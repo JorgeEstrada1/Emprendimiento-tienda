@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Editando: {{ producto.name }} - UniMarket</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+  <style>
+    :root {
+        --bg-color: #f3f5f9;
+        --text-color: #212529;
+        --card-bg: #ffffff;
+        --card-shadow: rgba(15, 23, 42, 0.12);
+        --primary-color: #0d6efd;
+        --primary-soft: #6610f2;
+        --success-color: #198754;
+        --muted-text: #6c757d;
+    }
+    body.dark-mode {
+        --bg-color: #121212;
+        --text-color: #e0e0e0;
+        --card-bg: #1e1e1e;
+        --card-shadow: rgba(0, 0, 0, 0.5);
+        --primary-color: #bb86fc;
+        --primary-soft: #03dac6;
+        --success-color: #66bb6a;
+        --muted-text: #a0a0a0;
+    }
+    body {
+        background: var(--bg-color);
+        color: var(--text-color);
+        transition: background 0.3s, color 0.3s;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+    }
+    .navbar.bg-primary { background-color: var(--primary-color) !important; transition: background 0.3s; }
+    .mode-toggle { border: none; background: transparent; color: #fff; font-size: 1.3rem; cursor: pointer; }
+    footer {
+        padding: 24px 0 16px;
+        font-size: 0.85rem;
+        color: var(--muted-text);
+        margin-top: auto;
+        text-align: center;
+    }
+    .admin-card {
+        background-color: var(--card-bg);
+        border-radius: 12px;
+        box-shadow: 0 4px 15px var(--card-shadow);
+        padding: 2rem;
+    }
+    .form-label {
+        font-weight: 500;
+    }
+    .form-control, .form-select {
+        background-color: var(--bg-color);
+        border: 1px solid rgba(0,0,0,0.1);
+        color: var(--text-color);
+    }
+    body.dark-mode .form-control, body.dark-mode .form-select {
+        background-color: #2a2a2a;
+        border-color: #444;
+        color: var(--text-color);
+    }
+    .form-control:focus, .form-select:focus {
+        background-color: var(--card-bg);
+        color: var(--text-color);
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 0.25rem rgba(13,110,253,.25);
+    }
+    body.dark-mode .form-control:focus, body.dark-mode .form-select:focus {
+        background-color: #333;
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 0.25rem rgba(187,134,252,.25);
+    }
+    .current-image {
+        width: 80px;
+        height: 80px;
+        object-fit: cover;
+        border-radius: 8px;
+        border: 2px solid var(--card-bg);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+  </style>
+</head>
+<body>
+
+<nav class="navbar navbar-dark bg-primary">
+    <div class="container d-flex justify-content-between align-items-center">
+        <a href="/" class="navbar-brand mb-0 h1 d-flex align-items-center gap-2 text-decoration-none">
+            <i class="bi bi-bag-check-fill fs-4"></i> <span class="d-none d-sm-inline">UniMarket Bolivia</span>
+        </a>
+        <div class="d-flex align-items-center gap-3">
+            <a href="{{ url_for('cart_page') }}" class="text-white text-decoration-none d-flex align-items-center position-relative" title="Ver carrito">
+                <i class="bi bi-cart-fill fs-4"></i>
+                {% if cart_count > 0 %}
+                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.7rem;">
+                    {{ cart_count }}
+                </span>
+                {% endif %}
+            </a>
+            <button id="modeToggle" class="mode-toggle" title="Cambiar modo">
+                <i class="bi bi-moon-fill"></i>
+            </button>
+        </div>
+    </div>
+</nav>
+
+<div class="container py-4 flex-grow-1">
+
+  <div class="mb-3">
+    <a href="{{ url_for('admin_panel') }}" class="btn btn-outline-primary rounded-pill">
+      <i class="bi bi-arrow-left me-1"></i> Volver al panel de admin
+    </a>
+  </div>
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+          {{ message }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+
+  <div class="admin-card">
+    <h3 class="mb-4">Editando Producto (ID: {{ producto.id }})</h3>
+    
+    <form action="{{ url_for('admin_edit_product', product_id=producto.id) }}" method="POST" class="row g-3" enctype="multipart/form-data">
+      
+      <div class="col-md-8">
+        <label for="name" class="form-label">Nombre del Producto <span class="text-danger">*</span></label>
+        <input type="text" class="form-control" id="name" name="name" value="{{ producto.name }}" required>
+      </div>
+      
+      <div class="col-md-4">
+        <label for="price" class="form-label">Precio (Bs) <span class="text-danger">*</span></label>
+        <input type="number" step="0.01" class="form-control" id="price" name="price" value="{{ producto.price }}" required>
+      </div>
+      
+      <div class="col-12">
+        <label for="description" class="form-label">Descripción</label>
+        <textarea class="form-control" id="description" name="description" rows="3">{{ producto.description }}</textarea>
+      </div>
+      
+      <div class="col-12">
+        <label for="image_file" class="form-label">Cambiar Imagen (Opcional)</label>
+        <div class="d-flex align-items-center gap-3">
+            <img src="{{ producto.image.replace('\\', '/') }}" alt="Imagen actual" class="current-image">
+            <input type="file" class="form-control" id="image_file" name="image_file" accept="image/png, image/jpeg, image/gif, image/webp">
+        </div>
+        <div class="form-text">Si no seleccionas una imagen nueva, se conservará la actual.</div>
+      </div>
+      
+      <div class="col-md-6">
+        <label for="type" class="form-label">Tipo <span class="text-danger">*</span></label>
+        <select id="type" name="type" class="form-select" required>
+            <option value="importado" {% if producto.type == 'importado' %}selected{% endif %}>Importado</option>
+            <option value="nacional" {% if producto.type == 'nacional' %}selected{% endif %}>Nacional</option>
+        </select>
+      </div>
+      
+      <div class="col-md-6">
+        <label for="source" class="form-label">Origen (Fuente) <span class="text-danger">*</span></label>
+        <input type="text" class="form-control" id="source" name="source" value="{{ producto.source }}" required>
+      </div>
+
+      <div class="col-md-6">
+        <label for="category" class="form-label">Categoría <span class="text-danger">*</span></label>
+        <input type="text" class="form-control" id="category" name="category" value="{{ producto.category }}" required>
+      </div>
+      
+      <div class="col-md-6">
+        <label for="eta" class="form-label">Tiempo de Entrega (ETA) <span class="text-danger">*</span></label>
+        <input type="text" class="form-control" id="eta" name="eta" value="{{ producto.eta }}" required>
+      </div>
+
+      <div class="col-12">
+        <label for="product_url" class="form-label">URL del Producto Original (Opcional)</label>
+        <input type="url" class="form-control" id="product_url" name="product_url" value="{{ producto.product_url }}">
+      </div>
+      
+      <div class="col-12 text-end mt-4">
+        <a href="{{ url_for('admin_panel') }}" class="btn btn-outline-secondary btn-lg rounded-pill me-2">Cancelar</a>
+        <button type="submit" class="btn btn-primary btn-lg rounded-pill">
+          <i class="bi bi-check-circle-fill me-1"></i> Actualizar Producto
+        </button>
+      </div>
+
+    </form>
+  </div>
+
+</div>
+
+<footer class="text-center mt-5"> 
+  UniMarket Bolivia &copy; 2024 · Tu puerta al mundo y a lo nacional.
+  | <a href="{{ url_for('admin_panel') }}" class="text-muted">Admin</a>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  const modeToggle = document.getElementById('modeToggle');
+  function updateModeIcon() {
+    const icon = modeToggle.querySelector('i');
+    if (document.body.classList.contains('dark-mode')) {
+      icon.classList.replace('bi-moon-fill', 'bi-brightness-high-fill');
+    } else {
+      icon.classList.replace('bi-brightness-high-fill', 'bi-moon-fill');
+    }
+  }
+  function toggleDarkMode() {
+    document.body.classList.toggle('dark-mode');
+    localStorage.setItem('darkMode', document.body.classList.contains('dark-mode'));
+    updateModeIcon();
+  }
+  modeToggle.addEventListener('click', toggleDarkMode);
+  if (localStorage.getItem('darkMode') === 'true') {
+    document.body.classList.add('dark-mode');
+  }
+  updateModeIcon();
+</script>
+</body>
+</html>

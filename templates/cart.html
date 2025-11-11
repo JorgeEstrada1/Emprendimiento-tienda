@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Mi Carrito - UniMarket Bolivia</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+  <style>
+    :root {
+        --bg-color: #f3f5f9;
+        --text-color: #212529;
+        --card-bg: #ffffff;
+        --card-shadow: rgba(15, 23, 42, 0.12);
+        --primary-color: #0d6efd; /* Azul de Bootstrap */
+        --primary-soft: #6610f2; /* Un morado vibrante para el gradiente */
+        --success-color: #198754;
+        --muted-text: #6c757d;
+    }
+    body.dark-mode {
+        --bg-color: #121212; /* Un gris oscuro más estándar */
+        --text-color: #e0e0e0; /* Blanco suave */
+        --card-bg: #1e1e1e; /* Gris oscuro para tarjetas */
+        --card-shadow: rgba(0, 0, 0, 0.5); /* Sombra más sutil en dark mode */
+        --primary-color: #bb86fc; /* Morado claro para dark mode */
+        --primary-soft: #03dac6; /* Aqua para dark mode */
+        --success-color: #66bb6a; /* Verde claro para dark mode */
+        --muted-text: #a0a0a0;
+    }
+    body {
+        background: var(--bg-color);
+        color: var(--text-color);
+        transition: background 0.3s, color 0.3s;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+    }
+    .navbar.bg-primary { background-color: var(--primary-color) !important; transition: background 0.3s; }
+    .price-text {
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: var(--text-color);
+    }
+    .btn-success {
+        background-color: #28a745;
+        border-color: #28a745;
+        padding: 12px 15px;
+        font-size: 1.05rem;
+        font-weight: 600;
+        border-radius: 10px;
+    }
+    .mode-toggle { border: none; background: transparent; color: #fff; font-size: 1.3rem; cursor: pointer; }
+    footer {
+        padding: 24px 0 16px;
+        font-size: 0.85rem;
+        color: var(--muted-text);
+        margin-top: auto;
+        text-align: center;
+    }
+    .cart-item {
+        background-color: var(--card-bg);
+        border-radius: 12px;
+        box-shadow: 0 4px 15px var(--card-shadow);
+        padding: 1rem;
+    }
+    .cart-item img {
+        width: 80px;
+        height: 80px;
+        object-fit: cover;
+        border-radius: 8px;
+    }
+    .cart-total-card {
+        background-color: var(--card-bg);
+        border-radius: 12px;
+        box-shadow: 0 4px 15px var(--card-shadow);
+        padding: 1.5rem;
+    }
+    .btn-danger {
+        background-color: #dc3545;
+        border-color: #dc3545;
+    }
+    .quantity-selector {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .quantity-selector form {
+        margin: 0;
+    }
+    .quantity-selector .btn {
+        width: 38px;
+        height: 38px;
+        padding: 0;
+        font-size: 1.2rem;
+        font-weight: bold;
+        line-height: 1;
+        border-radius: 50% !important;
+    }
+    .quantity-selector .quantity-display {
+        font-size: 1.2rem;
+        font-weight: 600;
+        padding: 0 0.5rem;
+        min-width: 30px;
+        text-align: center;
+    }
+    /* === INICIO: NUEVOS ESTILOS (Scroll-to-Top) === */
+    #scrollTopButton {
+        display: none;
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        z-index: 99;
+        border: none;
+        outline: none;
+        background-color: var(--primary-color);
+        color: white;
+        cursor: pointer;
+        padding: 0;
+        border-radius: 50%;
+        width: 50px;
+        height: 50px;
+        font-size: 1.5rem;
+        opacity: 0.7;
+        transition: opacity 0.3s, transform 0.3s;
+    }
+    #scrollTopButton:hover {
+        opacity: 1;
+        transform: scale(1.1);
+    }
+    /* === FIN: NUEVOS ESTILOS === */
+  </style>
+</head>
+<body>
+
+<nav class="navbar navbar-dark bg-primary">
+    <div class="container d-flex justify-content-between align-items-center">
+        <a href="/" class="navbar-brand mb-0 h1 d-flex align-items-center gap-2 text-decoration-none">
+            <i class="bi bi-bag-check-fill fs-4"></i> <span class="d-none d-sm-inline">UniMarket Bolivia</span>
+        </a>
+        <div class="d-flex align-items-center gap-3">
+            <a href="{{ url_for('cart_page') }}" class="text-white text-decoration-none d-flex align-items-center position-relative" title="Ver carrito">
+                <i class="bi bi-cart-fill fs-4"></i>
+                {% if cart_count > 0 %}
+                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.7rem;">
+                    {{ cart_count }}
+                </span>
+                {% endif %}
+            </a>
+            <button id="modeToggle" class="mode-toggle" title="Cambiar modo">
+                <i class="bi bi-moon-fill"></i>
+            </button>
+        </div>
+    </div>
+</nav>
+
+<div class="container py-4 flex-grow-1">
+  <h1 class="mb-4">Mi Carrito de Compras</h1>
+  
+  <div class="row g-4">
+    <div class="col-lg-8">
+      {% if not cart_items %}
+        <div class="alert alert-info text-center">
+          <i class="bi bi-cart-x fs-3"></i>
+          <h4 class="alert-heading mt-2">Tu carrito está vacío</h4>
+          <p>No has añadido ningún producto. ¡Explora el <a href="/" class="alert-link">catálogo</a>!</p>
+        </div>
+      {% else %}
+        <div class="d-flex flex-column gap-3">
+          {% for item in cart_items %}
+          <div class="cart-item d-flex flex-column flex-md-row align-items-center gap-3">
+            <a href="{{ url_for('producto_detalle', product_id=item.product.id) }}">
+                <img src="{{ item.product.image.replace('\\', '/') }}" alt="{{ item.product.name }}">
+            </a>
+            <div class="flex-grow-1 text-center text-md-start">
+              <a href="{{ url_for('producto_detalle', product_id=item.product.id) }}" class="text-decoration-none" style="color: var(--text-color);">
+                <h5 class="mb-1">{{ item.product.name }}</h5>
+              </a>
+              <span class="price-text" style="font-size: 1.1rem;">{{ item.product.price }} Bs</span>
+            </div>
+            
+            <div class="quantity-selector my-2 my-md-0">
+                <form action="{{ url_for('cart_decrease', product_id=item.product.id) }}" method="POST">
+                    <button type="submit" class="btn btn-outline-primary">
+                        <i class="bi bi-dash-lg"></i>
+                    </button>
+                </form>
+                <span class="quantity-display">{{ item.quantity }}</span>
+                <form action="{{ url_for('cart_increase', product_id=item.product.id) }}" method="POST">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-plus-lg"></i>
+                    </button>
+                </form>
+            </div>
+            
+            <div class="text-center text-md-end ms-md-auto">
+              <span class="price-text fs-5">Subtotal: {{ "%.2f"|format(item.subtotal) }} Bs</span>
+              <form action="{{ url_for('remove_from_cart', product_id=item.product.id) }}" method="POST" class="mt-1">
+                <button type="submit" class="btn btn-link text-danger btn-sm p-0">
+                  <i class="bi bi-trash-fill me-1"></i> Eliminar
+                </button>
+              </form>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    </div>
+
+    {% if cart_items %}
+    <div class="col-lg-4">
+      <div class="cart-total-card position-sticky" style="top: 20px;">
+        <h3 class="mb-3">Resumen del Pedido</h3>
+        <hr>
+        <div class="d-flex justify-content-between fs-4 fw-bold mb-4">
+          <span>Total:</span>
+          <span class="price-text">{{ "%.2f"|format(total_price) }} Bs</span>
+        </div>
+        
+        {% set wa_text = ["Hola, quiero encargar los siguientes productos de UniMarket:\n"] %}
+        {% for item in cart_items %}
+            {% set item_text = "\n- " ~ item.product.name ~ " (x" ~ item.quantity ~ ")" ~ " | Subtotal: " ~ "%.2f"|format(item.subtotal) ~ " Bs" %}
+            {% set _ = wa_text.append(item_text) %}
+        {% endfor %}
+        {% set _ = wa_text.append("\n\n*Total Estimado: " ~ "%.2f"|format(total_price) ~ " Bs*") %}
+        {% set _ = wa_text.append("\n\n(Espero confirmación del pedido, gracias)") %}
+        
+        <a href="https://wa.me/59176141856?text={{ wa_text | join('') | urlencode }}"
+           class="btn btn-success btn-lg w-100 rounded-pill" target="_blank">
+            <i class="bi bi-whatsapp me-2"></i> Finalizar Pedido por WhatsApp
+        </a>
+      </div>
+    </div>
+    {% endif %}
+    
+  </div>
+</div>
+
+<a id="scrollTopButton" href="#" class="btn btn-primary d-flex align-items-center justify-content-center">
+    <i class="bi bi-arrow-up-short"></i>
+</a>
+<footer class="text-center mt-5"> 
+  UniMarket Bolivia &copy; 2024 · Tu puerta al mundo y a lo nacional.
+  | <a href="{{ url_for('admin_panel') }}" class="text-muted">Admin</a>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  const modeToggle = document.getElementById('modeToggle');
+  const scrollTopButton = document.getElementById('scrollTopButton'); // Para el scroll
+
+  function updateModeIcon() {
+    const icon = modeToggle.querySelector('i');
+    if (document.body.classList.contains('dark-mode')) {
+      icon.classList.replace('bi-moon-fill', 'bi-brightness-high-fill');
+    } else {
+      icon.classList.replace('bi-brightness-high-fill', 'bi-moon-fill');
+    }
+  }
+  function toggleDarkMode() {
+    document.body.classList.toggle('dark-mode');
+    localStorage.setItem('darkMode', document.body.classList.contains('dark-mode'));
+    updateModeIcon();
+  }
+  modeToggle.addEventListener('click', toggleDarkMode);
+  if (localStorage.getItem('darkMode') === 'true') {
+    document.body.classList.add('dark-mode');
+  }
+  updateModeIcon();
+
+  // === INICIO: NUEVO SCRIPT (Scroll-to-Top) ===
+  window.onscroll = function() {
+      if (document.body.scrollTop > 100 || document.documentElement.scrollTop > 100) {
+          scrollTopButton.style.display = "flex";
+      } else {
+          scrollTopButton.style.display = "none";
+      }
+  };
+  scrollTopButton.addEventListener('click', (e) => {
+      e.preventDefault();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+  // === FIN: NUEVO SCRIPT (Scroll-to-Top) ===
+</script>
+</body>
+</html>

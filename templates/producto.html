@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{{ producto.name }} - UniMarket Bolivia</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+  <style>
+    :root {
+        --bg-color: #f3f5f9;
+        --text-color: #212529;
+        --card-bg: #ffffff;
+        --card-shadow: rgba(15, 23, 42, 0.12);
+        --primary-color: #0d6efd; /* Azul de Bootstrap */
+        --primary-soft: #6610f2; /* Un morado vibrante para el gradiente */
+        --success-color: #198754;
+        --muted-text: #6c757d;
+    }
+    body.dark-mode {
+        --bg-color: #121212; /* Un gris oscuro más estándar */
+        --text-color: #e0e0e0; /* Blanco suave */
+        --card-bg: #1e1e1e; /* Gris oscuro para tarjetas */
+        --card-shadow: rgba(0, 0, 0, 0.5); /* Sombra más sutil en dark mode */
+        --primary-color: #bb86fc; /* Morado claro para dark mode */
+        --primary-soft: #03dac6; /* Aqua para dark mode */
+        --success-color: #66bb6a; /* Verde claro para dark mode */
+        --muted-text: #a0a0a0;
+    }
+    body {
+        background: var(--bg-color);
+        color: var(--text-color);
+        transition: background 0.3s, color 0.3s;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+    }
+    .navbar.bg-primary { background-color: var(--primary-color) !important; transition: background 0.3s; }
+    .product-card .card {
+        background: var(--card-bg);
+        border: none;
+        border-radius: 18px;
+        box-shadow: 0 8px 20px var(--card-shadow);
+    }
+    .price-text {
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: var(--text-color);
+    }
+    .badge {
+        font-size: 0.8rem;
+        padding: 6px 12px;
+        border-radius: 50px;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+    }
+    .badge-import { background: rgba(13,110,253,0.15); color: var(--primary-color); }
+    .badge-nacional { background: rgba(25,135,84,0.15); color: var(--success-color); }
+    .delivery-text {
+        font-size: 0.95rem;
+        color: var(--muted-text);
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+    .delivery-text i { font-size: 1.1rem; }
+    .source-text {
+        font-size: 0.85rem;
+        color: var(--muted-text);
+    }
+    .whatsapp-button-container { margin-top: 20px; }
+    .btn-success {
+        background-color: #28a745;
+        border-color: #28a745;
+        padding: 12px 15px;
+        font-size: 1.05rem;
+        font-weight: 600;
+        border-radius: 10px;
+    }
+    .mode-toggle { border: none; background: transparent; color: #fff; font-size: 1.3rem; cursor: pointer; }
+    footer {
+        padding: 24px 0 16px;
+        font-size: 0.85rem;
+        color: var(--muted-text);
+        margin-top: auto;
+        text-align: center;
+    }
+    .product-detail-card {
+        background: var(--card-bg);
+        border: none;
+        border-radius: 18px;
+        box-shadow: 0 8px 20px var(--card-shadow);
+        overflow: hidden;
+    }
+    .product-detail-img {
+        width: 100%;
+        height: 450px;
+        object-fit: cover;
+    }
+    @media (max-width: 768px) {
+      .product-detail-img {
+        height: 300px;
+        border-bottom-left-radius: 0;
+        border-bottom-right-radius: 0;
+      }
+    }
+    /* === INICIO: NUEVOS ESTILOS (Scroll-to-Top) === */
+    #scrollTopButton {
+        display: none;
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        z-index: 99;
+        border: none;
+        outline: none;
+        background-color: var(--primary-color);
+        color: white;
+        cursor: pointer;
+        padding: 0;
+        border-radius: 50%;
+        width: 50px;
+        height: 50px;
+        font-size: 1.5rem;
+        opacity: 0.7;
+        transition: opacity 0.3s, transform 0.3s;
+    }
+    #scrollTopButton:hover {
+        opacity: 1;
+        transform: scale(1.1);
+    }
+    /* === FIN: NUEVOS ESTILOS === */
+  </style>
+</head>
+<body>
+
+<nav class="navbar navbar-dark bg-primary">
+    <div class="container d-flex justify-content-between align-items-center">
+        <a href="/" class="navbar-brand mb-0 h1 d-flex align-items-center gap-2 text-decoration-none">
+            <i class="bi bi-bag-check-fill fs-4"></i> <span class="d-none d-sm-inline">UniMarket Bolivia</span>
+        </a>
+        <div class="d-flex align-items-center gap-3">
+            <a href="{{ url_for('cart_page') }}" class="text-white text-decoration-none d-flex align-items-center position-relative" title="Ver carrito">
+                <i class="bi bi-cart-fill fs-4"></i>
+                {% if cart_count > 0 %}
+                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.7rem;">
+                    {{ cart_count }}
+                </span>
+                {% endif %}
+            </a>
+            <button id="modeToggle" class="mode-toggle" title="Cambiar modo">
+                <i class="bi bi-moon-fill"></i>
+            </button>
+        </div>
+    </div>
+</nav>
+
+<div class="container py-4 flex-grow-1">
+  
+  <div class="mb-3 d-flex justify-content-between align-items-center">
+    <a href="/" class="btn btn-outline-primary rounded-pill">
+      <i class="bi bi-arrow-left me-1"></i> Volver al catálogo
+    </a>
+  </div>
+  
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <div class="row mb-3">
+        <div class="col">
+          {% for category, message in messages %}
+            <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+              <i class="bi bi-check-circle-fill me-2"></i>
+              {{ message }}
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    {% endif %}
+  {% endwith %}
+  <div class="product-detail-card">
+    <div class="row g-0">
+      <div class="col-md-6">
+        <img src="{{ producto.image.replace('\\', '/') }}" class="product-detail-img" alt="{{ producto.name }}">
+      </div>
+      <div class="col-md-6 d-flex flex-column">
+        <div class="card-body p-4 p-md-5">
+          
+          {% if producto.type|lower == 'importado' %}
+            <span class="badge rounded-pill badge-import mb-2">IMPORTADO</span>
+          {% else %}
+            <span class="badge rounded-pill badge-nacional mb-2">NACIONAL</span>
+          {% endif %}
+          
+          <h1 class="card-title display-6 fw-bold mb-3">{{ producto.name }}</h1>
+          
+          <p class="card-text mb-3">
+            <span class="price-text" style="font-size: 2.5rem;">{{ producto.price }} Bs</span>
+          </p>
+
+          <h5 class="fw-bold mt-4">Descripción</h5>
+          <p class="lead" style="line-height: 1.6;">
+            {{ producto.description | default('Descripción no disponible.') }}
+          </p>
+
+          <hr class="my-4">
+          <p class="delivery-text mb-2 fs-5">
+            <i class="bi bi-truck"></i> Entrega: {{ producto.eta }}
+          </p>
+          <p class="source-text fs-5 mb-0">
+            <small><i class="bi bi-shop-window me-1"></i> {{ producto.source }}</small>
+          </p>
+
+          <div class="mt-auto whatsapp-button-container pt-4">
+              <form action="{{ url_for('add_to_cart', product_id=producto.id) }}" method="POST">
+                  <button type="submit" class="btn btn-primary w-100 btn-lg rounded-pill">
+                      <i class="bi bi-cart-plus me-1"></i> Añadir al carrito
+                  </button>
+              </form>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<a id="scrollTopButton" href="#" class="btn btn-primary d-flex align-items-center justify-content-center">
+    <i class="bi bi-arrow-up-short"></i>
+</a>
+<footer class="text-center mt-5"> 
+  UniMarket Bolivia &copy; 2024 · Tu puerta al mundo y a lo nacional.
+  | <a href="{{ url_for('admin_panel') }}" class="text-muted">Admin</a>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  const modeToggle = document.getElementById('modeToggle');
+  const scrollTopButton = document.getElementById('scrollTopButton'); // Para el scroll
+
+  function updateModeIcon() {
+    const icon = modeToggle.querySelector('i');
+    if (document.body.classList.contains('dark-mode')) {
+      icon.classList.replace('bi-moon-fill', 'bi-brightness-high-fill');
+    } else {
+      icon.classList.replace('bi-brightness-high-fill', 'bi-moon-fill');
+    }
+  }
+
+  function toggleDarkMode() {
+    document.body.classList.toggle('dark-mode');
+    localStorage.setItem('darkMode', document.body.classList.contains('dark-mode'));
+    updateModeIcon();
+  }
+
+  modeToggle.addEventListener('click', toggleDarkMode);
+
+  if (localStorage.getItem('darkMode') === 'true') {
+    document.body.classList.add('dark-mode');
+  }
+  updateModeIcon();
+  
+  // === INICIO: NUEVO SCRIPT (Scroll-to-Top) ===
+  window.onscroll = function() {
+      if (document.body.scrollTop > 100 || document.documentElement.scrollTop > 100) {
+          scrollTopButton.style.display = "flex";
+      } else {
+          scrollTopButton.style.display = "none";
+      }
+  };
+  scrollTopButton.addEventListener('click', (e) => {
+      e.preventDefault();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+  // === FIN: NUEVO SCRIPT (Scroll-to-Top) ===
+</script>
+</body>
+</html>

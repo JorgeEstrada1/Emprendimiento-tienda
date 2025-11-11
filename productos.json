@@ -1,0 +1,86 @@
+[
+    {
+        "id": 2,
+        "name": "Auriculares Bluetooth Baseus",
+        "price": 185.0,
+        "description": "Sumérgete en tu música con los auriculares Baseus. Cancelación de ruido pasiva, batería de larga duración y un estuche de carga compacto. Calidad de sonido superior.",
+        "source": "AliExpress",
+        "type": "importado",
+        "category": "Audio",
+        "image": "https://ae01.alicdn.com/kf/S2b2c3d4e5f6g7h8i9j0/Auriculares-Baseus.jpg",
+        "product_url": "https://www.aliexpress.com/item/1005000000000002.html",
+        "eta": "18–30 días hábiles"
+    },
+    {
+        "id": 3,
+        "name": "Teclado mecánico RGB 60%",
+        "price": 320.0,
+        "description": "Un teclado compacto y reactivo. Switches mecánicos (a elección), iluminación RGB personalizable y layout del 60% para ahorrar espacio en tu escritorio.",
+        "source": "AliExpress",
+        "type": "importado",
+        "category": "Periféricos",
+        "image": "https://ae01.alicdn.com/kf/S3b2c3d4e5f6g7h8i9j0/Teclado-RGB.jpg",
+        "product_url": "https://www.aliexpress.com/item/1005000000000003.html",
+        "eta": "20–35 días hábiles"
+    },
+    {
+        "id": 4,
+        "name": "Mini proyector LED 1080p",
+        "price": 480.0,
+        "description": "Lleva el cine a casa con este mini proyector portátil. Soporta 1080p nativo, altavoces integrados y múltiples conexiones (HDMI, USB).",
+        "source": "AliExpress",
+        "type": "importado",
+        "category": "Proyectores",
+        "image": "https://ae01.alicdn.com/kf/S4b2c3d4e5f6g7h8i9j0/Proyector-LED.jpg",
+        "product_url": "https://www.aliexpress.com/item/1005000000000004.html",
+        "eta": "25–40 días hábiles"
+    },
+    {
+        "id": 5,
+        "name": "Polera Oversize Tarija Street",
+        "price": 110.0,
+        "description": "Diseño exclusivo de Tarija Street. 100% algodón, corte oversize para máxima comodidad y estilo urbano. Apoya el talento local.",
+        "source": "Tienda local",
+        "type": "nacional",
+        "category": "Ropa",
+        "image": "https://via.placeholder.com/600x400?text=Polera+Oversize",
+        "product_url": "",
+        "eta": "2–5 días hábiles"
+    },
+    {
+        "id": 6,
+        "name": "Taza personalizada 3D",
+        "price": 75.0,
+        "description": "Tazas únicas impresas en 3D con el diseño que tú elijas. Perfectas para un regalo original. Material PLA de grado alimenticio.",
+        "source": "Tienda local",
+        "type": "nacional",
+        "category": "Hogar",
+        "image": "https://via.placeholder.com/600x400?text=Taza+3D",
+        "product_url": "",
+        "eta": "2–5 días hábiles"
+    },
+    {
+        "name": "cocoyote",
+        "price": 100.0,
+        "description": "aaa",
+        "source": "Aliexpress",
+        "type": "importado",
+        "category": "ropa",
+        "image": "/static/uploads/1762826228_husillo.jpg",
+        "product_url": "https://www.facebook.com",
+        "eta": "20-30",
+        "id": 7
+    },
+    {
+        "name": "cocoyote",
+        "price": 22222.0,
+        "description": "asdasd",
+        "source": "Aliexpress",
+        "type": "importado",
+        "category": "ropa",
+        "image": "/static/uploads/1762824129_coco.jpg",
+        "product_url": "https://www.facebook.com",
+        "eta": "20-30",
+        "id": 8
+    }
+]

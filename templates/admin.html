@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Panel de Admin - UniMarket</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+  <style>
+    :root {
+        --bg-color: #f3f5f9;
+        --text-color: #212529;
+        --card-bg: #ffffff;
+        --card-shadow: rgba(15, 23, 42, 0.12);
+        --primary-color: #0d6efd; /* Azul de Bootstrap */
+        --primary-soft: #6610f2; /* Un morado vibrante para el gradiente */
+        --success-color: #198754;
+        --muted-text: #6c757d;
+    }
+    body.dark-mode {
+        --bg-color: #121212; /* Un gris oscuro más estándar */
+        --text-color: #e0e0e0; /* Blanco suave */
+        --card-bg: #1e1e1e; /* Gris oscuro para tarjetas */
+        --card-shadow: rgba(0, 0, 0, 0.5); /* Sombra más sutil en dark mode */
+        --primary-color: #bb86fc; /* Morado claro para dark mode */
+        --primary-soft: #03dac6; /* Aqua para dark mode */
+        --success-color: #66bb6a; /* Verde claro para dark mode */
+        --muted-text: #a0a0a0;
+    }
+    body {
+        background: var(--bg-color);
+        color: var(--text-color);
+        transition: background 0.3s, color 0.3s;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+    }
+    .navbar.bg-primary { background-color: var(--primary-color) !important; transition: background 0.3s; }
+    .price-text {
+        font-size: 1.4rem;
+        font-weight: 700;
+        color: var(--text-color);
+    }
+    .mode-toggle { border: none; background: transparent; color: #fff; font-size: 1.3rem; cursor: pointer; }
+    footer {
+        padding: 24px 0 16px;
+        font-size: 0.85rem;
+        color: var(--muted-text);
+        margin-top: auto;
+        text-align: center;
+    }
+    
+    /* Estilos para el login y formulario de admin */
+    .admin-card {
+        background-color: var(--card-bg);
+        border-radius: 12px;
+        box-shadow: 0 4px 15px var(--card-shadow);
+        padding: 2rem;
+    }
+    .form-label {
+        font-weight: 500;
+    }
+    .form-control, .form-select {
+        background-color: var(--bg-color); /* Fondo un poco gris */
+        border: 1px solid rgba(0,0,0,0.1);
+        color: var(--text-color);
+    }
+    body.dark-mode .form-control, body.dark-mode .form-select {
+        background-color: #2a2a2a;
+        border-color: #444;
+        color: var(--text-color);
+    }
+    .form-control:focus, .form-select:focus {
+        background-color: var(--card-bg);
+        color: var(--text-color);
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 0.25rem rgba(13,110,253,.25);
+    }
+    body.dark-mode .form-control:focus, body.dark-mode .form-select:focus {
+        background-color: #333;
+        border-color: var(--primary-color);
+        box-shadow: 0 0 0 0.25rem rgba(187,134,252,.25);
+    }
+    #scrollTopButton {
+        display: none;
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        z-index: 99;
+        border: none;
+        outline: none;
+        background-color: var(--primary-color);
+        color: white;
+        cursor: pointer;
+        padding: 0;
+        border-radius: 50%;
+        width: 50px;
+        height: 50px;
+        font-size: 1.5rem;
+        opacity: 0.7;
+        transition: opacity 0.3s, transform 0.3s;
+    }
+    #scrollTopButton:hover {
+        opacity: 1;
+        transform: scale(1.1);
+    }
+    /* Estilos para la tabla de productos */
+    .table {
+        color: var(--text-color);
+    }
+    .table-hover tbody tr:hover {
+        color: var(--text-color);
+        background-color: rgba(0,0,0,0.05);
+    }
+    body.dark-mode .table {
+        border-color: #444;
+    }
+    body.dark-mode .table-hover tbody tr:hover {
+        color: var(--text-color);
+        background-color: rgba(255,255,255,0.05);
+    }
+    .table img {
+        width: 40px;
+        height: 40px;
+        object-fit: cover;
+        border-radius: 6px;
+    }
+    .table .btn-group .btn {
+        padding: 0.25rem 0.5rem;
+    }
+  </style>
+</head>
+<body>
+
+<nav class="navbar navbar-dark bg-primary">
+    <div class="container d-flex justify-content-between align-items-center">
+        <a href="/" class="navbar-brand mb-0 h1 d-flex align-items-center gap-2 text-decoration-none">
+            <i class="bi bi-bag-check-fill fs-4"></i> <span class="d-none d-sm-inline">UniMarket Bolivia</span>
+        </a>
+        <div class="d-flex align-items-center gap-3">
+            <a href="{{ url_for('cart_page') }}" class="text-white text-decoration-none d-flex align-items-center position-relative" title="Ver carrito">
+                <i class="bi bi-cart-fill fs-4"></i>
+                {% if cart_count > 0 %}
+                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.7rem;">
+                    {{ cart_count }}
+                </span>
+                {% endif %}
+            </a>
+            <button id="modeToggle" class="mode-toggle" title="Cambiar modo">
+                <i class="bi bi-moon-fill"></i>
+            </button>
+        </div>
+    </div>
+</nav>
+
+<div class="container py-4 flex-grow-1">
+
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      {% for category, message in messages %}
+        <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+          {{ message }}
+          <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+      {% endfor %}
+    {% endif %}
+  {% endwith %}
+
+  {% if session.admin_logged_in %}
+  
+    <div class="d-flex justify-content-between align-items-center mb-4">
+      <h1 class="mb-0">Panel de Administrador</h1>
+      <a href="{{ url_for('admin_logout') }}" class="btn btn-outline-danger">
+        <i class="bi bi-box-arrow-left me-1"></i> Cerrar Sesión
+      </a>
+    </div>
+
+    <div class="admin-card mb-4">
+      <h3 class="mb-4">Añadir Nuevo Producto</h3>
+      <form action="{{ url_for('admin_add_product') }}" method="POST" class="row g-3" enctype="multipart/form-data">
+        <div class="col-md-8">
+          <label for="name" class="form-label">Nombre del Producto <span class="text-danger">*</span></label>
+          <input type="text" class="form-control" id="name" name="name" required>
+        </div>
+        <div class="col-md-4">
+          <label for="price" class="form-label">Precio (Bs) <span class="text-danger">*</span></label>
+          <input type="number" step="0.01" class="form-control" id="price" name="price" placeholder="Ej: 230.50" required>
+        </div>
+        <div class="col-12">
+          <label for="description" class="form-label">Descripción</label>
+          <textarea class="form-control" id="description" name="description" rows="3"></textarea>
+        </div>
+        <div class="col-12">
+          <label for="image_file" class="form-label">Subir Imagen del Producto <span class="text-danger">*</span></label>
+          <input type="file" class="form-control" id="image_file" name="image_file" required accept="image/png, image/jpeg, image/gif, image/webp">
+        </div>
+        <div class="col-md-6">
+          <label for="type" class="form-label">Tipo <span class="text-danger">*</span></label>
+          <select id="type" name="type" class="form-select" required>
+            <option value="importado" selected>Importado</option>
+            <option value="nacional">Nacional</option>
+          </select>
+        </div>
+        <div class="col-md-6">
+          <label for="source" class="form-label">Origen (Fuente) <span class="text-danger">*</span></label>
+          <input type="text" class="form-control" id="source" name="source" placeholder="Ej: AliExpress, Tienda Local" required>
+        </div>
+        <div class="col-md-6">
+          <label for="category" class="form-label">Categoría <span class="text-danger">*</span></label>
+          <input type="text" class="form-control" id="category" name="category" placeholder="Ej: Relojes, Ropa, Audio" required>
+        </div>
+        <div class="col-md-6">
+          <label for="eta" class="form-label">Tiempo de Entrega (ETA) <span class="text-danger">*</span></label>
+          <input type="text" class="form-control" id="eta" name="eta" placeholder="Ej: 20-35 días" required>
+        </div>
+        <div class="col-12">
+          <label for="product_url" class="form-label">URL del Producto Original (Opcional)</label>
+          <input type="url" class="form-control" id="product_url" name="product_url" placeholder="https://aliexpress.com/...">
+        </div>
+        <div class="col-12 text-end mt-4">
+          <button type="submit" class="btn btn-primary btn-lg rounded-pill">
+            <i class="bi bi-plus-circle-fill me-1"></i> Guardar Producto
+          </button>
+        </div>
+      </form>
+    </div>
+    
+    <div class="admin-card">
+        <h3 class="mb-4">Gestionar Inventario</h3>
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead>
+                    <tr>
+                        <th scope="col">ID</th>
+                        <th scope="col">Img</th>
+                        <th scope="col">Nombre</th>
+                        <th scope="col">Precio (Bs)</th>
+                        <th scope="col">Categoría</th>
+                        <th scope="col" class="text-end">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for p in products %}
+                    <tr>
+                        <th scope="row">{{ p.id }}</th>
+                        <td>
+                            <img src="{{ p.image.replace('\\', '/') }}" alt="{{ p.name }}">
+                        </td>
+                        <td>{{ p.name }}</td>
+                        <td>{{ "%.2f"|format(p.price) }}</td>
+                        <td>{{ p.category }}</td>
+                        <td class="text-end">
+                            <div class="btn-group" role="group">
+                                <a href="{{ url_for('admin_edit_product', product_id=p.id) }}" class="btn btn-outline-primary">
+                                    <i class="bi bi-pencil-fill"></i>
+                                </a>
+                                <form action="{{ url_for('admin_delete_product', product_id=p.id) }}" method="POST" onsubmit="return confirm('¿Estás seguro de que quieres eliminar este producto? Esta acción no se puede deshacer.');">
+                                    <button type="submit" class="btn btn-outline-danger">
+                                        <i class="bi bi-trash-fill"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    
+                    {% if not products %}
+                    <tr>
+                        <td colspan="6" class="text-center text-muted">Aún no has añadido ningún producto.</td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% else %}
+  
+    <div class="row justify-content-center">
+      <div class="col-md-6 col-lg-4">
+        <div class="admin-card text-center">
+          <i class="bi bi-shield-lock-fill fs-1 text-primary"></i>
+          <h2 class="my-3">Acceso de Admin</h2>
+          <p class="text-muted">Debes ingresar la contraseña para gestionar la tienda.</p>
+          <form action="{{ url_for('admin_panel') }}" method="POST">
+            <div class="mb-3">
+              <input type="password" class="form-control form-control-lg text-center" id="password" name="password" placeholder="Tu contraseña secreta" required>
+            </div>
+            <button type="submit" class="btn btn-primary w-100 btn-lg">Entrar</button>
+          </form>
+        </div>
+      </div>
+    </div>
+    
+  {% endif %}
+
+</div>
+
+<a id="scrollTopButton" href="#" class="btn btn-primary d-flex align-items-center justify-content-center">
+    <i class="bi bi-arrow-up-short"></i>
+</a>
+
+<footer class="text-center mt-5"> 
+  UniMarket Bolivia &copy; 2024 · Tu puerta al mundo y a lo nacional.
+  | <a href="{{ url_for('admin_panel') }}" class="text-muted">Admin</a>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  const modeToggle = document.getElementById('modeToggle');
+  const scrollTopButton = document.getElementById('scrollTopButton');
+
+  function updateModeIcon() {
+    const icon = modeToggle.querySelector('i');
+    if (document.body.classList.contains('dark-mode')) {
+      icon.classList.replace('bi-moon-fill', 'bi-brightness-high-fill');
+    } else {
+      icon.classList.replace('bi-brightness-high-fill', 'bi-moon-fill');
+    }
+  }
+  function toggleDarkMode() {
+    document.body.classList.toggle('dark-mode');
+    localStorage.setItem('darkMode', document.body.classList.contains('dark-mode'));
+    updateModeIcon();
+  }
+  modeToggle.addEventListener('click', toggleDarkMode);
+  if (localStorage.getItem('darkMode') === 'true') {
+    document.body.classList.add('dark-mode');
+  }
+  updateModeIcon();
+  
+  window.onscroll = function() {
+      if (document.body.scrollTop > 100 || document.documentElement.scrollTop > 100) {
+          scrollTopButton.style.display = "flex";
+      } else {
+          scrollTopButton.style.display = "none";
+      }
+  };
+  scrollTopButton.addEventListener('click', (e) => {
+      e.preventDefault();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+  });
+</script>
+</body>
+</html>

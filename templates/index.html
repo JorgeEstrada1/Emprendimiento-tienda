@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>UniMarket Bolivia</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css">
+    <style>
+        :root {
+            --bg-color: #f3f5f9;
+            --text-color: #212529;
+            --card-bg: #ffffff;
+            --card-shadow: rgba(15, 23, 42, 0.12);
+            --primary-color: #0d6efd; /* Azul de Bootstrap */
+            --primary-soft: #6610f2; /* Un morado vibrante para el gradiente */
+            --success-color: #198754;
+            --muted-text: #6c757d;
+        }
+        body.dark-mode {
+            --bg-color: #121212; /* Un gris oscuro más estándar */
+            --text-color: #e0e0e0; /* Blanco suave */
+            --card-bg: #1e1e1e; /* Gris oscuro para tarjetas */
+            --card-shadow: rgba(0, 0, 0, 0.5); /* Sombra más sutil en dark mode */
+            --primary-color: #bb86fc; /* Morado claro para dark mode */
+            --primary-soft: #03dac6; /* Aqua para dark mode */
+            --success-color: #66bb6a; /* Verde claro para dark mode */
+            --muted-text: #a0a0a0;
+        }
+        body {
+            background: var(--bg-color);
+            color: var(--text-color);
+            transition: background 0.3s, color 0.3s;
+            min-height: 100vh; /* Asegura que el cuerpo ocupe al menos la altura de la ventana */
+            display: flex;
+            flex-direction: column;
+        }
+        .navbar.bg-primary { background-color: var(--primary-color) !important; transition: background 0.3s; }
+        .hero {
+            background: linear-gradient(135deg, var(--primary-color), var(--primary-soft));
+            border-radius: 18px;
+            padding: 30px 25px; /* Más padding para que respire */
+            color: #fff;
+            box-shadow: 0 12px 30px rgba(13,110,253,0.35); /* Sombra más pronunciada */
+            text-align: center; /* Centrar el texto */
+        }
+        .hero h1 { font-size: 2.2rem; font-weight: 700; margin-bottom: 10px; } /* Texto más grande y bold */
+        .hero p { font-size: 1.1rem; opacity: 0.9; line-height: 1.6; } /* Texto más legible */
+
+        /* Estilos para los botones de filtro */
+        .filter-buttons-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px; /* Espacio entre botones */
+            justify-content: center; /* Centrar los botones */
+        }
+        .filter-btn {
+            border-radius: 50px; /* Botones más redondeados (pastillas) */
+            padding: 8px 20px;
+            font-size: 0.95rem;
+            font-weight: 500;
+            white-space: nowrap; /* Evita que el texto se rompa */
+        }
+        .filter-btn.active {
+            color: #fff !important;
+            background-color: var(--primary-color);
+            border-color: var(--primary-color);
+            box-shadow: 0 4px 10px rgba(13,110,253,0.2); /* Pequeña sombra al activo */
+        }
+
+        /* Estilos de la barra de búsqueda */
+        .search-container .input-group {
+            border-radius: 50px; /* Bordes redondeados para el input group */
+            overflow: hidden; /* Para que el contenido respete el border-radius */
+            box-shadow: 0 4px 15px rgba(0,0,0,0.08); /* Sombra sutil */
+        }
+        .input-group-text, .form-control {
+            background-color: var(--card-bg);
+            border: none !important; /* Quitar bordes */
+            color: var(--text-color);
+            height: 48px; /* Altura consistente */
+        }
+        .form-control:focus {
+            box-shadow: none !important; /* Quitar el shadow por defecto de focus */
+        }
+        .search-button {
+            background-color: var(--primary-color) !important;
+            border-color: var(--primary-color) !important;
+            color: #fff !important;
+            padding: 0 20px;
+        }
+
+        .product-card {
+            transition: all 0.25s ease-in-out;
+            cursor: pointer;
+        }
+        .product-card .card {
+            background: var(--card-bg);
+            border: none;
+            border-radius: 18px; /* Un poco más redondeado */
+            box-shadow: 0 8px 20px var(--card-shadow); /* Sombra más presente */
+            transition: transform 0.15s ease-out, box-shadow 0.15s ease-out, background 0.3s ease;
+            display: flex; /* Para asegurar que el contenido se ajuste */
+            flex-direction: column;
+        }
+        .product-card .card:hover {
+            transform: translateY(-5px); /* Un poco más de elevación */
+            box-shadow: 0 18px 40px rgba(15, 23, 42, 0.2); /* Sombra más grande al pasar el ratón */
+        }
+        .product-card img {
+            border-top-left-radius: 18px; /* Mismo radio que la tarjeta */
+            border-top-right-radius: 18px;
+            height: 220px; /* Un poco más de altura para imágenes */
+            object-fit: cover;
+            width: 100%;
+        }
+        .product-card .card-body {
+            padding: 20px; /* Más padding interno */
+            display: flex;
+            flex-direction: column;
+            flex-grow: 1; /* Para que el body ocupe todo el espacio disponible */
+        }
+        .product-card .card-title {
+            font-size: 1.25rem; /* Título un poco más grande */
+            font-weight: 600;
+            line-height: 1.3;
+            margin-bottom: 8px;
+        }
+        .badge {
+            font-size: 0.8rem; /* Tamaño de badge ajustado */
+            padding: 6px 12px;
+            border-radius: 50px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+        .badge-import { background: rgba(13,110,253,0.15); color: var(--primary-color); }
+        .badge-nacional { background: rgba(25,135,84,0.15); color: var(--success-color); }
+        .price-text {
+            font-size: 1.4rem; /* Precio más grande y llamativo */
+            font-weight: 700;
+            color: var(--text-color);
+            margin-bottom: 5px;
+        }
+        .delivery-text {
+            font-size: 0.95rem; /* Texto de entrega más legible */
+            color: var(--muted-text);
+            margin-bottom: 5px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .delivery-text i { font-size: 1.1rem; }
+        .source-text {
+            font-size: 0.85rem;
+            color: var(--muted-text);
+            margin-top: auto; /* Empuja el origen hacia abajo */
+            padding-top: 10px; /* Espacio antes del origen */
+        }
+        .whatsapp-button-container { margin-top: 20px; } /* Espacio para el botón de WhatsApp */
+        .btn-success {
+            background-color: #28a745; /* Verde de WhatsApp más específico */
+            border-color: #28a745;
+            padding: 12px 15px;
+            font-size: 1.05rem;
+            font-weight: 600;
+            border-radius: 10px; /* Botón ligeramente redondeado */
+        }
+        .btn-success:hover {
+            background-color: #218838;
+            border-color: #1e7e34;
+        }
+
+        .mode-toggle { border: none; background: transparent; color: #fff; font-size: 1.3rem; cursor: pointer; }
+        .input-group-text { background-color: var(--card-bg); border-color: transparent; color: var(--muted-text); }
+        .form-control { background-color: var(--card-bg); border-color: transparent; color: var(--text-color); }
+        .form-control::placeholder { color: var(--muted-text); }
+
+        footer {
+            padding: 24px 0 16px;
+            font-size: 0.85rem;
+            color: var(--muted-text);
+            margin-top: auto; /* Empuja el footer al final */
+            text-align: center;
+        }
+        .alert-warning {
+            border-radius: 12px;
+            background-color: rgba(255,193,7,0.1);
+            color: #ffc107;
+            border-color: rgba(255,193,7,0.2);
+        }
+        
+        /* === INICIO: NUEVOS ESTILOS (Scroll-to-Top) === */
+        #scrollTopButton {
+            display: none; /* Oculto por defecto */
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 99;
+            border: none;
+            outline: none;
+            background-color: var(--primary-color);
+            color: white;
+            cursor: pointer;
+            padding: 0;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            font-size: 1.5rem;
+            opacity: 0.7;
+            transition: opacity 0.3s, transform 0.3s;
+        }
+        #scrollTopButton:hover {
+            opacity: 1;
+            transform: scale(1.1);
+        }
+        /* === FIN: NUEVOS ESTILOS === */
+    </style>
+</head>
+<body>
+
+<nav class="navbar navbar-dark bg-primary">
+    <div class="container d-flex justify-content-between align-items-center">
+        <a href="/" class="navbar-brand mb-0 h1 d-flex align-items-center gap-2 text-decoration-none">
+            <i class="bi bi-bag-check-fill fs-4"></i> <span class="d-none d-sm-inline">UniMarket Bolivia</span>
+        </a>
+        
+        <div class="d-flex align-items-center gap-3">
+            <a href="{{ url_for('cart_page') }}" class="text-white text-decoration-none d-flex align-items-center position-relative" title="Ver carrito">
+                <i class="bi bi-cart-fill fs-4"></i>
+                {% if cart_count > 0 %}
+                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.7rem;">
+                    {{ cart_count }}
+                </span>
+                {% endif %}
+            </a>
+            <button id="modeToggle" class="mode-toggle" title="Cambiar modo">
+                <i class="bi bi-moon-fill"></i>
+            </button>
+        </div>
+    </div>
+</nav>
+
+<div class="container py-4 flex-grow-1"> 
+    <div class="hero mb-5"> 
+        <h1 class="mb-3">Compra productos del mundo, pagando en Bolivia</h1>
+        <p class="mb-0">
+            Simplificamos tus compras de importación y conectamos con el talento nacional.
+            Encarga por WhatsApp y nosotros nos encargamos del resto. 🚀
+        </p>
+    </div>
+
+    <div class="row align-items-center mb-4 g-3"> 
+        <div class="col-12 filter-buttons-container">
+            <button class="btn btn-outline-primary filter-btn active" data-filter="all">
+                <i class="bi bi-list-ul me-1"></i> Todos
+            </button>
+            <button class="btn btn-outline-primary filter-btn" data-filter="importado">
+                <i class="bi bi-airplane me-1"></i> Importados
+            </button>
+            <button class="btn btn-outline-primary filter-btn" data-filter="nacional">
+                <i class="bi bi-house-door me-1"></i> Nacionales
+            </button>
+            {% if categories %}
+                <span class="vr mx-2 d-none d-md-inline-block"></span>
+                {% for category in categories %}
+                    <button class="btn btn-outline-primary filter-btn" data-filter="{{ category|lower }}">
+                        {{ category }}
+                    </button>
+                {% endfor %}
+            {% endif %}
+        </div>
+        
+        <div class="col-12">
+            <form class="input-group search-container" method="get" action="/">
+                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                <input
+                    type="text"
+                    name="q"
+                    id="search-input"
+                    class="form-control"
+                    placeholder="Buscar producto (ej: smartwatch, auriculares)..."
+                    value="{{ query or '' }}"
+                >
+                <button class="btn search-button" type="submit">Buscar</button>
+            </form>
+        </div>
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="row mb-3">
+          <div class="col">
+            {% for category, message in messages %}
+              <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+                <i class="bi bi-check-circle-fill me-2"></i>
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      {% endif %}
+    {% endwith %}
+    <div class="row g-4 mb-4" id="products-container" style="visibility: hidden;"> 
+    {% for p in products %}
+        <a href="/producto/{{ p.id }}" class="col-12 col-md-6 col-lg-4 product-card text-decoration-none"
+           data-type="{{ p.type|lower }}"
+           data-name="{{ p.name|lower }}"
+           data-category="{{ p.category|lower if p.category else '' }}">
+           
+            <div class="card h-100">
+                <img src="{{ p.image.replace('\\', '/') }}" class="card-img-top" alt="{{ p.name }}">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <h5 class="card-title mb-0">{{ p.name }}</h5>
+                        {% if p.type|lower == 'importado' %}
+                            <span class="badge rounded-pill badge-import">IMPORTADO</span>
+                        {% else %}
+                            <span class="badge rounded-pill badge-nacional">NACIONAL</span>
+                        {% endif %}
+                    </div>
+                    <p class="card-text mb-1"><span class="price-text">{{ p.price }} Bs</span></p>
+                    <p class="delivery-text mb-2">
+                        <i class="bi bi-truck"></i> Entrega: {{ p.eta }}
+                    </p>
+                    <p class="source-text">
+                        <small><i class="bi bi-shop-window me-1"></i> {{ p.source }}</small>
+                    </p>
+                    
+                    <div class="mt-auto whatsapp-button-container" onclick="event.preventDefault();">
+                        <form action="{{ url_for('add_to_cart', product_id=p.id) }}" method="POST">
+                            <button type="submit" class="btn btn-primary w-100 rounded-pill">
+                                <i class="bi bi-cart-plus me-1"></i> Añadir al carrito
+                            </button>
+                        </form>
+                    </div>
+                    
+                </div>
+            </div>
+        </a>
+        {% endfor %}
+        
+        {% if products|length == 0 %}
+            <div class="col-12">
+                <div class="alert alert-warning text-center">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i> No se encontraron productos para "<strong>{{ query }}</strong>".
+                    Prueba con otra palabra o explora los <a href="/" class="alert-link">productos disponibles</a>.
+                </div>
+            </div>
+        {% endif %}
+    </div>
+
+    <a id="scrollTopButton" href="#" class="btn btn-primary d-flex align-items-center justify-content-center">
+        <i class="bi bi-arrow-up-short"></i>
+    </a>
+    <footer class="text-center mt-5"> 
+        UniMarket Bolivia &copy; 2024 · Tu puerta al mundo y a lo nacional.
+        | <a href="{{ url_for('admin_panel') }}" class="text-muted">Admin</a>
+    </footer>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    const filterButtons = document.querySelectorAll('.filter-btn');
+    const productCards = document.querySelectorAll('.product-card');
+    const productsContainer = document.getElementById('products-container'); // Para el FOUC
+    const modeToggle = document.getElementById('modeToggle');
+    const searchInput = document.getElementById('search-input');
+    const scrollTopButton = document.getElementById('scrollTopButton'); // Para el scroll
+
+    let currentFilter = 'all';
+
+    function applyFilters() {
+        productCards.forEach(card => {
+            const type = card.getAttribute('data-type');
+            const category = card.getAttribute('data-category');
+
+            const matchesFilter = (
+                currentFilter === 'all' ||
+                currentFilter === type ||
+                currentFilter === category
+            );
+            
+            card.classList.toggle('d-none', !matchesFilter);
+        });
+        
+        // === INICIO: CAMBIO (FOUC Fix) ===
+        // Hacemos visible el contenedor DESPUÉS de filtrar
+        if (productsContainer.style.visibility === 'hidden') {
+            productsContainer.style.visibility = 'visible';
+        }
+        // === FIN: CAMBIO (FOUC Fix) ===
+    }
+
+    filterButtons.forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            e.preventDefault(); 
+            e.stopPropagation();
+
+            currentFilter = btn.getAttribute('data-filter');
+            filterButtons.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            applyFilters();
+        });
+    });
+
+    function updateModeIcon() {
+        const icon = modeToggle.querySelector('i');
+        if (document.body.classList.contains('dark-mode')) {
+            icon.classList.replace('bi-moon-fill', 'bi-brightness-high-fill');
+        } else {
+            icon.classList.replace('bi-brightness-high-fill', 'bi-moon-fill');
+        }
+    }
+
+    function toggleDarkMode() {
+        document.body.classList.toggle('dark-mode');
+        localStorage.setItem('darkMode', document.body.classList.contains('dark-mode'));
+        updateModeIcon();
+    }
+
+    modeToggle.addEventListener('click', toggleDarkMode);
+
+    if (localStorage.getItem('darkMode') === 'true') {
+        document.body.classList.add('dark-mode');
+    }
+    updateModeIcon();
+    
+    applyFilters();
+    
+    // === INICIO: NUEVO SCRIPT (Scroll-to-Top) ===
+    window.onscroll = function() {
+        if (document.body.scrollTop > 100 || document.documentElement.scrollTop > 100) {
+            scrollTopButton.style.display = "flex";
+        } else {
+            scrollTopButton.style.display = "none";
+        }
+    };
+    scrollTopButton.addEventListener('click', (e) => {
+        e.preventDefault();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+    // === FIN: NUEVO SCRIPT (Scroll-to-Top) ===
+</script>
+</body>
+</html>

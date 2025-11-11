@@ -11,7 +11,7 @@ basedir = os.path.abspath(os.path.dirname(__file__))
 
 UPLOAD_FOLDER = os.path.join(basedir, 'static/uploads') # Ruta completa a la carpeta de subidas
 ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
-ADMIN_PASSWORD = 'unimarket123' # ¡¡¡CAMBIA ESTA CONTRASEÑA!!!
+ADMIN_PASSWORD = 'espada.com1' # ¡¡¡CAMBIA ESTA CONTRASEÑA!!!
 
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.secret_key = os.urandom(24)

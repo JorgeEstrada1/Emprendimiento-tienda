@@ -767,7 +767,9 @@ function mesa(where){
   const pgAt = (sp, x, y, z) => { const pg = new THREE.Group(); pg.position.z = z; m.add(pg); products(pg, x, y, 0.5, 0.16, 0.18); sp.pgs.push(pg); };
   ['A','B'].forEach((s,i) => {
     const cx = i ? 0.3 : -0.3;
-    const n1 = addSpace(m, info(1,s,'',''), 0.6, 0.9, 0.30, cx, 0, 0.27); pgAt(n1, cx, 0.322, -0.39); pgAt(n1, cx, 0.322, 0.39);
+    box(0.6, 0.022, 0.3, M.pine, cx, 0.311, 0, m);
+    const b1 = addSpace(m, info(1,s,'1',' · lado 1'), 0.6, 0.3, 0.30, cx, -0.3, 0.27); b1.face = -1; pgAt(b1, cx, 0.322, -0.39);
+    const b2 = addSpace(m, info(1,s,'2',' · lado 2'), 0.6, 0.3, 0.30, cx, 0.3, 0.27); pgAt(b2, cx, 0.322, 0.39);
     const a1 = addSpace(m, info(2,s,'1',' · lado 1'), 0.6, 0.3, 0.60, cx, -0.3, 0.27); a1.face = -1; pgAt(a1, cx, 0.622, -0.3);
     const a2 = addSpace(m, info(2,s,'2',' · lado 2'), 0.6, 0.3, 0.60, cx, 0.3, 0.27); pgAt(a2, cx, 0.622, 0.3);
     const n3 = addSpace(m, info(3,s,'',''), 0.6, 0.3, 0.90, cx, 0, 0.3); pgAt(n3, cx, 0.922, 0);
@@ -1422,7 +1424,9 @@ function mesa(where){
   const pgAt = (sp, x, y, z) => { const pg = new THREE.Group(); pg.position.z = z; m.add(pg); products(pg, x, y, 0.5, 0.16, 0.18); sp.pgs.push(pg); };
   ['A','B'].forEach((s,i) => {
     const cx = i ? 0.3 : -0.3;
-    const n1 = addSpace(m, info(1,s,'',''), 0.6, 0.9, 0.30, cx, 0, 0.27); pgAt(n1, cx, 0.322, -0.39); pgAt(n1, cx, 0.322, 0.39);
+    box(0.6, 0.022, 0.3, M.pine, cx, 0.311, 0, m);
+    const b1 = addSpace(m, info(1,s,'1',' · lado 1'), 0.6, 0.3, 0.30, cx, -0.3, 0.27); b1.face = -1; pgAt(b1, cx, 0.322, -0.39);
+    const b2 = addSpace(m, info(1,s,'2',' · lado 2'), 0.6, 0.3, 0.30, cx, 0.3, 0.27); pgAt(b2, cx, 0.322, 0.39);
     const a1 = addSpace(m, info(2,s,'1',' · lado 1'), 0.6, 0.3, 0.60, cx, -0.3, 0.27); a1.face = -1; pgAt(a1, cx, 0.622, -0.3);
     const a2 = addSpace(m, info(2,s,'2',' · lado 2'), 0.6, 0.3, 0.60, cx, 0.3, 0.27); pgAt(a2, cx, 0.622, 0.3);
     const n3 = addSpace(m, info(3,s,'',''), 0.6, 0.3, 0.90, cx, 0, 0.3); pgAt(n3, cx, 0.922, 0);

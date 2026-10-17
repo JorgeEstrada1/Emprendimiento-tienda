@@ -91,6 +91,9 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-off
 [hidden]{display:none!important}
 .promo{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:6px 16px;background:var(--fg);color:var(--bg);border-radius:8px;padding:12px 16px}
 .promo b{font-size:16px;font-weight:700;text-wrap:balance}
+.zona{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;border:1px solid var(--line,#ccc);border-radius:8px;padding:10px 14px;font-size:14px}
+.zona b{font-weight:700}.zona .bar{flex:1 1 140px;height:8px;border-radius:99px;background:color-mix(in srgb,var(--fg) 12%,transparent);overflow:hidden}.zona .bar i{display:block;height:100%;background:var(--libre)}
+.chip.pronto{background:#C8A87A;color:#1C2321}
 .promo .cupos{font-family:var(--mono);font-size:12px;letter-spacing:.04em;background:var(--premium);color:#1C2321;padding:4px 10px;border-radius:99px;white-space:nowrap}
 #panel{max-height:min(82vh,680px);overflow:auto;overscroll-behavior:contain}
 .sec{display:flex;flex-direction:column;gap:10px}
@@ -146,6 +149,7 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-off
   </header>
 
   <div class="promo" id="promo" hidden><b id="promo-txt"></b><span class="cupos" id="promo-cupos"></span></div>
+  <div class="zona" id="zona" hidden><span>Zona abierta: <b id="zona-nom"></b></span><span class="bar"><i id="zona-bar"></i></span><span id="zona-n"></span></div>
 
   <div id="admin-bar" hidden>
     <span id="admin-txt">Modo admin: toca un espacio para marcarlo, asignarle una marca o subir fotos.</span>
@@ -160,12 +164,13 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-off
 
   <div class="intro">
     <h2>Elige tu espacio</h2>
-    <p>Gira el local con el dedo, acércate y toca una repisa verde o dorada para ver su código, precio y reservarla. En las grises puedes ver qué marca está ahí.</p>
+    <p>Gira el local con el dedo, acércate y toca una repisa verde o dorada para ver su código, precio y reservarla. Las que brillan son las recomendadas. En las grises puedes ver qué marca está ahí, y las de madera se abren pronto.</p>
   </div>
   <div class="avail" aria-live="polite">
     <div class="k"><div class="sw" style="background:var(--libre)"></div><span><strong id="n-libre">0</strong> libres</span></div>
     <div class="k"><div class="sw" style="background:var(--premium)"></div><span><strong id="n-prem">0</strong> premium libres</span></div>
     <div class="k"><div class="sw" style="background:var(--ocupado)"></div><span><strong id="n-ocup">0</strong> ocupados</span></div>
+    <div class="k" id="k-pronto"><div class="sw" style="background:#C8A87A"></div><span><strong id="n-pronto">0</strong> próximamente</span></div>
   </div>
   <div class="group filters" role="group" aria-label="Filtrar espacios">
     <span>Ver</span>
@@ -224,6 +229,7 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-off
     <div class="fotos" id="b-fotos"></div>
     <a class="ig" id="b-ig" target="_blank" rel="noopener">Ver en Instagram</a>
   </div>
+  <p class="msg" id="p-pronto" hidden>Este espacio se abrirá pronto. Estamos llenando la tienda por zonas para que todo luzca lleno el día de la inauguración. Elige un espacio verde o dorado, ¡los que brillan son los recomendados!</p>
   <p class="msg" id="p-taken" hidden>Este espacio ya está ocupado. Elige otro espacio verde o dorado.</p>
 
   <div class="sec" id="p-free">
@@ -259,7 +265,7 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-off
   </div>
 </div>
 
-<script type="application/json" id="estado">{"ocupados": {"C1-N1": "organik", "C1-N2": "organik", "C1-N3": "organik", "C1-N4": "organik", "C1-N5": "organik", "C4-N2": "andaluza", "C4-N3": "andaluza", "C4-N4": "andaluza", "C2-N4": "glowlab", "M3-N4-A": "byfer", "C3-N3": "alfajores", "M8-N5-A": "greensplash", "G2T2-N3-BF": "yanesme", "M13-N4-B": "ticuva", "M7-N3-B": "emp52", "M3-N4-B": "margarita", "M7-N3-A": "viagney", "M12-N3-A": "bysilvi", "M11-N3-B": "printbo", "M11-N4-B": "printbo", "M11-N2-B": "printbo", "ME3-N3-A": "marcela", "M10-N2-B": "isa", "M10-N3-B": "isa", "M10-N4-B": "isa", "ME5-N2-A1": "calcomania"}, "marcas": {"organik": {"nombre": "OrganiK", "rubro": "Productos orgánicos", "ig": "", "logo": "", "fotos": []}, "andaluza": {"nombre": "Andaluza", "rubro": "Carteras, billeteras bordadas y sombreros", "ig": "", "logo": "", "fotos": []}, "glowlab": {"nombre": "GLOWLAB", "rubro": "Cosméticos naturales", "ig": "@glowlab_bo", "logo": "", "fotos": []}, "byfer": {"nombre": "ByFer Chocolatería", "rubro": "Chocolates", "ig": "", "logo": "", "fotos": []}, "alfajores": {"nombre": "Alfajores Artesanales", "rubro": "Alfajores artesanales", "ig": "", "logo": "", "fotos": []}, "yanesme": {"nombre": "Yanesme", "rubro": "Llaveros y amigurumis tejidos", "ig": "Yanesme", "logo": "", "fotos": []}, "ticuva": {"nombre": "Ticuva", "rubro": "Singani y gin", "ig": "Ticuva.bo", "logo": "", "fotos": []}, "emp52": {"nombre": "Papelería personalizada", "rubro": "Cuadernos para pintar y papelería", "ig": "", "logo": "", "fotos": []}, "margarita": {"nombre": "Café de Margarita", "rubro": "Café", "ig": "", "logo": "", "fotos": []}, "viagney": {"nombre": "CJ CAROL", "rubro": "Jabones, champús y cosméticos artesanales", "ig": "TikTok VIAGNEY", "logo": "", "fotos": []}, "bysilvi": {"nombre": "By Silvi", "rubro": "Joyas", "ig": "", "logo": "", "fotos": []}, "printbo": {"nombre": "print.bo", "rubro": "Pines, stickers y llaveros", "ig": "@print_bo", "logo": "", "fotos": []}, "marcela": {"nombre": "Marcela Zamora", "rubro": "Gorras y gafas", "ig": "", "logo": "", "fotos": []}, "isa": {"nombre": "Edén Accesorios y Regalos", "rubro": "Joyería en acero inoxidable, foleado y bañado; accesorios personalizados", "ig": "@eden_accesorios_regalostj", "logo": "", "fotos": []}, "calcomania": {"nombre": "Calco Mania", "rubro": "Stickers autoadhesivos", "ig": "@calco_mania.bo", "logo": "", "fotos": []}, "greensplash": {"nombre": "Green Splash", "rubro": "Plantas acuáticas", "ig": "", "logo": "", "fotos": []}}, "promo": {"activo": true, "texto": "Membresía Fundadores: las 20 primeras uvas del parral reciben reels gratis el primer mes y sesión de fotos", "cupos": 20, "tomados": 16}}</script>
+<script type="application/json" id="estado">{"ocupados": {"C1-N1": "organik", "C1-N2": "organik", "C1-N3": "organik", "C1-N4": "organik", "C1-N5": "organik", "C4-N2": "andaluza", "C4-N3": "andaluza", "C4-N4": "andaluza", "C2-N4": "glowlab", "M3-N4-A": "byfer", "C3-N3": "alfajores", "M8-N5-A": "greensplash", "G2T2-N3-BF": "yanesme", "M13-N4-B": "ticuva", "M7-N3-B": "emp52", "M3-N4-B": "margarita", "M7-N3-A": "viagney", "M12-N3-A": "bysilvi", "M11-N3-B": "printbo", "M11-N4-B": "printbo", "M11-N2-B": "printbo", "ME3-N3-A": "marcela", "M10-N2-B": "isa", "M10-N3-B": "isa", "M10-N4-B": "isa", "ME5-N2-A1": "calcomania"}, "marcas": {"organik": {"nombre": "OrganiK", "rubro": "Productos orgánicos", "ig": "", "logo": "", "fotos": []}, "andaluza": {"nombre": "Andaluza", "rubro": "Carteras, billeteras bordadas y sombreros", "ig": "", "logo": "", "fotos": []}, "glowlab": {"nombre": "GLOWLAB", "rubro": "Cosméticos naturales", "ig": "@glowlab_bo", "logo": "", "fotos": []}, "byfer": {"nombre": "ByFer Chocolatería", "rubro": "Chocolates", "ig": "", "logo": "", "fotos": []}, "alfajores": {"nombre": "Alfajores Artesanales", "rubro": "Alfajores artesanales", "ig": "", "logo": "", "fotos": []}, "yanesme": {"nombre": "Yanesme", "rubro": "Llaveros y amigurumis tejidos", "ig": "Yanesme", "logo": "", "fotos": []}, "ticuva": {"nombre": "Ticuva", "rubro": "Singani y gin", "ig": "Ticuva.bo", "logo": "", "fotos": []}, "emp52": {"nombre": "Papelería personalizada", "rubro": "Cuadernos para pintar y papelería", "ig": "", "logo": "", "fotos": []}, "margarita": {"nombre": "Café de Margarita", "rubro": "Café", "ig": "", "logo": "", "fotos": []}, "viagney": {"nombre": "CJ CAROL", "rubro": "Jabones, champús y cosméticos artesanales", "ig": "TikTok VIAGNEY", "logo": "", "fotos": []}, "bysilvi": {"nombre": "By Silvi", "rubro": "Joyas", "ig": "", "logo": "", "fotos": []}, "printbo": {"nombre": "print.bo", "rubro": "Pines, stickers y llaveros", "ig": "@print_bo", "logo": "", "fotos": []}, "marcela": {"nombre": "Marcela Zamora", "rubro": "Gorras y gafas", "ig": "", "logo": "", "fotos": []}, "isa": {"nombre": "Edén Accesorios y Regalos", "rubro": "Joyería en acero inoxidable, foleado y bañado; accesorios personalizados", "ig": "@eden_accesorios_regalostj", "logo": "", "fotos": []}, "calcomania": {"nombre": "Calco Mania", "rubro": "Stickers autoadhesivos", "ig": "@calco_mania.bo", "logo": "", "fotos": []}, "greensplash": {"nombre": "Green Splash", "rubro": "Plantas acuáticas", "ig": "", "logo": "", "fotos": []}}, "zona": {"nombre": "Caja y fondo", "abiertos": ["M10", "M11", "M12", "C1", "C2", "C3", "C4", "ME5"], "niveles": [2, 3, 4], "recomendados": ["M11-N2-A", "M11-N3-A", "M11-N4-A", "M10-N3-A", "M12-N3-B", "C2-N3", "ME5-N3-A", "ME5-N2-A2"]}, "promo": {"activo": true, "texto": "Membresía Fundadores: las 20 primeras uvas del parral reciben reels gratis el primer mes y sesión de fotos", "cupos": 20, "tomados": 16}}</script>
 <script type="text/plain" id="fuente"><title>El Parralito</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -352,6 +358,9 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-off
 [hidden]{display:none!important}
 .promo{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:6px 16px;background:var(--fg);color:var(--bg);border-radius:8px;padding:12px 16px}
 .promo b{font-size:16px;font-weight:700;text-wrap:balance}
+.zona{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;border:1px solid var(--line,#ccc);border-radius:8px;padding:10px 14px;font-size:14px}
+.zona b{font-weight:700}.zona .bar{flex:1 1 140px;height:8px;border-radius:99px;background:color-mix(in srgb,var(--fg) 12%,transparent);overflow:hidden}.zona .bar i{display:block;height:100%;background:var(--libre)}
+.chip.pronto{background:#C8A87A;color:#1C2321}
 .promo .cupos{font-family:var(--mono);font-size:12px;letter-spacing:.04em;background:var(--premium);color:#1C2321;padding:4px 10px;border-radius:99px;white-space:nowrap}
 #panel{max-height:min(82vh,680px);overflow:auto;overscroll-behavior:contain}
 .sec{display:flex;flex-direction:column;gap:10px}
@@ -407,6 +416,7 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-off
   </header>
 
   <div class="promo" id="promo" hidden><b id="promo-txt"></b><span class="cupos" id="promo-cupos"></span></div>
+  <div class="zona" id="zona" hidden><span>Zona abierta: <b id="zona-nom"></b></span><span class="bar"><i id="zona-bar"></i></span><span id="zona-n"></span></div>
 
   <div id="admin-bar" hidden>
     <span id="admin-txt">Modo admin: toca un espacio para marcarlo, asignarle una marca o subir fotos.</span>
@@ -421,12 +431,13 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-off
 
   <div class="intro">
     <h2>Elige tu espacio</h2>
-    <p>Gira el local con el dedo, acércate y toca una repisa verde o dorada para ver su código, precio y reservarla. En las grises puedes ver qué marca está ahí.</p>
+    <p>Gira el local con el dedo, acércate y toca una repisa verde o dorada para ver su código, precio y reservarla. Las que brillan son las recomendadas. En las grises puedes ver qué marca está ahí, y las de madera se abren pronto.</p>
   </div>
   <div class="avail" aria-live="polite">
     <div class="k"><div class="sw" style="background:var(--libre)"></div><span><strong id="n-libre">0</strong> libres</span></div>
     <div class="k"><div class="sw" style="background:var(--premium)"></div><span><strong id="n-prem">0</strong> premium libres</span></div>
     <div class="k"><div class="sw" style="background:var(--ocupado)"></div><span><strong id="n-ocup">0</strong> ocupados</span></div>
+    <div class="k" id="k-pronto"><div class="sw" style="background:#C8A87A"></div><span><strong id="n-pronto">0</strong> próximamente</span></div>
   </div>
   <div class="group filters" role="group" aria-label="Filtrar espacios">
     <span>Ver</span>
@@ -485,6 +496,7 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-off
     <div class="fotos" id="b-fotos"></div>
     <a class="ig" id="b-ig" target="_blank" rel="noopener">Ver en Instagram</a>
   </div>
+  <p class="msg" id="p-pronto" hidden>Este espacio se abrirá pronto. Estamos llenando la tienda por zonas para que todo luzca lleno el día de la inauguración. Elige un espacio verde o dorado, ¡los que brillan son los recomendados!</p>
   <p class="msg" id="p-taken" hidden>Este espacio ya está ocupado. Elige otro espacio verde o dorado.</p>
 
   <div class="sec" id="p-free">
@@ -594,6 +606,8 @@ const S = {
   premium: new THREE.MeshStandardMaterial({ color:0xE0AC2E, roughness:.45, metalness:.15, emissive:0x3d2a00, emissiveIntensity:.35 }),
   ocupado: new THREE.MeshStandardMaterial({ color:0x8A8F8C, roughness:.8 }),
   sel:     new THREE.MeshStandardMaterial({ color:0x3D8BFF, roughness:.4, emissive:0x1d4fb0, emissiveIntensity:.8 }),
+  rec:     new THREE.MeshStandardMaterial({ color:0x46D474, roughness:.45, emissive:0x2bd160, emissiveIntensity:.6 }),
+  recP:    new THREE.MeshStandardMaterial({ color:0xF0BE3C, roughness:.4, metalness:.15, emissive:0xd99a10, emissiveIntensity:.6 }),
 };
 const prodMats = [0xD94F3D,0xF2B134,0x3E8E7E,0x5470C6,0xE7DCC8,0x9A6FB0,0x2D2D2D,0xE88AA8,0x7FA650,0xC9A27E]
   .map(c => new THREE.MeshStandardMaterial({ color:c, roughness:.7 }));
@@ -801,6 +815,7 @@ function normalize(e){
     else if (e.ocupados && typeof e.ocupados === 'object') Object.assign(o.ocupados, e.ocupados);
     if (e.marcas && typeof e.marcas === 'object') Object.assign(o.marcas, e.marcas);
     if (e.promo && typeof e.promo === 'object') Object.assign(o.promo, e.promo);
+    if (e.zona && typeof e.zona === 'object') o.zona = e.zona;
   }
   return o;
 }
@@ -810,6 +825,12 @@ let draft = JSON.parse(JSON.stringify(estado));
 let adminOn = false, showAvail = true, filtro = 'todos', selected = null, selSet = new Set(), packs = [], packIdx = 0;
 const cur = () => adminOn ? draft : estado;
 const isTaken = sp => Object.prototype.hasOwnProperty.call(cur().ocupados, sp.code);
+const mueble = sp => sp.code.split('-')[0];
+const isOpen = sp => { const z = cur().zona; if (adminOn || !z || !Array.isArray(z.abiertos)) return true;
+  if (!z.abiertos.includes(mueble(sp))) return false;
+  if (Array.isArray(z.niveles) && 'MCG'.includes(sp.family) && sp.family !== 'ME' && !z.niveles.includes(sp.li+1)) return false;
+  return true; };
+const isRec = sp => { const z = cur().zona; return !adminOn && !!z && Array.isArray(z.recomendados) && z.recomendados.includes(sp.code); };
 const brandOf = sp => { const id = cur().ocupados[sp.code]; return id ? cur().marcas[id] : null; };
 
 /* ---------- productos reales (fotos) en la repisa ---------- */
@@ -846,25 +867,38 @@ const applyAll = () => SPACES.forEach(applyVisual);
 /* ---------- colores, filtros y conteos ---------- */
 function matchF(sp){
   const t = isTaken(sp);
-  if (filtro === 'libres') return !t;
-  if (filtro === 'premium') return sp.premium && !t;
-  if (filtro === 'barato') return !t && sp.price <= 150;
+  if (filtro === 'libres') return !t && isOpen(sp);
+  if (filtro === 'premium') return sp.premium && !t && isOpen(sp);
+  if (filtro === 'barato') return !t && isOpen(sp) && sp.price <= 150;
   if (filtro === 'marcas') return t && !!brandOf(sp);
   return true;
 }
 function paint(){
   SPACES.forEach(sp => {
-    sp.board.material = selSet.has(sp) ? S.sel : !showAvail ? M.pine : !matchF(sp) ? S.dim : isTaken(sp) ? S.ocupado : sp.premium ? S.premium : S.libre;
+    sp.board.material = selSet.has(sp) ? S.sel : !showAvail ? M.pine : !matchF(sp) ? S.dim : isTaken(sp) ? S.ocupado : !isOpen(sp) ? M.pine : isRec(sp) ? (sp.premium ? S.recP : S.rec) : sp.premium ? S.premium : S.libre;
   });
   const vis = SPACES.filter(sp => sp.phase === 1 || phase2.visible);
-  document.getElementById('n-libre').textContent = vis.filter(sp => !isTaken(sp)).length;
-  document.getElementById('n-prem').textContent = vis.filter(sp => sp.premium && !isTaken(sp)).length;
+  document.getElementById('n-libre').textContent = vis.filter(sp => !isTaken(sp) && isOpen(sp)).length;
+  document.getElementById('n-prem').textContent = vis.filter(sp => sp.premium && !isTaken(sp) && isOpen(sp)).length;
+  const np = vis.filter(sp => !isTaken(sp) && !isOpen(sp)).length; document.getElementById('n-pronto').textContent = np; document.getElementById('k-pronto').hidden = !np;
+  renderZona();
   document.getElementById('n-ocup').textContent = vis.filter(isTaken).length;
   renderPromo();
 }
 document.querySelectorAll('.filters button').forEach(b => b.addEventListener('click', () => {
   filtro = b.dataset.f; document.querySelectorAll('.filters button').forEach(x => x.setAttribute('aria-pressed', String(x === b))); paint();
 }));
+
+/* ---------- zona abierta ---------- */
+function renderZona(){
+  const z = cur().zona, el = document.getElementById('zona');
+  if (adminOn || !z || !Array.isArray(z.abiertos)){ el.hidden = true; return; }
+  const zs = SPACES.filter(isOpen), ok = zs.filter(isTaken).length;
+  document.getElementById('zona-nom').textContent = z.nombre || 'Zona 1';
+  document.getElementById('zona-n').textContent = `${ok} de ${zs.length} espacios ocupados`;
+  document.getElementById('zona-bar').style.width = (zs.length ? Math.round(100*ok/zs.length) : 0) + '%';
+  el.hidden = false;
+}
 
 /* ---------- promoción ---------- */
 function renderPromo(){
@@ -881,7 +915,7 @@ function computePacks(sp){
   const out = [{ key:'1', name:'Solo este espacio', note: sp.premium ? 'Ubicación premium' : '', list:[sp], price: sp.price }];
   if (sp.premium || !sp.col) return out;
   const same = SPACES.filter(o => o.col === sp.col).sort((a,b) => a.li - b.li);
-  const free = o => !isTaken(o);
+  const free = o => !isTaken(o) && isOpen(o);
   for (const start of [sp.li-1, sp.li, sp.li-2]){
     const win = same.filter(o => o.li >= start && o.li < start+3);
     if (start >= 0 && win.length === 3 && win.every(free)){
@@ -938,8 +972,10 @@ function openPanel(sp){
   const taken = isTaken(sp), b = taken ? brandOf(sp) : null;
   $('p-code').textContent = sp.code; $('p-desc').textContent = sp.desc; $('p-where').textContent = sp.where; $('p-size').textContent = Math.round(sp.bw*100) + ' × ' + Math.round((sp.family==='G' ? 0.2 : sp.bd)*100) + ' cm';
   const chip = $('p-chip');
-  chip.className = 'chip ' + (taken ? 'ocupado' : sp.premium ? 'premium' : 'libre');
-  chip.textContent = taken ? 'Ocupado' : sp.premium ? 'Premium · libre' : 'Libre';
+  const pronto = !taken && !isOpen(sp);
+  chip.className = 'chip ' + (taken ? 'ocupado' : pronto ? 'pronto' : sp.premium ? 'premium' : 'libre');
+  chip.textContent = taken ? 'Ocupado' : pronto ? 'Próximamente' : isRec(sp) ? (sp.premium ? 'Premium · recomendado' : 'Recomendado') : sp.premium ? 'Premium · libre' : 'Libre';
+  $('p-pronto').hidden = !pronto;
   $('p-brand').hidden = !b; $('p-taken').hidden = !(taken && !b) || adminOn;
   if (b){
     $('b-name').textContent = b.nombre || 'Marca'; $('b-rubro').textContent = b.rubro || '';
@@ -948,8 +984,8 @@ function openPanel(sp){
     (b.fotos||[]).slice(0,4).forEach(u => { const im = document.createElement('img'); im.src = u; im.alt = 'Producto de ' + (b.nombre||'la marca'); im.loading = 'lazy'; fl.appendChild(im); });
     const ig = igUrl(b.ig); $('b-ig').hidden = !ig; if (ig) { $('b-ig').href = ig; $('b-ig').textContent = 'Ver ' + (b.ig.startsWith('@') ? b.ig : '@'+b.ig.replace(/^https?:\/\/(www\.)?instagram\.com\//,'')) + ' en Instagram'; }
   }
-  $('p-free').hidden = taken || adminOn;
-  if (!taken && !adminOn){
+  $('p-free').hidden = taken || pronto || adminOn;
+  if (!taken && !pronto && !adminOn){
     packs = computePacks(sp); packIdx = 0; renderPacks(); selSet = new Set(packs[0].list);
     $('p-price').textContent = sp.price + ' Bs/mes';
     const p = cur().promo, left = Math.max(0, (+p.cupos||0) - (+p.tomados||0));
@@ -1173,6 +1209,7 @@ renderer.setAnimationLoop(() => {
     controls.target.lerpVectors(tween.from.t, tween.to.t, e);
     if (k===1) tween = null;
   }
+  { const k = .45 + .45*Math.sin(performance.now()/380); S.rec.emissiveIntensity = k; S.recP.emissiveIntensity = k; }
   controls.update();
   renderer.render(scene,camera);
   labelR.render(scene,camera);
@@ -1251,6 +1288,8 @@ const S = {
   premium: new THREE.MeshStandardMaterial({ color:0xE0AC2E, roughness:.45, metalness:.15, emissive:0x3d2a00, emissiveIntensity:.35 }),
   ocupado: new THREE.MeshStandardMaterial({ color:0x8A8F8C, roughness:.8 }),
   sel:     new THREE.MeshStandardMaterial({ color:0x3D8BFF, roughness:.4, emissive:0x1d4fb0, emissiveIntensity:.8 }),
+  rec:     new THREE.MeshStandardMaterial({ color:0x46D474, roughness:.45, emissive:0x2bd160, emissiveIntensity:.6 }),
+  recP:    new THREE.MeshStandardMaterial({ color:0xF0BE3C, roughness:.4, metalness:.15, emissive:0xd99a10, emissiveIntensity:.6 }),
 };
 const prodMats = [0xD94F3D,0xF2B134,0x3E8E7E,0x5470C6,0xE7DCC8,0x9A6FB0,0x2D2D2D,0xE88AA8,0x7FA650,0xC9A27E]
   .map(c => new THREE.MeshStandardMaterial({ color:c, roughness:.7 }));
@@ -1458,6 +1497,7 @@ function normalize(e){
     else if (e.ocupados && typeof e.ocupados === 'object') Object.assign(o.ocupados, e.ocupados);
     if (e.marcas && typeof e.marcas === 'object') Object.assign(o.marcas, e.marcas);
     if (e.promo && typeof e.promo === 'object') Object.assign(o.promo, e.promo);
+    if (e.zona && typeof e.zona === 'object') o.zona = e.zona;
   }
   return o;
 }
@@ -1467,6 +1507,12 @@ let draft = JSON.parse(JSON.stringify(estado));
 let adminOn = false, showAvail = true, filtro = 'todos', selected = null, selSet = new Set(), packs = [], packIdx = 0;
 const cur = () => adminOn ? draft : estado;
 const isTaken = sp => Object.prototype.hasOwnProperty.call(cur().ocupados, sp.code);
+const mueble = sp => sp.code.split('-')[0];
+const isOpen = sp => { const z = cur().zona; if (adminOn || !z || !Array.isArray(z.abiertos)) return true;
+  if (!z.abiertos.includes(mueble(sp))) return false;
+  if (Array.isArray(z.niveles) && 'MCG'.includes(sp.family) && sp.family !== 'ME' && !z.niveles.includes(sp.li+1)) return false;
+  return true; };
+const isRec = sp => { const z = cur().zona; return !adminOn && !!z && Array.isArray(z.recomendados) && z.recomendados.includes(sp.code); };
 const brandOf = sp => { const id = cur().ocupados[sp.code]; return id ? cur().marcas[id] : null; };
 
 /* ---------- productos reales (fotos) en la repisa ---------- */
@@ -1503,25 +1549,38 @@ const applyAll = () => SPACES.forEach(applyVisual);
 /* ---------- colores, filtros y conteos ---------- */
 function matchF(sp){
   const t = isTaken(sp);
-  if (filtro === 'libres') return !t;
-  if (filtro === 'premium') return sp.premium && !t;
-  if (filtro === 'barato') return !t && sp.price <= 150;
+  if (filtro === 'libres') return !t && isOpen(sp);
+  if (filtro === 'premium') return sp.premium && !t && isOpen(sp);
+  if (filtro === 'barato') return !t && isOpen(sp) && sp.price <= 150;
   if (filtro === 'marcas') return t && !!brandOf(sp);
   return true;
 }
 function paint(){
   SPACES.forEach(sp => {
-    sp.board.material = selSet.has(sp) ? S.sel : !showAvail ? M.pine : !matchF(sp) ? S.dim : isTaken(sp) ? S.ocupado : sp.premium ? S.premium : S.libre;
+    sp.board.material = selSet.has(sp) ? S.sel : !showAvail ? M.pine : !matchF(sp) ? S.dim : isTaken(sp) ? S.ocupado : !isOpen(sp) ? M.pine : isRec(sp) ? (sp.premium ? S.recP : S.rec) : sp.premium ? S.premium : S.libre;
   });
   const vis = SPACES.filter(sp => sp.phase === 1 || phase2.visible);
-  document.getElementById('n-libre').textContent = vis.filter(sp => !isTaken(sp)).length;
-  document.getElementById('n-prem').textContent = vis.filter(sp => sp.premium && !isTaken(sp)).length;
+  document.getElementById('n-libre').textContent = vis.filter(sp => !isTaken(sp) && isOpen(sp)).length;
+  document.getElementById('n-prem').textContent = vis.filter(sp => sp.premium && !isTaken(sp) && isOpen(sp)).length;
+  const np = vis.filter(sp => !isTaken(sp) && !isOpen(sp)).length; document.getElementById('n-pronto').textContent = np; document.getElementById('k-pronto').hidden = !np;
+  renderZona();
   document.getElementById('n-ocup').textContent = vis.filter(isTaken).length;
   renderPromo();
 }
 document.querySelectorAll('.filters button').forEach(b => b.addEventListener('click', () => {
   filtro = b.dataset.f; document.querySelectorAll('.filters button').forEach(x => x.setAttribute('aria-pressed', String(x === b))); paint();
 }));
+
+/* ---------- zona abierta ---------- */
+function renderZona(){
+  const z = cur().zona, el = document.getElementById('zona');
+  if (adminOn || !z || !Array.isArray(z.abiertos)){ el.hidden = true; return; }
+  const zs = SPACES.filter(isOpen), ok = zs.filter(isTaken).length;
+  document.getElementById('zona-nom').textContent = z.nombre || 'Zona 1';
+  document.getElementById('zona-n').textContent = `${ok} de ${zs.length} espacios ocupados`;
+  document.getElementById('zona-bar').style.width = (zs.length ? Math.round(100*ok/zs.length) : 0) + '%';
+  el.hidden = false;
+}
 
 /* ---------- promoción ---------- */
 function renderPromo(){
@@ -1538,7 +1597,7 @@ function computePacks(sp){
   const out = [{ key:'1', name:'Solo este espacio', note: sp.premium ? 'Ubicación premium' : '', list:[sp], price: sp.price }];
   if (sp.premium || !sp.col) return out;
   const same = SPACES.filter(o => o.col === sp.col).sort((a,b) => a.li - b.li);
-  const free = o => !isTaken(o);
+  const free = o => !isTaken(o) && isOpen(o);
   for (const start of [sp.li-1, sp.li, sp.li-2]){
     const win = same.filter(o => o.li >= start && o.li < start+3);
     if (start >= 0 && win.length === 3 && win.every(free)){
@@ -1595,8 +1654,10 @@ function openPanel(sp){
   const taken = isTaken(sp), b = taken ? brandOf(sp) : null;
   $('p-code').textContent = sp.code; $('p-desc').textContent = sp.desc; $('p-where').textContent = sp.where; $('p-size').textContent = Math.round(sp.bw*100) + ' × ' + Math.round((sp.family==='G' ? 0.2 : sp.bd)*100) + ' cm';
   const chip = $('p-chip');
-  chip.className = 'chip ' + (taken ? 'ocupado' : sp.premium ? 'premium' : 'libre');
-  chip.textContent = taken ? 'Ocupado' : sp.premium ? 'Premium · libre' : 'Libre';
+  const pronto = !taken && !isOpen(sp);
+  chip.className = 'chip ' + (taken ? 'ocupado' : pronto ? 'pronto' : sp.premium ? 'premium' : 'libre');
+  chip.textContent = taken ? 'Ocupado' : pronto ? 'Próximamente' : isRec(sp) ? (sp.premium ? 'Premium · recomendado' : 'Recomendado') : sp.premium ? 'Premium · libre' : 'Libre';
+  $('p-pronto').hidden = !pronto;
   $('p-brand').hidden = !b; $('p-taken').hidden = !(taken && !b) || adminOn;
   if (b){
     $('b-name').textContent = b.nombre || 'Marca'; $('b-rubro').textContent = b.rubro || '';
@@ -1605,8 +1666,8 @@ function openPanel(sp){
     (b.fotos||[]).slice(0,4).forEach(u => { const im = document.createElement('img'); im.src = u; im.alt = 'Producto de ' + (b.nombre||'la marca'); im.loading = 'lazy'; fl.appendChild(im); });
     const ig = igUrl(b.ig); $('b-ig').hidden = !ig; if (ig) { $('b-ig').href = ig; $('b-ig').textContent = 'Ver ' + (b.ig.startsWith('@') ? b.ig : '@'+b.ig.replace(/^https?:\/\/(www\.)?instagram\.com\//,'')) + ' en Instagram'; }
   }
-  $('p-free').hidden = taken || adminOn;
-  if (!taken && !adminOn){
+  $('p-free').hidden = taken || pronto || adminOn;
+  if (!taken && !pronto && !adminOn){
     packs = computePacks(sp); packIdx = 0; renderPacks(); selSet = new Set(packs[0].list);
     $('p-price').textContent = sp.price + ' Bs/mes';
     const p = cur().promo, left = Math.max(0, (+p.cupos||0) - (+p.tomados||0));
@@ -1830,10 +1891,9 @@ renderer.setAnimationLoop(() => {
     controls.target.lerpVectors(tween.from.t, tween.to.t, e);
     if (k===1) tween = null;
   }
+  { const k = .45 + .45*Math.sin(performance.now()/380); S.rec.emissiveIntensity = k; S.recP.emissiveIntensity = k; }
   controls.update();
   renderer.render(scene,camera);
   labelR.render(scene,camera);
 });
 </script>
-
-</body></html>

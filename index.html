@@ -93,6 +93,10 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-off
 .promo b{font-size:16px;font-weight:700;text-wrap:balance}
 .zona{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;border:1px solid var(--line,#ccc);border-radius:8px;padding:10px 14px;font-size:14px}
 .zona b{font-weight:700}.zona .bar{flex:1 1 140px;height:8px;border-radius:99px;background:color-mix(in srgb,var(--fg) 12%,transparent);overflow:hidden}.zona .bar i{display:block;height:100%;background:var(--libre)}
+#btn-disp{position:absolute;left:50%;bottom:18px;transform:translateX(-50%);z-index:5;font:700 17px/1.1 inherit;font-family:inherit;padding:14px 22px;border-radius:99px;border:0;background:var(--libre);color:#fff;box-shadow:0 6px 20px rgba(0,0,0,.25);cursor:pointer;display:flex;align-items:center;gap:8px;white-space:nowrap;animation:pulso 1.8s ease-in-out infinite}
+#btn-disp[aria-pressed="true"]{background:var(--fg);color:var(--bg);animation:none}
+@keyframes pulso{0%,100%{box-shadow:0 0 0 0 rgba(46,154,82,.55),0 6px 20px rgba(0,0,0,.25)}50%{box-shadow:0 0 0 12px rgba(46,154,82,0),0 6px 20px rgba(0,0,0,.25)}}
+@media (prefers-reduced-motion:reduce){#btn-disp{animation:none}}
 .chip.pronto{background:#C8A87A;color:#1C2321}
 .promo .cupos{font-family:var(--mono);font-size:12px;letter-spacing:.04em;background:var(--premium);color:#1C2321;padding:4px 10px;border-radius:99px;white-space:nowrap}
 #panel{max-height:min(82vh,680px);overflow:auto;overscroll-behavior:contain}
@@ -164,7 +168,7 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-off
 
   <div class="intro">
     <h2>Elige tu espacio</h2>
-    <p>Gira el local con el dedo, acércate y toca una repisa verde o dorada para ver su código, precio y reservarla. Las que brillan son las recomendadas. En las grises puedes ver qué marca está ahí, y las de madera se abren pronto.</p>
+    <p>Gira el local con el dedo, acércate y toca una repisa verde o dorada para ver su código, precio y reservarla. En las grises puedes ver qué marca está ahí, y las de madera todavía no están habilitadas. Toca «Repisas disponibles» para ver solo los espacios que puedes reservar ahora.</p>
   </div>
   <div class="avail" aria-live="polite">
     <div class="k"><div class="sw" style="background:var(--libre)"></div><span><strong id="n-libre">0</strong> libres</span></div>
@@ -184,6 +188,7 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-off
   <div class="stage">
     <div id="view" aria-label="Modelo 3D del local. Cada repisa muestra si está libre, ocupada o es premium." role="img"></div>
     <div class="hint">Arrastra para girar · pellizca para acercar · toca una repisa</div>
+    <button id="btn-disp" aria-pressed="false" hidden>🟢 Repisas disponibles</button>
   </div>
 
   <div class="bar">
@@ -229,7 +234,7 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-off
     <div class="fotos" id="b-fotos"></div>
     <a class="ig" id="b-ig" target="_blank" rel="noopener">Ver en Instagram</a>
   </div>
-  <p class="msg" id="p-pronto" hidden>Este espacio se abrirá pronto. Estamos llenando la tienda por zonas para que todo luzca lleno el día de la inauguración. Elige un espacio verde o dorado, ¡los que brillan son los recomendados!</p>
+  <p class="msg" id="p-pronto" hidden>Este espacio todavía no está habilitado. Estamos llenando la tienda por etapas para que todo luzca lleno el día de la inauguración. Toca «Repisas disponibles» para ver los espacios que puedes reservar ahora.</p>
   <p class="msg" id="p-taken" hidden>Este espacio ya está ocupado. Elige otro espacio verde o dorado.</p>
 
   <div class="sec" id="p-free">
@@ -265,7 +270,7 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-off
   </div>
 </div>
 
-<script type="application/json" id="estado">{"ocupados": {"C1-N1": "organik", "C1-N2": "organik", "C1-N3": "organik", "C1-N4": "organik", "C1-N5": "organik", "C4-N2": "andaluza", "C4-N3": "andaluza", "C4-N4": "andaluza", "C2-N4": "glowlab", "M3-N4-A": "byfer", "C3-N3": "alfajores", "M8-N5-A": "greensplash", "G2T2-N3-BF": "yanesme", "M13-N4-B": "ticuva", "M7-N3-B": "emp52", "M3-N4-B": "margarita", "M7-N3-A": "viagney", "M12-N3-A": "bysilvi", "M11-N3-B": "printbo", "M11-N4-B": "printbo", "M11-N2-B": "printbo", "ME3-N3-A": "marcela", "M10-N2-B": "isa", "M10-N3-B": "isa", "M10-N4-B": "isa", "ME5-N2-A1": "calcomania"}, "marcas": {"organik": {"nombre": "OrganiK", "rubro": "Productos orgánicos", "ig": "", "logo": "", "fotos": []}, "andaluza": {"nombre": "Andaluza", "rubro": "Carteras, billeteras bordadas y sombreros", "ig": "", "logo": "", "fotos": []}, "glowlab": {"nombre": "GLOWLAB", "rubro": "Cosméticos naturales", "ig": "@glowlab_bo", "logo": "", "fotos": []}, "byfer": {"nombre": "ByFer Chocolatería", "rubro": "Chocolates", "ig": "", "logo": "", "fotos": []}, "alfajores": {"nombre": "Alfajores Artesanales", "rubro": "Alfajores artesanales", "ig": "", "logo": "", "fotos": []}, "yanesme": {"nombre": "Yanesme", "rubro": "Llaveros y amigurumis tejidos", "ig": "Yanesme", "logo": "", "fotos": []}, "ticuva": {"nombre": "Ticuva", "rubro": "Singani y gin", "ig": "Ticuva.bo", "logo": "", "fotos": []}, "emp52": {"nombre": "Papelería personalizada", "rubro": "Cuadernos para pintar y papelería", "ig": "", "logo": "", "fotos": []}, "margarita": {"nombre": "Café de Margarita", "rubro": "Café", "ig": "", "logo": "", "fotos": []}, "viagney": {"nombre": "CJ CAROL", "rubro": "Jabones, champús y cosméticos artesanales", "ig": "TikTok VIAGNEY", "logo": "", "fotos": []}, "bysilvi": {"nombre": "By Silvi", "rubro": "Joyas", "ig": "", "logo": "", "fotos": []}, "printbo": {"nombre": "print.bo", "rubro": "Pines, stickers y llaveros", "ig": "@print_bo", "logo": "", "fotos": []}, "marcela": {"nombre": "Marcela Zamora", "rubro": "Gorras y gafas", "ig": "", "logo": "", "fotos": []}, "isa": {"nombre": "Edén Accesorios y Regalos", "rubro": "Joyería en acero inoxidable, foleado y bañado; accesorios personalizados", "ig": "@eden_accesorios_regalostj", "logo": "", "fotos": []}, "calcomania": {"nombre": "Calco Mania", "rubro": "Stickers autoadhesivos", "ig": "@calco_mania.bo", "logo": "", "fotos": []}, "greensplash": {"nombre": "Green Splash", "rubro": "Plantas acuáticas", "ig": "", "logo": "", "fotos": []}}, "zona": {"nombre": "Caja y fondo", "abiertos": ["M10", "M11", "M12", "C1", "C2", "C3", "C4", "ME5"], "niveles": [2, 3, 4], "recomendados": ["M11-N2-A", "M11-N3-A", "M11-N4-A", "M10-N3-A", "M12-N3-B", "C2-N3", "ME5-N3-A", "ME5-N2-A2"]}, "promo": {"activo": true, "texto": "Membresía Fundadores: las 20 primeras uvas del parral reciben reels gratis el primer mes y sesión de fotos", "cupos": 20, "tomados": 16}}</script>
+<script type="application/json" id="estado">{"ocupados": {"C1-N1": "organik", "C1-N2": "organik", "C1-N3": "organik", "C1-N4": "organik", "C1-N5": "organik", "C4-N2": "andaluza", "C4-N3": "andaluza", "C4-N4": "andaluza", "C2-N4": "glowlab", "M3-N4-A": "byfer", "C3-N3": "alfajores", "M8-N5-A": "greensplash", "G2T2-N3-BF": "yanesme", "M13-N4-B": "ticuva", "M7-N3-B": "emp52", "M3-N4-B": "margarita", "M7-N3-A": "viagney", "M12-N3-A": "bysilvi", "M11-N3-B": "printbo", "M11-N4-B": "printbo", "M11-N2-B": "printbo", "ME3-N3-A": "marcela", "M10-N2-B": "isa", "M10-N3-B": "isa", "M10-N4-B": "isa", "ME5-N2-A1": "calcomania"}, "marcas": {"organik": {"nombre": "OrganiK", "rubro": "Productos orgánicos", "ig": "", "logo": "", "fotos": []}, "andaluza": {"nombre": "Andaluza", "rubro": "Carteras, billeteras bordadas y sombreros", "ig": "", "logo": "", "fotos": []}, "glowlab": {"nombre": "GLOWLAB", "rubro": "Cosméticos naturales", "ig": "@glowlab_bo", "logo": "", "fotos": []}, "byfer": {"nombre": "ByFer Chocolatería", "rubro": "Chocolates", "ig": "", "logo": "", "fotos": []}, "alfajores": {"nombre": "Alfajores Artesanales", "rubro": "Alfajores artesanales", "ig": "", "logo": "", "fotos": []}, "yanesme": {"nombre": "Yanesme", "rubro": "Llaveros y amigurumis tejidos", "ig": "Yanesme", "logo": "", "fotos": []}, "ticuva": {"nombre": "Ticuva", "rubro": "Singani y gin", "ig": "Ticuva.bo", "logo": "", "fotos": []}, "emp52": {"nombre": "Papelería personalizada", "rubro": "Cuadernos para pintar y papelería", "ig": "", "logo": "", "fotos": []}, "margarita": {"nombre": "Café de Margarita", "rubro": "Café", "ig": "", "logo": "", "fotos": []}, "viagney": {"nombre": "CJ CAROL", "rubro": "Jabones, champús y cosméticos artesanales", "ig": "TikTok VIAGNEY", "logo": "", "fotos": []}, "bysilvi": {"nombre": "By Silvi", "rubro": "Joyas", "ig": "", "logo": "", "fotos": []}, "printbo": {"nombre": "print.bo", "rubro": "Pines, stickers y llaveros", "ig": "@print_bo", "logo": "", "fotos": []}, "marcela": {"nombre": "Marcela Zamora", "rubro": "Gorras y gafas", "ig": "", "logo": "", "fotos": []}, "isa": {"nombre": "Edén Accesorios y Regalos", "rubro": "Joyería en acero inoxidable, foleado y bañado; accesorios personalizados", "ig": "@eden_accesorios_regalostj", "logo": "", "fotos": []}, "calcomania": {"nombre": "Calco Mania", "rubro": "Stickers autoadhesivos", "ig": "@calco_mania.bo", "logo": "", "fotos": []}, "greensplash": {"nombre": "Green Splash", "rubro": "Plantas acuáticas", "ig": "", "logo": "", "fotos": []}}, "zona": {"nombre": "Paredes y vitrinas", "abiertos": ["M1", "M2", "M3", "M4", "M5", "M6", "M7", "M8", "M9", "M10", "M11", "M12", "M13", "M14", "C1", "C2", "C3", "C4", "ME3", "ME5"]}, "promo": {"activo": true, "texto": "Membresía Fundadores: las 20 primeras uvas del parral reciben reels gratis el primer mes y sesión de fotos", "cupos": 20, "tomados": 16}}</script>
 <script type="text/plain" id="fuente"><title>El Parralito</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -360,6 +365,10 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-off
 .promo b{font-size:16px;font-weight:700;text-wrap:balance}
 .zona{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;border:1px solid var(--line,#ccc);border-radius:8px;padding:10px 14px;font-size:14px}
 .zona b{font-weight:700}.zona .bar{flex:1 1 140px;height:8px;border-radius:99px;background:color-mix(in srgb,var(--fg) 12%,transparent);overflow:hidden}.zona .bar i{display:block;height:100%;background:var(--libre)}
+#btn-disp{position:absolute;left:50%;bottom:18px;transform:translateX(-50%);z-index:5;font:700 17px/1.1 inherit;font-family:inherit;padding:14px 22px;border-radius:99px;border:0;background:var(--libre);color:#fff;box-shadow:0 6px 20px rgba(0,0,0,.25);cursor:pointer;display:flex;align-items:center;gap:8px;white-space:nowrap;animation:pulso 1.8s ease-in-out infinite}
+#btn-disp[aria-pressed="true"]{background:var(--fg);color:var(--bg);animation:none}
+@keyframes pulso{0%,100%{box-shadow:0 0 0 0 rgba(46,154,82,.55),0 6px 20px rgba(0,0,0,.25)}50%{box-shadow:0 0 0 12px rgba(46,154,82,0),0 6px 20px rgba(0,0,0,.25)}}
+@media (prefers-reduced-motion:reduce){#btn-disp{animation:none}}
 .chip.pronto{background:#C8A87A;color:#1C2321}
 .promo .cupos{font-family:var(--mono);font-size:12px;letter-spacing:.04em;background:var(--premium);color:#1C2321;padding:4px 10px;border-radius:99px;white-space:nowrap}
 #panel{max-height:min(82vh,680px);overflow:auto;overscroll-behavior:contain}
@@ -431,7 +440,7 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-off
 
   <div class="intro">
     <h2>Elige tu espacio</h2>
-    <p>Gira el local con el dedo, acércate y toca una repisa verde o dorada para ver su código, precio y reservarla. Las que brillan son las recomendadas. En las grises puedes ver qué marca está ahí, y las de madera se abren pronto.</p>
+    <p>Gira el local con el dedo, acércate y toca una repisa verde o dorada para ver su código, precio y reservarla. En las grises puedes ver qué marca está ahí, y las de madera todavía no están habilitadas. Toca «Repisas disponibles» para ver solo los espacios que puedes reservar ahora.</p>
   </div>
   <div class="avail" aria-live="polite">
     <div class="k"><div class="sw" style="background:var(--libre)"></div><span><strong id="n-libre">0</strong> libres</span></div>
@@ -451,6 +460,7 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-off
   <div class="stage">
     <div id="view" aria-label="Modelo 3D del local. Cada repisa muestra si está libre, ocupada o es premium." role="img"></div>
     <div class="hint">Arrastra para girar · pellizca para acercar · toca una repisa</div>
+    <button id="btn-disp" aria-pressed="false" hidden>🟢 Repisas disponibles</button>
   </div>
 
   <div class="bar">
@@ -496,7 +506,7 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-off
     <div class="fotos" id="b-fotos"></div>
     <a class="ig" id="b-ig" target="_blank" rel="noopener">Ver en Instagram</a>
   </div>
-  <p class="msg" id="p-pronto" hidden>Este espacio se abrirá pronto. Estamos llenando la tienda por zonas para que todo luzca lleno el día de la inauguración. Elige un espacio verde o dorado, ¡los que brillan son los recomendados!</p>
+  <p class="msg" id="p-pronto" hidden>Este espacio todavía no está habilitado. Estamos llenando la tienda por etapas para que todo luzca lleno el día de la inauguración. Toca «Repisas disponibles» para ver los espacios que puedes reservar ahora.</p>
   <p class="msg" id="p-taken" hidden>Este espacio ya está ocupado. Elige otro espacio verde o dorado.</p>
 
   <div class="sec" id="p-free">
@@ -873,9 +883,14 @@ function matchF(sp){
   if (filtro === 'marcas') return t && !!brandOf(sp);
   return true;
 }
+let soloDisp = false;
+const cerradoP = sp => !SPACES.some(o => o.parent === sp.parent && isOpen(o));
 function paint(){
+  const cerrados = new Set(SPACES.map(sp => sp.parent));
+  SPACES.filter(isOpen).forEach(sp => cerrados.delete(sp.parent));
+  SPACES.forEach(sp => { sp.parent.visible = !(soloDisp && cerrados.has(sp.parent)); });
   SPACES.forEach(sp => {
-    sp.board.material = selSet.has(sp) ? S.sel : !showAvail ? M.pine : !matchF(sp) ? S.dim : isTaken(sp) ? S.ocupado : !isOpen(sp) ? M.pine : isRec(sp) ? (sp.premium ? S.recP : S.rec) : sp.premium ? S.premium : S.libre;
+    sp.board.material = selSet.has(sp) ? S.sel : !showAvail ? M.pine : soloDisp && !isOpen(sp) ? S.dim : !matchF(sp) ? S.dim : isTaken(sp) ? S.ocupado : !isOpen(sp) ? M.pine : isRec(sp) ? (sp.premium ? S.recP : S.rec) : sp.premium ? S.premium : S.libre;
   });
   const vis = SPACES.filter(sp => sp.phase === 1 || phase2.visible);
   document.getElementById('n-libre').textContent = vis.filter(sp => !isTaken(sp) && isOpen(sp)).length;
@@ -888,6 +903,12 @@ function paint(){
 document.querySelectorAll('.filters button').forEach(b => b.addEventListener('click', () => {
   filtro = b.dataset.f; document.querySelectorAll('.filters button').forEach(x => x.setAttribute('aria-pressed', String(x === b))); paint();
 }));
+
+/* ---------- botón repisas disponibles ---------- */
+{ const bd = document.getElementById('btn-disp');
+  bd.hidden = !(cur().zona && Array.isArray(cur().zona.abiertos));
+  bd.addEventListener('click', () => { soloDisp = !soloDisp; bd.setAttribute('aria-pressed', String(soloDisp));
+    bd.textContent = soloDisp ? 'Ver toda la tienda' : '🟢 Repisas disponibles'; paint(); }); }
 
 /* ---------- zona abierta ---------- */
 function renderZona(){
@@ -1015,7 +1036,7 @@ renderer.domElement.addEventListener('pointerup', e => {
   const r = renderer.domElement.getBoundingClientRect();
   ptr.set(((e.clientX-r.left)/r.width)*2-1, -((e.clientY-r.top)/r.height)*2+1);
   ray.setFromCamera(ptr, camera);
-  const targets = HITS.filter(h => { const sp = h.userData.sp; return (sp.phase === 1 || phase2.visible) && (adminOn || filtro === 'todos' || matchF(sp)); });
+  const targets = HITS.filter(h => { const sp = h.userData.sp; return (sp.phase === 1 || phase2.visible) && (!soloDisp || !cerradoP(sp)) && (adminOn || filtro === 'todos' || matchF(sp)); });
   const hit = ray.intersectObjects(targets, false)[0];
   if (!hit) { if (!adminOn) closePanel(); return; }
   openPanel(hit.object.userData.sp);
@@ -1555,9 +1576,14 @@ function matchF(sp){
   if (filtro === 'marcas') return t && !!brandOf(sp);
   return true;
 }
+let soloDisp = false;
+const cerradoP = sp => !SPACES.some(o => o.parent === sp.parent && isOpen(o));
 function paint(){
+  const cerrados = new Set(SPACES.map(sp => sp.parent));
+  SPACES.filter(isOpen).forEach(sp => cerrados.delete(sp.parent));
+  SPACES.forEach(sp => { sp.parent.visible = !(soloDisp && cerrados.has(sp.parent)); });
   SPACES.forEach(sp => {
-    sp.board.material = selSet.has(sp) ? S.sel : !showAvail ? M.pine : !matchF(sp) ? S.dim : isTaken(sp) ? S.ocupado : !isOpen(sp) ? M.pine : isRec(sp) ? (sp.premium ? S.recP : S.rec) : sp.premium ? S.premium : S.libre;
+    sp.board.material = selSet.has(sp) ? S.sel : !showAvail ? M.pine : soloDisp && !isOpen(sp) ? S.dim : !matchF(sp) ? S.dim : isTaken(sp) ? S.ocupado : !isOpen(sp) ? M.pine : isRec(sp) ? (sp.premium ? S.recP : S.rec) : sp.premium ? S.premium : S.libre;
   });
   const vis = SPACES.filter(sp => sp.phase === 1 || phase2.visible);
   document.getElementById('n-libre').textContent = vis.filter(sp => !isTaken(sp) && isOpen(sp)).length;
@@ -1570,6 +1596,12 @@ function paint(){
 document.querySelectorAll('.filters button').forEach(b => b.addEventListener('click', () => {
   filtro = b.dataset.f; document.querySelectorAll('.filters button').forEach(x => x.setAttribute('aria-pressed', String(x === b))); paint();
 }));
+
+/* ---------- botón repisas disponibles ---------- */
+{ const bd = document.getElementById('btn-disp');
+  bd.hidden = !(cur().zona && Array.isArray(cur().zona.abiertos));
+  bd.addEventListener('click', () => { soloDisp = !soloDisp; bd.setAttribute('aria-pressed', String(soloDisp));
+    bd.textContent = soloDisp ? 'Ver toda la tienda' : '🟢 Repisas disponibles'; paint(); }); }
 
 /* ---------- zona abierta ---------- */
 function renderZona(){
@@ -1697,7 +1729,7 @@ renderer.domElement.addEventListener('pointerup', e => {
   const r = renderer.domElement.getBoundingClientRect();
   ptr.set(((e.clientX-r.left)/r.width)*2-1, -((e.clientY-r.top)/r.height)*2+1);
   ray.setFromCamera(ptr, camera);
-  const targets = HITS.filter(h => { const sp = h.userData.sp; return (sp.phase === 1 || phase2.visible) && (adminOn || filtro === 'todos' || matchF(sp)); });
+  const targets = HITS.filter(h => { const sp = h.userData.sp; return (sp.phase === 1 || phase2.visible) && (!soloDisp || !cerradoP(sp)) && (adminOn || filtro === 'todos' || matchF(sp)); });
   const hit = ray.intersectObjects(targets, false)[0];
   if (!hit) { if (!adminOn) closePanel(); return; }
   openPanel(hit.object.userData.sp);

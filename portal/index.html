@@ -54,6 +54,11 @@ td.r,th.r{text-align:right}
 .login{max-width:380px;margin:40px auto;display:flex;flex-direction:column;gap:12px}
 .pin{font-family:var(--f-num);font-size:1.6rem;letter-spacing:.4em;text-align:center}
 .err{color:var(--bad);font-size:.9rem;min-height:1.2em}
+.carga .ln{display:grid;grid-template-columns:minmax(0,1fr) 72px 92px;gap:6px}
+.carga label{font-size:.75rem;color:var(--muted)}
+.carga input{width:100%}
+button.sec{background:var(--panel);color:var(--ink);border:1px solid var(--line)}
+.ok{color:var(--ok);font-size:.9rem;min-height:1.2em}
 .day{font-weight:700;font-size:.85rem;color:var(--muted);padding-top:6px}
 @media (max-width:480px){.kpis{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}
 </style>
@@ -91,12 +96,23 @@ td.r,th.r{text-align:right}
       <div class="row"><h2>Mi stock en la tienda</h2><span id="stockChip"></span></div>
       <div id="stock"></div>
     </div>
+    <form class="panel carga" id="carga">
+      <h2>Cargar mis productos</h2>
+      <p class="small muted" style="margin:0">Anota lo que vas a traer a la tienda. Se suma a tu stock cuando lo recibimos y lo contamos contigo.</p>
+      <div class="ln"><label>Producto</label><label>Cantidad</label><label>Precio Bs</label></div>
+      <div id="cRows"></div>
+      <datalist id="dlMis"></datalist>
+      <button type="button" class="sec" id="cAdd">+ Otro producto</button>
+      <input id="cNota" maxlength="200" placeholder="Nota (opcional): ej. Los traigo el lunes 26 en la tarde" aria-label="Nota">
+      <button type="submit" id="cSend">Enviar a la tienda</button>
+      <div class="ok" id="cMsg"></div>
+    </form>
     <div class="panel">
       <h2>Entregas de dinero</h2>
       <div id="liq"></div>
     </div>
     <div class="panel">
-      <h2>Mercadería que dejaste</h2>
+      <h2>Mercadería declarada y recibida</h2>
       <div id="ing" class="small"></div>
     </div>
     <p class="small muted" style="text-align:center">Actualizado <span id="upd"></span> · <a href="#" id="salir" style="color:var(--grape)">Salir</a></p>
@@ -146,6 +162,28 @@ td.r,th.r{text-align:right}
   }
   setInterval(() => { if (D && !document.hidden) cargar(); }, 120000);
 
+  function addRow() {
+    const d = document.createElement("div"); d.className = "ln";
+    d.innerHTML = `<input list="dlMis" maxlength="80" placeholder="Ej. Llavero acrílico" aria-label="Producto" data-k="nombre"><input type="number" min="1" max="9999" step="1" value="1" inputmode="numeric" aria-label="Cantidad" data-k="cant"><input type="number" min="0" step="0.5" inputmode="decimal" placeholder="0" aria-label="Precio" data-k="precio">`;
+    d.querySelector('[data-k="nombre"]').addEventListener("change", e => { const p = D?.productos.find(p => p.nombre.toLowerCase() === e.target.value.trim().toLowerCase()); const pr = d.querySelector('[data-k="precio"]'); if (p && !pr.value) pr.value = p.precio; });
+    $("#cRows").appendChild(d);
+  }
+  $("#cAdd").addEventListener("click", addRow);
+  $("#carga").addEventListener("submit", async e => {
+    e.preventDefault(); $("#cMsg").textContent = ""; $("#cMsg").style.color = "";
+    const items = [...$("#cRows").children].map(r => ({nombre: r.querySelector('[data-k="nombre"]').value.trim(), cant: r.querySelector('[data-k="cant"]').value.trim(), precio: r.querySelector('[data-k="precio"]').value.trim()})).filter(x => x.nombre);
+    const err = m => { $("#cMsg").style.color = "var(--bad)"; $("#cMsg").textContent = m; };
+    if (!items.length) return err("Escribe al menos un producto.");
+    if (items.some(x => !/^\d+$/.test(x.cant) || +x.cant < 1)) return err("Revisa las cantidades: deben ser números enteros.");
+    if (items.some(x => x.precio === "" || isNaN(+x.precio) || +x.precio < 0)) return err("Pon el precio de venta de cada producto.");
+    $("#cSend").disabled = true;
+    const {data, error} = await sb.rpc("portal_cargar", {p_token: token, p_pin: pin, p_items: items.map(x => ({...x, precio: String(Math.round(+x.precio * 100) / 100)})), p_nota: $("#cNota").value.trim()});
+    $("#cSend").disabled = false;
+    if (error) return err("No hay conexión. Inténtalo otra vez.");
+    if (data?.error) return err({muchos_pendientes: "Tienes muchas cargas por recibir. Espera a que la tienda las reciba.", bloqueado: "Demasiados intentos. Espera 15 minutos."}[data.error] || "Revisa los datos de los productos.");
+    $("#cRows").innerHTML = ""; $("#cNota").value = ""; $("#cMsg").textContent = "Listo. Cuando traigas tus productos, los contamos y se suman a tu stock.";
+    cargar();
+  });
   function render() {
     const m = D.marca;
     $("#hNombre").textContent = m.nombre; $("#hEspacio").textContent = "Tu espacio: " + (m.espacio || "—") + " · tarifa " + bs(m.tarifa) + "/mes";
@@ -166,10 +204,16 @@ td.r,th.r{text-align:right}
     }
     const low = D.productos.filter(p => p.stock <= p.minimo);
     $("#stockChip").innerHTML = D.productos.length ? (low.length ? `<span class="chip warn">${low.length} por reponer</span>` : `<span class="chip ok">Todo con stock</span>`) : "";
-    $("#stock").innerHTML = D.productos.length ? `<div class="tbl"><table><thead><tr><th>Producto</th><th class="r">Precio</th><th class="r">Quedan</th><th></th></tr></thead><tbody>${D.productos.map(p => `<tr><td>${esc(p.nombre)}</td><td class="r num">${bs(p.precio)}</td><td class="r num">${p.stock}</td><td>${p.stock <= 0 ? `<span class="chip bad">Agotado</span>` : p.stock <= p.minimo ? `<span class="chip warn">Reponer</span>` : `<span class="chip ok">OK</span>`}</td></tr>`).join("")}</tbody></table></div>` : `<div class="empty">Tus productos aparecen aquí cuando los registramos con la ficha de ingreso el día que traes tu mercadería.</div>`;
+    $("#stock").innerHTML = D.productos.length ? `<div class="tbl"><table><thead><tr><th>Producto</th><th class="r">Precio</th><th class="r">Vendidos</th><th class="r">Quedan</th><th></th></tr></thead><tbody>${D.productos.map(p => `<tr><td>${esc(p.nombre)}</td><td class="r num">${bs(p.precio)}</td><td class="r num">${p.vendidos ?? 0}</td><td class="r num">${p.stock}</td><td>${p.stock <= 0 ? `<span class="chip bad">Agotado</span>` : p.stock <= p.minimo ? `<span class="chip warn">Reponer</span>` : `<span class="chip ok">OK</span>`}</td></tr>`).join("")}</tbody></table></div>` : `<div class="empty">Todavía no tienes productos en la tienda. Cárgalos abajo y aparecen aquí cuando los recibimos.</div>`;
     const ls = [...D.liquidaciones].sort((a, b) => b.periodo.localeCompare(a.periodo));
     $("#liq").innerHTML = ls.length ? `<div class="tbl"><table><thead><tr><th>Periodo</th><th class="r">Vendido</th><th class="r">Descontado</th><th class="r">Entregado</th><th>Cómo</th></tr></thead><tbody>${ls.map(l => `<tr><td>${perLabel(l.periodo)}</td><td class="r num">${bs(l.vendido)}</td><td class="r num">${bs(l.descontado)}</td><td class="r num"><b>${bs(l.entregado)}</b></td><td><span class="chip g">${esc(l.metodo)}</span></td></tr>`).join("")}</tbody></table></div>` : `<div class="empty">La primera entrega de tus ventas es el 29 de noviembre.</div>`;
-    $("#ing").innerHTML = D.ingresos.length ? D.ingresos.map(i => `<div style="padding:6px 0;border-bottom:1px solid var(--line)"><b>${esc(fmtDia(i.fecha))}</b> · ${i.items.map(x => esc(x.nombre) + " ×" + x.cant).join(", ")}</div>`).join("") : `<span class="muted">Aún no registramos mercadería tuya.</span>`;
+    const chipE = {pendiente: `<span class="chip warn">Por recibir</span>`, recibido: `<span class="chip ok">Recibido</span>`, rechazado: `<span class="chip bad">No recibido</span>`};
+    $("#ing").innerHTML = D.ingresos.length ? D.ingresos.map(i => {
+      const dec = {}; (i.declarado || []).forEach(x => dec[x.nombre.toLowerCase()] = x.cant);
+      const items = i.items.map(x => { const d = dec[x.nombre.toLowerCase()]; return esc(x.nombre) + " ×" + x.cant + (i.estado === "recibido" && d != null && d !== x.cant ? ` <span class="muted">(declaraste ${d})</span>` : ""); }).join(", ");
+      return `<div style="padding:8px 0;border-bottom:1px solid var(--line)">${chipE[i.estado] || ""} <b>${esc(fmtDia(i.fecha))}</b> · ${items}${i.nota ? ` <span class="muted">· ${esc(i.nota)}</span>` : ""}</div>`; }).join("") : `<span class="muted">Aún no hay mercadería registrada.</span>`;
+    $("#dlMis").innerHTML = D.productos.map(p => `<option value="${esc(p.nombre)}"></option>`).join("");
+    if (!$("#cRows").children.length) addRow();
     $("#upd").textContent = new Date().toLocaleTimeString("es-BO", {hour: "2-digit", minute: "2-digit"});
   }
 })();

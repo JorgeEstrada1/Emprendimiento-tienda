@@ -183,7 +183,8 @@ details summary{cursor:pointer;font-weight:700}
 
   <!-- STOCK -->
   <section data-view="stock" hidden>
-    <div class="panel" style="margin-top:18px" id="lowPanel"></div>
+    <div class="panel" style="margin-top:18px" id="pendPanel"></div>
+    <div class="panel" style="margin-top:16px" id="lowPanel"></div>
     <div class="grid">
       <div class="panel">
         <h2>Productos de la marca</h2>
@@ -192,7 +193,7 @@ details summary{cursor:pointer;font-weight:700}
       </div>
       <div class="panel">
         <h2>Ficha de ingreso de mercadería</h2>
-        <p class="small muted" style="margin:0">Anota lo que la marca trae hoy. El stock se suma solo. Si el producto es nuevo, se crea.</p>
+        <p class="small muted" style="margin:0">Para cuando la marca trae productos sin haberlos cargado en su portal. El stock se suma solo; si el producto es nuevo, se crea.</p>
         <div id="fichaRows"></div>
         <button class="b" id="fichaAdd">+ Otra línea</button>
         <label class="f">Nota (opcional)<input id="fichaNota" placeholder="Ej. Entregó Marco el sábado 24"></label>
@@ -280,7 +281,7 @@ details summary{cursor:pointer;font-weight:700}
   const hora = iso => new Date(iso).toLocaleTimeString("es-BO", {hour: "2-digit", minute: "2-digit", timeZone: "America/La_Paz"});
   const fechaCorta = iso => new Date(iso).toLocaleDateString("es-BO", {day: "2-digit", month: "2-digit", year: "numeric", timeZone: "America/La_Paz"});
 
-  const S = { uid: null, marcas: {}, productos: {}, ventas: {}, liq: {}, cart: [], metodo: "efectivo", tab: "caja", marcaCaja: null, liqPer: PER_ACT(), editMarca: null, ficha: [] };
+  const S = { pend: [], uid: null, marcas: {}, productos: {}, ventas: {}, liq: {}, cart: [], metodo: "efectivo", tab: "caja", marcaCaja: null, liqPer: PER_ACT(), editMarca: null, ficha: [] };
 
   let tt;
   const toast = msg => { const t = $("#toast"); t.textContent = msg; t.hidden = false; clearTimeout(tt); tt = setTimeout(() => t.hidden = true, 3200); };
@@ -299,8 +300,9 @@ details summary{cursor:pointer;font-weight:700}
     const d = chk(await sb.from("ventas").select("*").in("periodo", pers).order("fecha", {ascending: false}).limit(5000));
     S.ventas = {}; d.forEach(v => S.ventas[v.id] = v);
   }
+  async function loadIngresos() { const d = chk(await sb.from("ingresos").select("*").eq("estado", "pendiente").order("fecha")); S.pend = d; }
   async function loadLiq() { const d = chk(await sb.from("liquidaciones").select("*").eq("periodo", S.liqPer)); S.liq = {}; d.forEach(l => S.liq[l.periodo + "__" + l.marca] = l); }
-  const loaders = {marcas: loadMarcas, productos: loadProductos, ventas: loadVentas, liquidaciones: loadLiq};
+  const loaders = {marcas: loadMarcas, productos: loadProductos, ventas: loadVentas, liquidaciones: loadLiq, ingresos: loadIngresos};
   const pend = new Set(); let tmr;
   function refresh(...tables) { tables.forEach(t => pend.add(t)); clearTimeout(tmr); tmr = setTimeout(async () => { const ts = [...pend]; pend.clear(); try { await Promise.all(ts.map(t => loaders[t]())); } catch (e) { fail(e); } render(); }, 150); }
 
@@ -361,6 +363,7 @@ details summary{cursor:pointer;font-weight:700}
     $("#kHoy").textContent = bs(hoy.reduce((a, v) => a + +v.total, 0));
     $("#kN").textContent = hoy.length;
     $("#kPer").textContent = bs(ventasPer(PER_ACT()).reduce((a, v) => a + +v.total, 0));
+    $('nav.tabs button[data-tab="stock"]').textContent = "Stock" + (S.pend.length ? " (" + S.pend.length + ")" : "");
     $("#kLow").textContent = Object.values(S.productos).filter(p => p.stock <= p.minimo).length;
     $("#perLabel").textContent = "Periodo " + perLabel(PER_ACT());
   }
@@ -443,6 +446,9 @@ details summary{cursor:pointer;font-weight:700}
     const low = Object.values(S.productos).filter(p => p.stock <= p.minimo).sort((a, b) => a.stock - b.stock);
     $("#lowPanel").innerHTML = `<div class="row" style="justify-content:space-between"><h2>Avisar para reponer</h2><span class="chip ${low.length ? "warn" : "ok"}">${low.length ? low.length + " productos" : "Todo con stock"}</span></div>` +
       (low.length ? `<div class="tbl"><table><thead><tr><th>Marca</th><th>Producto</th><th class="r">Quedan</th><th>Contacto</th></tr></thead><tbody>${low.map(p => { const m = S.marcas[p.marca] || {}; return `<tr><td>${esc(m.nombre)}</td><td>${esc(p.nombre)}</td><td class="r num"><span class="chip ${p.stock <= 0 ? "bad" : "warn"}">${p.stock}</span></td><td class="num small">${esc(m.celular || "—")}</td></tr>`; }).join("")}</tbody></table></div>` : `<p class="small muted" style="margin:0">Cuando a un producto le quede su stock mínimo o menos, aparece aquí con el celular de la marca.</p>`);
+    $("#pendPanel").innerHTML = `<div class="row" style="justify-content:space-between"><h2>Mercadería por recibir</h2><span class="chip ${S.pend.length ? "warn" : "ok"}">${S.pend.length ? S.pend.length + " cargas" : "Nada pendiente"}</span></div>` +
+      (S.pend.length ? S.pend.map(i => `<div class="liqcard" data-ing="${esc(i.id)}"><div style="grid-column:1/-1"><b>${esc(S.marcas[i.marca]?.nombre || i.marca)}</b> <span class="small muted">· declarado ${fechaCorta(i.fecha)}${i.nota ? " · " + esc(i.nota) : ""}</span></div><div style="grid-column:1/-1" class="tbl"><table><thead><tr><th>Producto</th><th class="r">Precio</th><th class="r">Declaró</th><th class="r">Recibido</th></tr></thead><tbody>${i.items.map((x, k) => `<tr><td>${esc(x.nombre)}${prodsDe(i.marca).some(p => p.nombre.toLowerCase() === x.nombre.toLowerCase()) ? "" : ` <span class="chip g">nuevo</span>`}</td><td class="r num">${bs(x.precio)}</td><td class="r num">${x.cant}</td><td class="r"><input type="number" min="0" step="1" value="${x.cant}" data-rc="${k}" style="width:76px" aria-label="Cantidad recibida"></td></tr>`).join("")}</tbody></table></div><div class="acts"><button class="b sm pri" data-recibir="${esc(i.id)}">Recibir y sumar al stock</button><span><button class="b sm danger" data-rechazar="${esc(i.id)}">No llegó</button></span></div></div>`).join("")
+        : `<p class="small muted" style="margin:0">Cuando una marca cargue sus productos desde su portal, aparecen aquí. Al recibirlos, cuenta lo que trajo, corrige la cantidad si hace falta y se suma al stock.</p>`);
     const ps = prodsDe(mid);
     $("#stockList").innerHTML = ps.length ? `<div class="tbl"><table><thead><tr><th>Producto</th><th class="r">Precio</th><th class="r">Stock</th><th class="r">Mínimo</th><th></th></tr></thead><tbody>${ps.map(p => `<tr><td><input data-pf="nombre" data-id="${esc(p.id)}" value="${esc(p.nombre)}" aria-label="Nombre"></td><td class="r"><input data-pf="precio" data-id="${esc(p.id)}" type="number" min="0" step="0.5" value="${p.precio}" style="width:90px" aria-label="Precio"></td><td class="r"><input data-pf="stock" data-id="${esc(p.id)}" type="number" min="0" step="1" value="${p.stock}" style="width:76px" aria-label="Stock"></td><td class="r"><input data-pf="minimo" data-id="${esc(p.id)}" type="number" min="0" step="1" value="${p.minimo}" style="width:70px" aria-label="Mínimo"></td><td><span class="chip ${p.stock <= 0 ? "bad" : p.stock <= p.minimo ? "warn" : "ok"}">${p.stock <= 0 ? "Agotado" : p.stock <= p.minimo ? "Reponer" : "OK"}</span></td></tr>`).join("")}</tbody></table></div><p class="small muted" style="margin:0">Corrige precio o stock directamente; se guarda al salir del campo.</p>`
       : `<div class="empty">Esta marca todavía no tiene productos. Regístralos con la ficha de ingreso el día que traiga su mercadería.</div>`;
@@ -483,6 +489,21 @@ details summary{cursor:pointer;font-weight:700}
       toast("Ingreso guardado: " + items.reduce((a, r) => a + r.cant, 0) + " unidades"); refresh("productos");
     } catch (e) { fail(e); }
     btn.disabled = false; renderStock();
+  });
+
+  $("#pendPanel").addEventListener("click", async e => {
+    const r = e.target.closest("[data-recibir]"), x = e.target.closest("[data-rechazar]"), y = e.target.closest("[data-yesrech]"), n = e.target.closest("[data-norech]");
+    try {
+      if (r) {
+        const card = r.closest("[data-ing]"); const ing = S.pend.find(i => i.id === r.dataset.recibir);
+        const items = ing.items.map((it, k) => ({nombre: it.nombre, precio: it.precio, cant: parseInt(card.querySelector(`[data-rc="${k}"]`).value, 10) || 0}));
+        r.disabled = true; chk(await sb.rpc("recibir_ingreso", {p_id: ing.id, p_items: items}));
+        toast("Recibido: " + items.reduce((a, i) => a + i.cant, 0) + " unidades sumadas al stock"); refresh("ingresos", "productos");
+      }
+      if (x) { x.parentElement.innerHTML = `<span class="confirm small">¿Marcar como no recibido? <button class="b sm danger" data-yesrech="${esc(x.dataset.rechazar)}">Sí</button><button class="b sm" data-norech="1">No</button></span>`; }
+      if (n) renderStock();
+      if (y) { chk(await sb.rpc("rechazar_ingreso", {p_id: y.dataset.yesrech})); toast("Carga marcada como no recibida"); refresh("ingresos"); }
+    } catch (er) { fail(er); }
   });
 
   // ---------- liquidación ----------

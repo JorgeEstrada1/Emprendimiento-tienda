@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@500;700&display=swap">
 <style>
+[hidden]{display:none!important}
 /* Layout: hoja personal de la marca — cabecera con su nombre y lo vendido, luego ventas, stock e historial en una sola columna */
 :root{
   --bg:#f4f6f1; --panel:#ffffff; --ink:#1e2a22; --muted:#5f6b62; --line:#dde3da;
@@ -118,7 +119,8 @@ td.r,th.r{text-align:right}
   const fmtHora = iso => new Date(iso).toLocaleTimeString("es-BO", {hour: "2-digit", minute: "2-digit", timeZone: "America/La_Paz"});
   const token = new URLSearchParams(location.search).get("t");
   const KEY = "pp_" + (token || "");
-  let D = null, per = perKey(laPaz()), pin = null;
+  const PER0 = () => { const k = perKey(laPaz()); return k < "2026-11" ? "2026-11" : k; };
+  let D = null, per = PER0(), pin = null;
 
   if (!token) { $("#sinLink").hidden = false; return; }
   try { pin = localStorage.getItem(KEY); } catch {}
@@ -147,7 +149,7 @@ td.r,th.r{text-align:right}
   function render() {
     const m = D.marca;
     $("#hNombre").textContent = m.nombre; $("#hEspacio").textContent = "Tu espacio: " + (m.espacio || "—") + " · tarifa " + bs(m.tarifa) + "/mes";
-    const pers = [...new Set([perKey(laPaz()), ...D.ventas.map(v => v.periodo)])].sort().reverse();
+    const pers = [...new Set([PER0(), ...D.ventas.map(v => v.periodo)])].sort().reverse();
     $("#per").innerHTML = pers.map(k => `<option value="${k}">${perLabel(k)}</option>`).join(""); $("#per").value = per;
     const vs = D.ventas.filter(v => v.periodo === per);
     const vend = vs.reduce((a, v) => a + +v.total, 0), uni = vs.reduce((a, v) => a + v.cant, 0);

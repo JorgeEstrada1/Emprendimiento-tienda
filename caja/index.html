@@ -8,6 +8,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@500;700&display=swap">
 <style>
+[hidden]{display:none!important}
+form.panel label.f{flex:none}
 /* Layout: mostrador — barra fija arriba con el resumen del día, pestañas grandes para el dedo, una columna en el celular y dos en pantalla ancha */
 :root{
   --bg:#f4f6f1; --panel:#ffffff; --ink:#1e2a22; --muted:#5f6b62; --line:#dde3da;
@@ -274,7 +276,7 @@ details summary{cursor:pointer;font-weight:700}
   const perLabel = k => { const [y, m] = k.split("-").map(Number); const pm = m === 1 ? 12 : m - 1; return "29 " + MESES[pm - 1] + " – 28 " + MESES[m - 1] + " · se entrega el 29 " + MESES[m - 1] + " " + y; };
   const perShift = (k, n) => { let [y, m] = k.split("-").map(Number); m += n; while (m > 12) { m -= 12; y++; } while (m < 1) { m += 12; y--; } return y + "-" + pad(m); };
   const HOY = () => diaKey(laPaz());
-  const PER_ACT = () => perKey(laPaz());
+  const PER_ACT = () => { const k = perKey(laPaz()); return k < "2026-11" ? "2026-11" : k; };
   const hora = iso => new Date(iso).toLocaleTimeString("es-BO", {hour: "2-digit", minute: "2-digit", timeZone: "America/La_Paz"});
   const fechaCorta = iso => new Date(iso).toLocaleDateString("es-BO", {day: "2-digit", month: "2-digit", year: "numeric", timeZone: "America/La_Paz"});
 

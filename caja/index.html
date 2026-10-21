@@ -1,0 +1,595 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Caja El Parralito</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: mostrador — barra fija arriba con el resumen del día, pestañas grandes para el dedo, una columna en el celular y dos en pantalla ancha */
+:root{
+  --bg:#f4f6f1; --panel:#ffffff; --ink:#1e2a22; --muted:#5f6b62; --line:#dde3da;
+  --vine:#2f5d3a; --grape:#6b2d5c; --grape-soft:#f2e7ef;
+  --ok:#2e7d4f; --warn:#b26a00; --bad:#b3261e; --ok-soft:#e3f2e8; --warn-soft:#fbefdc; --bad-soft:#fbe4e2;
+  --f-display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --f-body:"Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --f-num:"JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --r:12px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#121814; --panel:#1b231e; --ink:#e7eee8; --muted:#9cab9f; --line:#2d3a31;
+  --vine:#8fc79b; --grape:#e3a6d3; --grape-soft:#3a2234;
+  --ok:#7fd39f; --warn:#f0b45c; --bad:#ff8a80; --ok-soft:#1f3a2a; --warn-soft:#3d2e12; --bad-soft:#40201d; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#121814; --panel:#1b231e; --ink:#e7eee8; --muted:#9cab9f; --line:#2d3a31;
+  --vine:#8fc79b; --grape:#e3a6d3; --grape-soft:#3a2234;
+  --ok:#7fd39f; --warn:#f0b45c; --bad:#ff8a80; --ok-soft:#1f3a2a; --warn-soft:#3d2e12; --bad-soft:#40201d; color-scheme:dark}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);padding-top:env(safe-area-inset-top,0px);font-family:var(--f-body);font-size:16px;line-height:1.45}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--vine)}
+.wrap{max-width:1180px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 48px}
+header.top{position:sticky;top:0;z-index:5;background:var(--vine);color:#f4f6f1}
+header.top .wrap{padding-block:12px 0;display:flex;flex-direction:column;gap:10px}
+.brandrow{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.brandrow h1{font-family:var(--f-display);font-weight:800;font-size:1.35rem;margin:0;letter-spacing:-.01em}
+.brandrow .per{font-size:.85rem;opacity:.85}
+.kpis{display:flex;gap:18px;flex-wrap:wrap;font-size:.8rem}
+.kpis b{display:block;font-family:var(--f-num);font-size:1.05rem;font-weight:700}
+nav.tabs{display:flex;gap:4px;overflow-x:auto}
+nav.tabs button{flex:1 0 auto;min-width:90px;border:0;background:transparent;color:#f4f6f1;opacity:.75;font:700 .95rem var(--f-body);padding:10px 14px;border-radius:10px 10px 0 0;cursor:pointer}
+nav.tabs button[aria-selected="true"]{background:var(--bg);color:var(--ink);opacity:1}
+h2{font-family:var(--f-display);font-weight:600;font-size:1.25rem;margin:0;text-wrap:balance}
+h3{font-size:.8rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0}
+.grid{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:16px;margin-top:18px}
+@media (max-width:820px){.grid{grid-template-columns:minmax(0,1fr)}}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.row > *{min-width:0}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:.8rem;color:var(--muted);flex:1 1 140px}
+input,select,textarea{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;width:100%;min-width:0}
+input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible{outline:3px solid var(--grape);outline-offset:2px}
+button.b{font:700 .95rem var(--f-body);border-radius:10px;border:1px solid var(--line);background:var(--panel);color:var(--ink);padding:10px 14px;cursor:pointer}
+button.b.pri{background:var(--grape);border-color:var(--grape);color:var(--panel)}
+button.b.big{padding:14px 18px;font-size:1.05rem;width:100%}
+button.b.sm{padding:6px 10px;font-size:.85rem}
+button.b:disabled{opacity:.45;cursor:not-allowed}
+button.b.danger{color:var(--bad);border-color:var(--bad)}
+.num{font-family:var(--f-num);font-variant-numeric:tabular-nums}
+.muted{color:var(--muted)}
+.small{font-size:.85rem}
+.prods{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.prod{text-align:left;border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:10px;cursor:pointer;display:flex;flex-direction:column;gap:2px;color:var(--ink);font:inherit}
+.prod:hover{border-color:var(--grape)}
+.prod .p{font-family:var(--f-num);font-weight:700}
+.prod .s{font-size:.75rem;color:var(--muted)}
+.prod[disabled]{opacity:.45;cursor:not-allowed}
+.chip{display:inline-flex;align-items:center;gap:4px;font-size:.75rem;font-weight:700;padding:2px 8px;border-radius:999px;white-space:nowrap}
+.chip.ok{background:var(--ok-soft);color:var(--ok)} .chip.warn{background:var(--warn-soft);color:var(--warn)} .chip.bad{background:var(--bad-soft);color:var(--bad)} .chip.g{background:var(--grape-soft);color:var(--grape)}
+.tbl{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.9rem}
+th{font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);text-align:left;font-weight:700;padding:8px 6px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:8px 6px;border-bottom:1px solid var(--line);vertical-align:middle}
+td.r,th.r{text-align:right}
+tr.void td{text-decoration:line-through;color:var(--muted)}
+.cart li{display:flex;justify-content:space-between;gap:8px;align-items:center;padding:8px 0;border-bottom:1px dashed var(--line)}
+.cart{list-style:none;margin:0;padding:0}
+.total{display:flex;justify-content:space-between;align-items:baseline;font-family:var(--f-display);font-weight:800;font-size:1.6rem}
+.seg{display:flex;border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.seg button{flex:1;border:0;background:var(--panel);color:var(--ink);font:700 .9rem var(--f-body);padding:10px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--vine);color:var(--panel)}
+.empty{border:1px dashed var(--line);border-radius:10px;padding:16px;color:var(--muted);font-size:.9rem}
+.banner{background:var(--warn-soft);color:var(--warn);border-radius:10px;padding:12px 14px;font-size:.9rem;margin-top:16px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:999px;font-weight:700;z-index:20;max-width:calc(100% - 32px)}
+.liq{display:flex;flex-direction:column;gap:8px}
+.liqcard{border:1px solid var(--line);border-radius:10px;padding:12px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 12px;align-items:center}
+.liqcard .amt{font-family:var(--f-num);font-weight:700;font-size:1.1rem;text-align:right}
+.liqcard .meta{font-size:.82rem;color:var(--muted)}
+.liqcard .acts{grid-column:1/-1;display:flex;gap:6px;flex-wrap:wrap}
+textarea.rep{min-height:220px;font-family:var(--f-num);font-size:.82rem}
+.confirm{display:inline-flex;gap:6px;align-items:center}
+details summary{cursor:pointer;font-weight:700}
+@media (prefers-reduced-motion:no-preference){.prod,button.b{transition:border-color .15s,background .15s}}
+</style>
+</head>
+<body>
+<div id="loginView" hidden><div class="wrap" style="max-width:420px;padding-block:48px">
+  <form class="panel" id="loginForm">
+    <h2>El Parralito · Caja</h2>
+    <p class="small muted" style="margin:0">Solo para los socios. Entra con tu correo y contraseña.</p>
+    <label class="f">Correo<input id="lgEmail" type="email" autocomplete="username" required></label>
+    <label class="f">Contraseña<input id="lgPass" type="password" autocomplete="current-password" minlength="6" required></label>
+    <button class="b pri big" data-modo="entrar">Entrar</button>
+    <button class="b" data-modo="crear">Crear mi cuenta</button>
+    <div class="small" id="lgMsg" style="color:var(--bad)"></div>
+  </form>
+</div></div>
+<div id="joinView" hidden><div class="wrap" style="max-width:420px;padding-block:48px">
+  <form class="panel" id="joinForm">
+    <h2>Activa tu acceso de socio</h2>
+    <p class="small muted" style="margin:0">Entraste como <b id="joinEmail"></b>. Escribe el código de socios para activar la caja.</p>
+    <label class="f">Tu nombre<input id="jNombre" required></label>
+    <label class="f">Código de socios<input id="jCodigo" required autocomplete="off"></label>
+    <button class="b pri big">Activar</button>
+    <div class="small" id="jMsg" style="color:var(--bad)"></div>
+    <button type="button" class="b sm salir">Salir</button>
+  </form>
+</div></div>
+<div id="appView" hidden>
+<header class="top">
+  <div class="wrap">
+    <div class="brandrow">
+      <h1>El Parralito · Caja</h1>
+      <button class="b sm salir" style="background:transparent;color:#f4f6f1;border-color:rgba(255,255,255,.4)">Salir</button>
+      <span class="per" id="perLabel"></span>
+    </div>
+    <div class="kpis">
+      <span>Vendido hoy<b class="num" id="kHoy">0 Bs</b></span>
+      <span>Ventas hoy<b class="num" id="kN">0</b></span>
+      <span>Vendido en el periodo<b class="num" id="kPer">0 Bs</b></span>
+      <span>Stock bajo<b class="num" id="kLow">0</b></span>
+    </div>
+    <nav class="tabs" role="tablist">
+      <button role="tab" data-tab="caja" aria-selected="true">Caja</button>
+      <button role="tab" data-tab="stock" aria-selected="false">Stock</button>
+      <button role="tab" data-tab="liq" aria-selected="false">Liquidación</button>
+      <button role="tab" data-tab="marcas" aria-selected="false">Marcas</button>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+  
+  <!-- CAJA -->
+  <section data-view="caja">
+    <div class="grid">
+      <div class="panel">
+        <h2>Nueva venta</h2>
+        <label class="f">Marca
+          <input id="cajaMarca" list="dlMarcas" placeholder="Escribe la marca o el espacio (ej. Ticuva, M13)" autocomplete="off">
+        </label>
+        <datalist id="dlMarcas"></datalist>
+        <div id="cajaProds"></div>
+        <details>
+          <summary>Producto sin registrar</summary>
+          <div class="row" style="margin-top:8px">
+            <label class="f">Descripción<input id="libreNom" placeholder="Ej. Collar plateado"></label>
+            <label class="f" style="flex:0 1 110px">Precio Bs<input id="librePre" type="number" min="0" step="0.5" inputmode="decimal"></label>
+            <button class="b" id="libreAdd">Agregar</button>
+          </div>
+        </details>
+      </div>
+      <div class="panel">
+        <h2>Cuenta</h2>
+        <ul class="cart" id="cart"></ul>
+        <div class="total"><span>Total</span><span class="num" id="cartTot">0 Bs</span></div>
+        <div class="seg" id="metodo" role="group" aria-label="Forma de pago">
+          <button data-m="efectivo" aria-pressed="true">Efectivo</button>
+          <button data-m="qr" aria-pressed="false">QR</button>
+          <button data-m="tarjeta" aria-pressed="false">Tarjeta</button>
+        </div>
+        <button class="b pri big" id="cobrar" disabled>Cobrar</button>
+      </div>
+    </div>
+    <div class="panel" style="margin-top:16px">
+      <div class="row" style="justify-content:space-between"><h2>Ventas de hoy</h2><span class="small muted" id="hoyFecha"></span></div>
+      <div id="hoyList"></div>
+    </div>
+  </section>
+
+  <!-- STOCK -->
+  <section data-view="stock" hidden>
+    <div class="panel" style="margin-top:18px" id="lowPanel"></div>
+    <div class="grid">
+      <div class="panel">
+        <h2>Productos de la marca</h2>
+        <label class="f">Marca<select id="stockMarca"></select></label>
+        <div id="stockList"></div>
+      </div>
+      <div class="panel">
+        <h2>Ficha de ingreso de mercadería</h2>
+        <p class="small muted" style="margin:0">Anota lo que la marca trae hoy. El stock se suma solo. Si el producto es nuevo, se crea.</p>
+        <div id="fichaRows"></div>
+        <button class="b" id="fichaAdd">+ Otra línea</button>
+        <label class="f">Nota (opcional)<input id="fichaNota" placeholder="Ej. Entregó Marco el sábado 24"></label>
+        <button class="b pri big" id="fichaSave">Guardar ingreso</button>
+        <h3>Ingresos anteriores</h3>
+        <div id="fichaHist" class="small"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- LIQUIDACIÓN -->
+  <section data-view="liq" hidden>
+    <div class="panel" style="margin-top:18px">
+      <div class="row" style="justify-content:space-between">
+        <h2>Liquidación del día 29</h2>
+        <label class="f" style="flex:0 1 260px">Periodo<select id="liqPer"></select></label>
+      </div>
+      <p class="small muted" style="margin:0" id="liqHint"></p>
+      <div class="row small" id="liqTotals"></div>
+      <div class="liq" id="liqList"></div>
+    </div>
+    <div class="panel" style="margin-top:16px" id="repPanel" hidden>
+      <div class="row" style="justify-content:space-between"><h2 id="repTitle">Reporte</h2><button class="b sm" id="repClose">Cerrar</button></div>
+      <textarea class="rep" id="repText" readonly></textarea>
+      <div class="row"><button class="b pri" id="repCopy">Copiar para WhatsApp</button><span class="small muted" id="repTel"></span></div>
+    </div>
+  </section>
+
+  <!-- MARCAS -->
+  <section data-view="marcas" hidden>
+    <div class="panel" style="margin-top:18px">
+      <div class="row" style="justify-content:space-between"><h2>Marcas</h2><div class="row small" id="mTotals"></div></div>
+      <input id="mBuscar" placeholder="Buscar marca, titular o espacio">
+      <div class="tbl"><table>
+        <thead><tr><th>#</th><th>Marca</th><th>Espacio</th><th class="r">Tarifa</th><th>Saldo 1er mes</th><th>Descontar de ventas</th><th>Contacto</th><th></th></tr></thead>
+        <tbody id="mBody"></tbody>
+      </table></div>
+    </div>
+
+    <div class="panel" style="margin-top:16px" id="acPanel" hidden>
+      <div class="row" style="justify-content:space-between"><h2 id="acTitle">Acceso al portal</h2><button class="b sm" id="acClose">Cerrar</button></div>
+      <label class="f">Link personal de la marca<input id="acLink" readonly></label>
+      <div class="row"><button class="b" id="acCopyLink">Copiar link</button><button class="b pri" id="acGen">Generar PIN nuevo</button></div>
+      <div id="acPinBox"></div>
+      <div id="acMsgWrap" hidden><label class="f">Mensaje para WhatsApp<textarea id="acMsg" class="rep" style="min-height:110px" readonly></textarea></label><button class="b pri" id="acCopyMsg">Copiar mensaje</button></div>
+    </div>
+    <div class="panel" style="margin-top:16px">
+      <h2 id="mfTitle">Agregar marca</h2>
+      <div class="row">
+        <label class="f">Marca<input id="mfNombre"></label>
+        <label class="f">Titular<input id="mfTitular"></label>
+        <label class="f">Celular<input id="mfCel" inputmode="tel"></label>
+      </div>
+      <div class="row">
+        <label class="f">Rubro<input id="mfRubro"></label>
+        <label class="f">Espacio<input id="mfEspacio" placeholder="Ej. M7-N4-B"></label>
+        <label class="f" style="flex:0 1 120px">Tarifa Bs<input id="mfTarifa" type="number" min="0" step="10"></label>
+        <label class="f" style="flex:0 1 120px">Adelanto Bs<input id="mfAdel" type="number" min="0" step="5"></label>
+      </div>
+      <div class="row"><button class="b pri" id="mfSave">Guardar marca</button><button class="b" id="mfCancel" hidden>Cancelar</button></div>
+    </div>
+  </section>
+</main>
+</div>
+<div class="toast" id="toast" hidden></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script>
+(() => {
+  const SUPA_URL = "https://eyougzgrquztgrhlkain.supabase.co", SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV5b3VnemdycXV6dGdyaGxrYWluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc3OTA1MjcsImV4cCI6MjEwMzM2NjUyN30.b_4ma8HLRGW2F0uFBBhu307F9KqOKz0hI4_LnhwOWJk";
+  const PORTAL_URL = location.origin + location.pathname.replace(/caja\/?(index\.html)?$/, "") + "portal/";
+  const sb = window.supabase.createClient(SUPA_URL, SUPA_KEY);
+  const $ = (s, r = document) => r.querySelector(s);
+  const $$ = (s, r = document) => [...r.querySelectorAll(s)];
+  const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const bs = n => (Math.round((+n || 0) * 100) / 100).toLocaleString("es-BO", {maximumFractionDigits: 2}) + " Bs";
+  const MESES = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
+  const pad = n => String(n).padStart(2, "0");
+  const laPaz = () => new Date(new Date().toLocaleString("en-US", {timeZone: "America/La_Paz"}));
+  const diaKey = d => d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
+  const perKey = d => { let y = d.getFullYear(), m = d.getMonth(); if (d.getDate() >= 29) { m++; if (m > 11) { m = 0; y++; } } return y + "-" + pad(m + 1); };
+  const perLabel = k => { const [y, m] = k.split("-").map(Number); const pm = m === 1 ? 12 : m - 1; return "29 " + MESES[pm - 1] + " – 28 " + MESES[m - 1] + " · se entrega el 29 " + MESES[m - 1] + " " + y; };
+  const perShift = (k, n) => { let [y, m] = k.split("-").map(Number); m += n; while (m > 12) { m -= 12; y++; } while (m < 1) { m += 12; y--; } return y + "-" + pad(m); };
+  const HOY = () => diaKey(laPaz());
+  const PER_ACT = () => perKey(laPaz());
+  const hora = iso => new Date(iso).toLocaleTimeString("es-BO", {hour: "2-digit", minute: "2-digit", timeZone: "America/La_Paz"});
+  const fechaCorta = iso => new Date(iso).toLocaleDateString("es-BO", {day: "2-digit", month: "2-digit", year: "numeric", timeZone: "America/La_Paz"});
+
+  const S = { uid: null, marcas: {}, productos: {}, ventas: {}, liq: {}, cart: [], metodo: "efectivo", tab: "caja", marcaCaja: null, liqPer: PER_ACT(), editMarca: null, ficha: [] };
+
+  let tt;
+  const toast = msg => { const t = $("#toast"); t.textContent = msg; t.hidden = false; clearTimeout(tt); tt = setTimeout(() => t.hidden = true, 3200); };
+  const fail = e => { console.error(e); toast(e?.message?.includes("stock") ? e.message.replace(/^.*?:\s*/, "No hay stock suficiente: ") : "No se pudo guardar: " + (e?.message || "revisa la conexión")); };
+  const chk = ({data, error}) => { if (error) throw error; return data; };
+
+  const marcasOrden = () => Object.values(S.marcas).filter(m => m.activa !== false).sort((a, b) => (a.n || 999) - (b.n || 999) || a.nombre.localeCompare(b.nombre));
+  const prodsDe = mid => Object.values(S.productos).filter(p => p.marca === mid).sort((a, b) => a.nombre.localeCompare(b.nombre));
+  const ventasPer = k => Object.values(S.ventas).filter(v => v.periodo === k && !v.anulada);
+
+  // ---------- carga de datos ----------
+  async function loadMarcas() { const d = chk(await sb.from("marcas").select("*")); S.marcas = {}; d.forEach(m => S.marcas[m.id] = m); }
+  async function loadProductos() { const d = chk(await sb.from("productos").select("*")); S.productos = {}; d.forEach(p => S.productos[p.id] = p); }
+  async function loadVentas() {
+    const pers = [...new Set([PER_ACT(), S.liqPer])];
+    const d = chk(await sb.from("ventas").select("*").in("periodo", pers).order("fecha", {ascending: false}).limit(5000));
+    S.ventas = {}; d.forEach(v => S.ventas[v.id] = v);
+  }
+  async function loadLiq() { const d = chk(await sb.from("liquidaciones").select("*").eq("periodo", S.liqPer)); S.liq = {}; d.forEach(l => S.liq[l.periodo + "__" + l.marca] = l); }
+  const loaders = {marcas: loadMarcas, productos: loadProductos, ventas: loadVentas, liquidaciones: loadLiq};
+  const pend = new Set(); let tmr;
+  function refresh(...tables) { tables.forEach(t => pend.add(t)); clearTimeout(tmr); tmr = setTimeout(async () => { const ts = [...pend]; pend.clear(); try { await Promise.all(ts.map(t => loaders[t]())); } catch (e) { fail(e); } render(); }, 150); }
+
+  // ---------- sesión ----------
+  async function start() {
+    const {data: {session}} = await sb.auth.getSession();
+    sb.auth.onAuthStateChange((_e, s) => { if (!s) showLogin(); });
+    if (!session) return showLogin();
+    S.uid = session.user.id;
+    const ok = chk(await sb.rpc("es_socio"));
+    if (!ok) return showJoin(session.user.email);
+    showApp();
+  }
+  function showLogin() { $("#appView").hidden = true; $("#joinView").hidden = true; $("#loginView").hidden = false; }
+  function showJoin(email) { $("#appView").hidden = true; $("#loginView").hidden = true; $("#joinView").hidden = false; $("#joinEmail").textContent = email; }
+  async function showApp() {
+    $("#loginView").hidden = true; $("#joinView").hidden = true; $("#appView").hidden = false;
+    try { await Promise.all(Object.values(loaders).map(f => f())); } catch (e) { fail(e); }
+    sb.channel("caja").on("postgres_changes", {event: "*", schema: "public"}, p => { if (loaders[p.table]) refresh(p.table); }).subscribe();
+    setInterval(() => refresh("ventas", "productos"), 60000);
+    render();
+  }
+  $("#loginForm").addEventListener("submit", async e => {
+    e.preventDefault();
+    const email = $("#lgEmail").value.trim(), pass = $("#lgPass").value;
+    const modo = e.submitter?.dataset.modo || "entrar";
+    $("#lgMsg").textContent = "";
+    if (modo === "crear") {
+      const {data, error} = await sb.auth.signUp({email, password: pass});
+      if (error) { $("#lgMsg").textContent = traducir(error.message); return; }
+      if (!data.session) { $("#lgMsg").textContent = "Te mandamos un correo para confirmar tu cuenta. Ábrelo y luego entra aquí."; return; }
+    } else {
+      const {error} = await sb.auth.signInWithPassword({email, password: pass});
+      if (error) { $("#lgMsg").textContent = traducir(error.message); return; }
+    }
+    start();
+  });
+  const traducir = m => /Invalid login/i.test(m) ? "Correo o contraseña incorrectos." : /least 6/i.test(m) ? "La contraseña debe tener al menos 6 caracteres." : /already registered/i.test(m) ? "Ese correo ya tiene cuenta: usa «Entrar»." : /not confirmed/i.test(m) ? "Primero confirma tu correo con el enlace que te enviamos." : m;
+  $("#joinForm").addEventListener("submit", async e => {
+    e.preventDefault();
+    const {data, error} = await sb.rpc("unirse_como_socio", {p_codigo: $("#jCodigo").value.trim(), p_nombre: $("#jNombre").value.trim()});
+    if (error || !data) { $("#jMsg").textContent = "El código de socios no es correcto."; return; }
+    showApp();
+  });
+  $$(".salir").forEach(b => b.addEventListener("click", async () => { await sb.auth.signOut(); location.reload(); }));
+
+  // ---------- tabs ----------
+  $$("nav.tabs button").forEach(b => b.addEventListener("click", () => {
+    S.tab = b.dataset.tab;
+    $$("nav.tabs button").forEach(x => x.setAttribute("aria-selected", x === b));
+    $$("section[data-view]").forEach(s => s.hidden = s.dataset.view !== S.tab);
+    try { localStorage.setItem("tab", S.tab); } catch {}
+    render();
+  }));
+
+  function renderTop() {
+    const hoy = Object.values(S.ventas).filter(v => v.dia === HOY() && !v.anulada);
+    $("#kHoy").textContent = bs(hoy.reduce((a, v) => a + +v.total, 0));
+    $("#kN").textContent = hoy.length;
+    $("#kPer").textContent = bs(ventasPer(PER_ACT()).reduce((a, v) => a + +v.total, 0));
+    $("#kLow").textContent = Object.values(S.productos).filter(p => p.stock <= p.minimo).length;
+    $("#perLabel").textContent = "Periodo " + perLabel(PER_ACT());
+  }
+
+  // ---------- caja ----------
+  function marcaFromInput(v) {
+    v = (v || "").trim().toLowerCase(); if (!v) return null;
+    const list = marcasOrden();
+    return list.find(m => (m.nombre + " · " + m.espacio).toLowerCase() === v) || list.find(m => m.nombre.toLowerCase() === v) || list.find(m => m.nombre.toLowerCase().includes(v) || (m.espacio || "").toLowerCase().includes(v)) || null;
+  }
+  $("#cajaMarca").addEventListener("input", e => { const m = marcaFromInput(e.target.value); S.marcaCaja = m ? m.id : null; renderCaja(); });
+  function renderCaja() {
+    $("#dlMarcas").innerHTML = marcasOrden().map(m => `<option value="${esc(m.nombre + " · " + m.espacio)}"></option>`).join("");
+    const box = $("#cajaProds");
+    if (!S.marcaCaja) box.innerHTML = `<div class="empty">Elige una marca para ver sus productos. Si todavía no los registraron, usa «Producto sin registrar».</div>`;
+    else {
+      const ps = prodsDe(S.marcaCaja);
+      box.innerHTML = ps.length ? `<div class="prods">${ps.map(p => `<button class="prod" data-add="${esc(p.id)}" ${p.stock <= 0 ? "disabled" : ""}><span>${esc(p.nombre)}</span><span class="p">${bs(p.precio)}</span><span class="s">Stock: ${p.stock}</span></button>`).join("")}</div>`
+        : `<div class="empty">${esc(S.marcas[S.marcaCaja].nombre)} no tiene productos registrados. Regístralos en Stock con la ficha de ingreso, o vende con «Producto sin registrar».</div>`;
+    }
+    $("#cart").innerHTML = S.cart.length ? S.cart.map((l, i) => `<li><span style="min-width:0"><b>${esc(l.nombre)}</b><br><span class="small muted">${esc(S.marcas[l.marca]?.nombre || "")}</span></span><span class="row" style="flex-wrap:nowrap"><button class="b sm" data-dec="${i}" aria-label="Quitar uno">−</button><span class="num">${l.cant}</span><button class="b sm" data-inc="${i}" aria-label="Agregar uno">+</button><span class="num" style="min-width:76px;text-align:right">${bs(l.cant * l.precio)}</span></span></li>`).join("")
+      : `<li class="muted small">Toca un producto para agregarlo a la cuenta.</li>`;
+    $("#cartTot").textContent = bs(S.cart.reduce((a, l) => a + l.cant * l.precio, 0));
+    $("#cobrar").disabled = !S.cart.length;
+    $$("#metodo button").forEach(b => b.setAttribute("aria-pressed", b.dataset.m === S.metodo));
+    $("#hoyFecha").textContent = laPaz().toLocaleDateString("es-BO", {weekday: "long", day: "numeric", month: "long"});
+    const hoy = Object.values(S.ventas).filter(v => v.dia === HOY()).sort((a, b) => b.fecha.localeCompare(a.fecha));
+    $("#hoyList").innerHTML = hoy.length ? `<div class="tbl"><table><thead><tr><th>Hora</th><th>Marca</th><th>Producto</th><th class="r">Cant.</th><th class="r">Total</th><th>Pago</th><th></th></tr></thead><tbody>${hoy.map(v => `<tr class="${v.anulada ? "void" : ""}"><td class="num">${hora(v.fecha)}</td><td>${esc(S.marcas[v.marca]?.nombre || v.marca)}</td><td>${esc(v.nombre)}</td><td class="r num">${v.cant}</td><td class="r num">${bs(v.total)}</td><td><span class="chip g">${esc(v.metodo)}</span></td><td>${v.anulada ? `<span class="chip bad">Anulada</span>` : `<span><button class="b sm danger" data-anular="${esc(v.id)}">Anular</button></span>`}</td></tr>`).join("")}</tbody></table></div>`
+      : `<div class="empty">Todavía no hay ventas hoy. Cuando cobres, aparecen aquí con la hora y la marca.</div>`;
+  }
+  $("#cajaProds").addEventListener("click", e => {
+    const b = e.target.closest("[data-add]"); if (!b) return;
+    const p = S.productos[b.dataset.add]; if (!p) return;
+    const l = S.cart.find(x => x.producto === p.id);
+    if ((l ? l.cant : 0) + 1 > p.stock) return toast("No hay más stock de " + p.nombre);
+    if (l) l.cant++; else S.cart.push({producto: p.id, marca: p.marca, nombre: p.nombre, precio: +p.precio, cant: 1});
+    renderCaja();
+  });
+  $("#libreAdd").addEventListener("click", () => {
+    const nom = $("#libreNom").value.trim(), pre = parseFloat($("#librePre").value);
+    if (!S.marcaCaja) return toast("Primero elige la marca.");
+    if (!nom || !(pre > 0)) return toast("Escribe la descripción y el precio.");
+    S.cart.push({producto: null, marca: S.marcaCaja, nombre: nom, precio: pre, cant: 1});
+    $("#libreNom").value = ""; $("#librePre").value = ""; renderCaja();
+  });
+  $("#cart").addEventListener("click", e => {
+    const i = e.target.closest("[data-inc]")?.dataset.inc, j = e.target.closest("[data-dec]")?.dataset.dec;
+    if (i != null) { const l = S.cart[i]; const p = l.producto && S.productos[l.producto]; if (p && l.cant + 1 > p.stock) return toast("No hay más stock."); l.cant++; }
+    if (j != null) { S.cart[j].cant--; if (S.cart[j].cant <= 0) S.cart.splice(j, 1); }
+    renderCaja();
+  });
+  $("#metodo").addEventListener("click", e => { const b = e.target.closest("button"); if (b) { S.metodo = b.dataset.m; renderCaja(); } });
+  $("#cobrar").addEventListener("click", async () => {
+    if (!S.cart.length) return;
+    const btn = $("#cobrar"); btn.disabled = true;
+    const total = S.cart.reduce((a, l) => a + l.cant * l.precio, 0);
+    try {
+      chk(await sb.rpc("vender", {p_items: S.cart, p_metodo: S.metodo}));
+      S.cart = []; toast("Cobrado " + bs(total) + " (" + S.metodo + ")");
+      refresh("ventas", "productos");
+    } catch (e) { fail(e); }
+    renderCaja();
+  });
+  $("#hoyList").addEventListener("click", async e => {
+    const a = e.target.closest("[data-anular]"), y = e.target.closest("[data-yes]"), n = e.target.closest("[data-no]");
+    if (a) { a.parentElement.innerHTML = `<span class="confirm small">¿Anular? <button class="b sm danger" data-yes="${esc(a.dataset.anular)}">Sí</button><button class="b sm" data-no="1">No</button></span>`; return; }
+    if (n) return renderCaja();
+    if (y) { try { chk(await sb.rpc("anular_venta", {p_id: y.dataset.yes})); toast("Venta anulada y stock devuelto"); refresh("ventas", "productos"); } catch (er) { fail(er); } }
+  });
+
+  // ---------- stock ----------
+  function fillMarcaSelect(sel) {
+    const cur = sel.value;
+    sel.innerHTML = marcasOrden().map(m => `<option value="${esc(m.id)}">${esc(m.nombre)} · ${esc(m.espacio)}</option>`).join("");
+    if (cur && S.marcas[cur]) sel.value = cur;
+  }
+  function renderStock() {
+    const sel = $("#stockMarca"); fillMarcaSelect(sel);
+    const mid = sel.value;
+    const low = Object.values(S.productos).filter(p => p.stock <= p.minimo).sort((a, b) => a.stock - b.stock);
+    $("#lowPanel").innerHTML = `<div class="row" style="justify-content:space-between"><h2>Avisar para reponer</h2><span class="chip ${low.length ? "warn" : "ok"}">${low.length ? low.length + " productos" : "Todo con stock"}</span></div>` +
+      (low.length ? `<div class="tbl"><table><thead><tr><th>Marca</th><th>Producto</th><th class="r">Quedan</th><th>Contacto</th></tr></thead><tbody>${low.map(p => { const m = S.marcas[p.marca] || {}; return `<tr><td>${esc(m.nombre)}</td><td>${esc(p.nombre)}</td><td class="r num"><span class="chip ${p.stock <= 0 ? "bad" : "warn"}">${p.stock}</span></td><td class="num small">${esc(m.celular || "—")}</td></tr>`; }).join("")}</tbody></table></div>` : `<p class="small muted" style="margin:0">Cuando a un producto le quede su stock mínimo o menos, aparece aquí con el celular de la marca.</p>`);
+    const ps = prodsDe(mid);
+    $("#stockList").innerHTML = ps.length ? `<div class="tbl"><table><thead><tr><th>Producto</th><th class="r">Precio</th><th class="r">Stock</th><th class="r">Mínimo</th><th></th></tr></thead><tbody>${ps.map(p => `<tr><td><input data-pf="nombre" data-id="${esc(p.id)}" value="${esc(p.nombre)}" aria-label="Nombre"></td><td class="r"><input data-pf="precio" data-id="${esc(p.id)}" type="number" min="0" step="0.5" value="${p.precio}" style="width:90px" aria-label="Precio"></td><td class="r"><input data-pf="stock" data-id="${esc(p.id)}" type="number" min="0" step="1" value="${p.stock}" style="width:76px" aria-label="Stock"></td><td class="r"><input data-pf="minimo" data-id="${esc(p.id)}" type="number" min="0" step="1" value="${p.minimo}" style="width:70px" aria-label="Mínimo"></td><td><span class="chip ${p.stock <= 0 ? "bad" : p.stock <= p.minimo ? "warn" : "ok"}">${p.stock <= 0 ? "Agotado" : p.stock <= p.minimo ? "Reponer" : "OK"}</span></td></tr>`).join("")}</tbody></table></div><p class="small muted" style="margin:0">Corrige precio o stock directamente; se guarda al salir del campo.</p>`
+      : `<div class="empty">Esta marca todavía no tiene productos. Regístralos con la ficha de ingreso el día que traiga su mercadería.</div>`;
+    if (!S.ficha.length) S.ficha = [{nombre: "", cant: 1, precio: ""}];
+    if (!$("#fichaRows").contains(document.activeElement)) $("#fichaRows").innerHTML = S.ficha.map((r, i) => `<div class="row"><label class="f">Producto<input list="dlProds" data-fr="nombre" data-i="${i}" value="${esc(r.nombre)}" placeholder="Nombre del producto"></label><label class="f" style="flex:0 1 80px">Cant.<input data-fr="cant" data-i="${i}" type="number" min="1" step="1" value="${r.cant}"></label><label class="f" style="flex:0 1 100px">Precio Bs<input data-fr="precio" data-i="${i}" type="number" min="0" step="0.5" value="${r.precio}"></label></div>`).join("") + `<datalist id="dlProds">${ps.map(p => `<option value="${esc(p.nombre)}"></option>`).join("")}</datalist>`;
+    renderHist(mid);
+  }
+  let histFor = null;
+  async function renderHist(mid) {
+    if (!mid || histFor === mid) return; histFor = mid;
+    const {data} = await sb.from("ingresos").select("*").eq("marca", mid).order("fecha", {ascending: false}).limit(8);
+    $("#fichaHist").innerHTML = data?.length ? data.map(r => `<div style="padding:6px 0;border-bottom:1px solid var(--line)"><b class="num">${fechaCorta(r.fecha)}</b> · ${r.items.map(i => esc(i.nombre) + " ×" + i.cant).join(", ")}${r.nota ? ` <span class="muted">(${esc(r.nota)})</span>` : ""}</div>`).join("") : `<span class="muted">Sin ingresos registrados para esta marca.</span>`;
+  }
+  $("#stockMarca").addEventListener("change", () => { S.ficha = []; histFor = null; $("#fichaRows").innerHTML = ""; renderStock(); });
+  $("#stockList").addEventListener("change", async e => {
+    const i = e.target.closest("[data-pf]"); if (!i) return;
+    const f = i.dataset.pf; let v = f === "nombre" ? i.value.trim() : parseFloat(i.value);
+    if (f !== "nombre" && !(v >= 0)) return toast("Escribe un número válido.");
+    if (f === "nombre" && !v) return toast("El nombre no puede quedar vacío.");
+    if (f === "stock" || f === "minimo") v = Math.round(v);
+    try { chk(await sb.from("productos").update({[f]: v}).eq("id", i.dataset.id)); toast("Guardado"); refresh("productos"); } catch (er) { fail(er); }
+  });
+  $("#fichaRows").addEventListener("input", e => {
+    const i = e.target.closest("[data-fr]"); if (!i) return;
+    const r = S.ficha[i.dataset.i]; r[i.dataset.fr] = i.value;
+    if (i.dataset.fr === "nombre") { const p = prodsDe($("#stockMarca").value).find(p => p.nombre.toLowerCase() === i.value.trim().toLowerCase()); if (p && !r.precio) { r.precio = p.precio; const pi = $(`[data-fr="precio"][data-i="${i.dataset.i}"]`); if (pi) pi.value = p.precio; } }
+  });
+  $("#fichaAdd").addEventListener("click", () => { S.ficha.push({nombre: "", cant: 1, precio: ""}); $("#fichaRows").innerHTML = ""; renderStock(); });
+  $("#fichaSave").addEventListener("click", async () => {
+    const mid = $("#stockMarca").value; if (!mid) return;
+    const items = S.ficha.map(r => ({nombre: r.nombre.trim(), cant: parseInt(r.cant, 10), precio: parseFloat(r.precio)})).filter(r => r.nombre);
+    if (!items.length) return toast("Escribe al menos un producto.");
+    if (items.some(r => !(r.cant > 0) || !(r.precio >= 0))) return toast("Revisa cantidades y precios.");
+    const btn = $("#fichaSave"); btn.disabled = true;
+    try {
+      chk(await sb.rpc("registrar_ingreso", {p_marca: mid, p_items: items, p_nota: $("#fichaNota").value.trim()}));
+      S.ficha = []; $("#fichaNota").value = ""; $("#fichaRows").innerHTML = ""; histFor = null;
+      toast("Ingreso guardado: " + items.reduce((a, r) => a + r.cant, 0) + " unidades"); refresh("productos");
+    } catch (e) { fail(e); }
+    btn.disabled = false; renderStock();
+  });
+
+  // ---------- liquidación ----------
+  function calcLiq(m) {
+    const vs = ventasPer(S.liqPer).filter(v => v.marca === m.id);
+    const vendido = vs.reduce((a, v) => a + +v.total, 0);
+    const tarifa = +m.tarifa || 0;
+    const desc = m.descuenta ? Math.min(vendido, tarifa) : 0;
+    return {vs, vendido, desc, entregar: vendido - desc, falta: m.descuenta ? Math.max(0, tarifa - vendido) : tarifa};
+  }
+  function renderLiq() {
+    const sel = $("#liqPer"); const opts = []; for (let i = 3; i >= -6; i--) opts.push(perShift(PER_ACT(), i));
+    sel.innerHTML = [...new Set(opts)].filter(k => k >= "2026-11").map(k => `<option value="${k}">${perLabel(k)}${k === PER_ACT() ? " (actual)" : ""}</option>`).join("");
+    sel.value = S.liqPer;
+    $("#liqHint").textContent = "Ventas del " + perLabel(S.liqPer) + ". Si la marca aceptó descontar, la tarifa del mes siguiente se resta de lo vendido.";
+    const all = marcasOrden().map(m => ({m, ...calcLiq(m), done: S.liq[S.liqPer + "__" + m.id]}));
+    const sum = f => all.reduce((a, x) => a + x[f], 0);
+    $("#liqTotals").innerHTML = `<span class="chip g">Vendido ${bs(sum("vendido"))}</span><span class="chip ok">A entregar ${bs(sum("entregar"))}</span><span class="chip warn">Tarifas descontadas ${bs(sum("desc"))}</span><span class="chip bad">Tarifas por cobrar ${bs(sum("falta"))}</span><span class="chip g">${all.filter(x => x.done).length}/${all.length} entregadas</span>`;
+    $("#liqList").innerHTML = all.map(({m, vs, vendido, desc, entregar, falta, done}) => `<div class="liqcard"><div><b>${esc(m.nombre)}</b> <span class="small muted">· ${esc(m.espacio)}</span><div class="meta">${vs.length} ventas · vendido ${bs(vendido)}${m.descuenta ? ` · tarifa descontada ${bs(desc)}` : ` · tarifa ${bs(m.tarifa)} se cobra aparte`}${falta && m.descuenta ? ` · <b>falta cobrar ${bs(falta)}</b>` : ""}</div></div><div class="amt">${bs(entregar)}<div class="small muted" style="font-family:var(--f-body);font-weight:400">a entregar</div></div><div class="acts"><button class="b sm" data-rep="${esc(m.id)}">Reporte</button>${done ? `<span class="chip ok">Entregado ${fechaCorta(done.fecha)} · ${esc(done.metodo)}</span> <button class="b sm" data-undo="${esc(m.id)}">Deshacer</button>` : `<button class="b sm pri" data-done="${esc(m.id)}" data-met="efectivo">Entregado en efectivo</button><button class="b sm" data-done="${esc(m.id)}" data-met="transferencia">Entregado por transferencia</button>`}</div></div>`).join("") || `<div class="empty">No hay marcas activas.</div>`;
+  }
+  $("#liqPer").addEventListener("change", e => { S.liqPer = e.target.value; $("#repPanel").hidden = true; refresh("ventas", "liquidaciones"); });
+  $("#liqList").addEventListener("click", async e => {
+    const r = e.target.closest("[data-rep]"), d = e.target.closest("[data-done]"), u = e.target.closest("[data-undo]");
+    if (r) return showRep(r.dataset.rep);
+    try {
+      if (d) { const m = S.marcas[d.dataset.done], x = calcLiq(m); chk(await sb.from("liquidaciones").upsert({periodo: S.liqPer, marca: m.id, vendido: x.vendido, descontado: x.desc, entregado: x.entregar, metodo: d.dataset.met, por: S.uid})); toast("Marcado como entregado"); refresh("liquidaciones"); }
+      if (u) { chk(await sb.from("liquidaciones").delete().eq("periodo", S.liqPer).eq("marca", u.dataset.undo)); refresh("liquidaciones"); }
+    } catch (er) { fail(er); }
+  });
+  function showRep(mid) {
+    const m = S.marcas[mid], x = calcLiq(m);
+    const g = {}; x.vs.forEach(v => { const k = v.nombre + "|" + v.precio; g[k] = g[k] || {nombre: v.nombre, cant: 0, total: 0}; g[k].cant += v.cant; g[k].total += +v.total; });
+    const mm = +S.liqPer.split("-")[1]; const nm = mm === 12 ? 1 : mm + 1;
+    const lines = Object.values(g).sort((a, b) => b.total - a.total).map(i => `• ${i.nombre} ×${i.cant} — ${bs(i.total)}`);
+    const tar = `Tarifa del 29 ${MESES[mm - 1]} al 29 ${MESES[nm - 1]}: ${bs(m.tarifa)}`;
+    const txt = [`El Parralito · Liquidación`, m.nombre, `Periodo: ${perLabel(S.liqPer)}`, ``, lines.length ? `Ventas:` : `Este periodo no hubo ventas.`, ...lines, ``, `Total vendido: ${bs(x.vendido)}`,
+      m.descuenta ? `${tar} (descontada${x.falta ? `, faltan ${bs(x.falta)}` : ""})` : `${tar} (se paga aparte)`, `A entregarte: ${bs(x.entregar)}`, ``,
+      m.pin_hash ? `Mira tus ventas cuando quieras: ${PORTAL_URL}?t=${m.token}` : ``, `Gracias por ser parte de El Parralito.`].filter((l, i, a) => l !== "" || a[i - 1] !== "").join("\n");
+    $("#repTitle").textContent = "Reporte · " + m.nombre; $("#repText").value = txt; $("#repTel").textContent = m.celular ? "WhatsApp: " + m.celular : "Falta el celular de esta marca";
+    $("#repPanel").hidden = false; $("#repPanel").scrollIntoView({behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start"});
+  }
+  $("#repClose").addEventListener("click", () => $("#repPanel").hidden = true);
+  const copiar = (txt, el) => navigator.clipboard?.writeText(txt).then(() => toast("Copiado. Pégalo en el chat de la marca."), () => { el?.select?.(); toast("Selecciona y copia el texto."); });
+  $("#repCopy").addEventListener("click", () => copiar($("#repText").value, $("#repText")));
+
+  // ---------- marcas ----------
+  function renderMarcas() {
+    const q = $("#mBuscar").value.trim().toLowerCase();
+    const all = marcasOrden();
+    const ms = all.filter(m => !q || [m.nombre, m.titular, m.espacio, m.rubro].join(" ").toLowerCase().includes(q));
+    const pend = all.filter(m => !m.saldo_pagado).reduce((a, m) => a + +m.saldo, 0);
+    $("#mTotals").innerHTML = `<span class="chip g">${all.length} marcas</span><span class="chip ok">Tarifas ${bs(all.reduce((a, m) => a + +m.tarifa, 0))}/mes</span><span class="chip ${pend ? "warn" : "ok"}">Saldo por cobrar ${bs(pend)}</span><span class="chip ${all.some(m => !m.pin_hash) ? "warn" : "ok"}">${all.filter(m => m.pin_hash).length}/${all.length} con acceso al portal</span>`;
+    $("#mBody").innerHTML = ms.map(m => `<tr><td class="num muted">${m.n || ""}</td><td><b>${esc(m.nombre)}</b><div class="small muted">${esc(m.titular || "")}${m.rubro ? " · " + esc(m.rubro) : ""}</div></td><td class="small">${esc(m.espacio)}</td><td class="r num">${bs(m.tarifa)}</td><td>${+m.saldo > 0 ? `<button class="b sm" data-saldo="${esc(m.id)}">${m.saldo_pagado ? `<span class="chip ok">Pagado</span>` : `<span class="chip warn">Debe ${bs(m.saldo)}</span>`}</button>` : `<span class="chip ok">Mes pagado</span>`}</td><td><label class="row small" style="flex-wrap:nowrap"><input type="checkbox" data-desc="${esc(m.id)}" ${m.descuenta ? "checked" : ""} style="width:auto"> Sí</label></td><td class="num small">${esc(m.celular || "—")}</td><td><button class="b sm" data-portal="${esc(m.id)}">${m.pin_hash ? "Acceso" : "Crear acceso"}</button> <button class="b sm" data-edit="${esc(m.id)}">Editar</button></td></tr>`).join("") || `<tr><td colspan="8" class="muted">Ninguna marca coincide con la búsqueda.</td></tr>`;
+  }
+  $("#mBuscar").addEventListener("input", renderMarcas);
+  $("#mBody").addEventListener("click", async e => {
+    const s = e.target.closest("[data-saldo]"), ed = e.target.closest("[data-edit]"), po = e.target.closest("[data-portal]");
+    try {
+      if (s) { const m = S.marcas[s.dataset.saldo]; chk(await sb.from("marcas").update({saldo_pagado: !m.saldo_pagado}).eq("id", m.id)); toast(m.saldo_pagado ? "Saldo marcado como pendiente" : "Saldo de " + m.nombre + " cobrado"); refresh("marcas"); }
+      if (po) showAcceso(po.dataset.portal);
+      if (ed) { const m = S.marcas[ed.dataset.edit]; S.editMarca = m.id; $("#mfTitle").textContent = "Editar " + m.nombre; $("#mfNombre").value = m.nombre; $("#mfTitular").value = m.titular || ""; $("#mfCel").value = m.celular || ""; $("#mfRubro").value = m.rubro || ""; $("#mfEspacio").value = m.espacio || ""; $("#mfTarifa").value = m.tarifa || ""; $("#mfAdel").value = m.adelanto || ""; $("#mfCancel").hidden = false; $("#mfNombre").scrollIntoView({block: "center"}); $("#mfNombre").focus(); }
+    } catch (er) { fail(er); }
+  });
+  $("#mBody").addEventListener("change", async e => { const c = e.target.closest("[data-desc]"); if (c) { try { chk(await sb.from("marcas").update({descuenta: c.checked}).eq("id", c.dataset.desc)); refresh("marcas"); } catch (er) { fail(er); } } });
+  function showAcceso(mid, pin) {
+    const m = S.marcas[mid]; const link = PORTAL_URL + "?t=" + m.token;
+    $("#acTitle").textContent = "Acceso al portal · " + m.nombre;
+    $("#acLink").value = link;
+    $("#acPinBox").innerHTML = pin ? `PIN nuevo: <b class="num" style="font-size:1.3rem">${pin}</b> <span class="small muted">· anótalo o envíalo ahora; después no se puede volver a ver.</span>` : (m.pin_hash ? `<span class="small muted">Esta marca ya tiene PIN. Si lo olvidó, genera uno nuevo.</span>` : `<span class="small muted">Todavía no tiene PIN. Genera uno para activar su acceso.</span>`);
+    $("#acMsg").value = pin ? `¡Hola! Ya puedes ver tus ventas y tu stock de El Parralito cuando quieras desde tu celular:\n${link}\nTu PIN es: ${pin}\nGuárdalo y no lo compartas.` : "";
+    $("#acMsgWrap").hidden = !pin;
+    $("#acPanel").dataset.marca = mid; $("#acPanel").hidden = false; $("#acPanel").scrollIntoView({block: "center"});
+  }
+  $("#acGen").addEventListener("click", async () => {
+    const mid = $("#acPanel").dataset.marca; const a = new Uint32Array(1); crypto.getRandomValues(a); const pin = String(a[0] % 10000).padStart(4, "0");
+    try { chk(await sb.rpc("poner_pin", {p_marca: mid, p_pin: pin})); await loadMarcas(); renderMarcas(); showAcceso(mid, pin); } catch (er) { fail(er); }
+  });
+  $("#acCopyLink").addEventListener("click", () => copiar($("#acLink").value, $("#acLink")));
+  $("#acCopyMsg").addEventListener("click", () => copiar($("#acMsg").value, $("#acMsg")));
+  $("#acClose").addEventListener("click", () => $("#acPanel").hidden = true);
+  const resetForm = () => { S.editMarca = null; $("#mfTitle").textContent = "Agregar marca"; ["#mfNombre", "#mfTitular", "#mfCel", "#mfRubro", "#mfEspacio", "#mfTarifa", "#mfAdel"].forEach(s => $(s).value = ""); $("#mfCancel").hidden = true; };
+  $("#mfCancel").addEventListener("click", resetForm);
+  $("#mfSave").addEventListener("click", async () => {
+    const nombre = $("#mfNombre").value.trim(), tarifa = parseFloat($("#mfTarifa").value) || 0, adelanto = parseFloat($("#mfAdel").value) || 0;
+    if (!nombre) return toast("Escribe el nombre de la marca.");
+    const data = {nombre, titular: $("#mfTitular").value.trim(), celular: $("#mfCel").value.trim(), rubro: $("#mfRubro").value.trim(), espacio: $("#mfEspacio").value.trim(), tarifa, adelanto, saldo: Math.max(0, tarifa - adelanto)};
+    try {
+      if (S.editMarca) { chk(await sb.from("marcas").update(data).eq("id", S.editMarca)); toast("Marca actualizada"); }
+      else {
+        const id = nombre.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 40) + "-" + Math.random().toString(36).slice(2, 6);
+        const n = Math.max(0, ...Object.values(S.marcas).map(m => m.n || 0)) + 1;
+        chk(await sb.from("marcas").insert({...data, id, n, saldo_pagado: data.saldo === 0})); toast("Marca agregada (#" + n + ")");
+      }
+      resetForm(); refresh("marcas");
+    } catch (er) { fail(er); }
+  });
+
+  function render() {
+    if ($("#appView").hidden) return;
+    renderTop();
+    if (S.tab === "caja") renderCaja();
+    if (S.tab === "stock") renderStock();
+    if (S.tab === "liq") renderLiq();
+    if (S.tab === "marcas") renderMarcas();
+  }
+  try { const t = localStorage.getItem("tab"); if (t) { const b = $(`nav.tabs button[data-tab="${t}"]`); b && b.click(); } } catch {}
+  start().catch(fail);
+})();
+
+</script>
+</body>
+</html>

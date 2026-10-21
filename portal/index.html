@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Mis ventas · El Parralito</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: hoja personal de la marca — cabecera con su nombre y lo vendido, luego ventas, stock e historial en una sola columna */
+:root{
+  --bg:#f4f6f1; --panel:#ffffff; --ink:#1e2a22; --muted:#5f6b62; --line:#dde3da;
+  --vine:#2f5d3a; --grape:#6b2d5c; --grape-soft:#f2e7ef;
+  --ok:#2e7d4f; --warn:#b26a00; --bad:#b3261e; --ok-soft:#e3f2e8; --warn-soft:#fbefdc; --bad-soft:#fbe4e2;
+  --f-display:"Bricolage Grotesque","Segoe UI",system-ui,sans-serif;
+  --f-body:"Atkinson Hyperlegible","Segoe UI",system-ui,sans-serif;
+  --f-num:"JetBrains Mono",ui-monospace,Menlo,monospace;
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){:root{
+  --bg:#121814; --panel:#1b231e; --ink:#e7eee8; --muted:#9cab9f; --line:#2d3a31;
+  --vine:#8fc79b; --grape:#e3a6d3; --grape-soft:#3a2234;
+  --ok:#7fd39f; --warn:#f0b45c; --bad:#ff8a80; --ok-soft:#1f3a2a; --warn-soft:#3d2e12; --bad-soft:#40201d; color-scheme:dark}}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:16px/1.45 var(--f-body);padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+.wrap{max-width:760px;margin:0 auto;padding:0 max(16px,env(safe-area-inset-left,0px)) 40px max(16px,env(safe-area-inset-right,0px))}
+header{background:#2f5d3a;color:#f4f6f1}
+header .wrap{padding-block:18px 20px;display:flex;flex-direction:column;gap:6px}
+.eyebrow{font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;opacity:.8}
+h1{font-family:var(--f-display);font-weight:800;font-size:1.7rem;margin:0;text-wrap:balance}
+h2{font-family:var(--f-display);font-weight:600;font-size:1.15rem;margin:0}
+.kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:10px}
+.kpi{background:rgba(255,255,255,.1);border-radius:10px;padding:10px}
+.kpi span{font-size:.75rem;opacity:.85}
+.kpi b{display:block;font-family:var(--f-num);font-size:1.1rem}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:10px;margin-top:16px;min-width:0}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:space-between}
+input,select{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;min-width:0}
+input:focus-visible,select:focus-visible,button:focus-visible{outline:3px solid var(--grape);outline-offset:2px}
+button{font:700 1rem var(--f-body);border-radius:10px;border:0;background:var(--grape);color:var(--panel);padding:12px 16px;cursor:pointer}
+.muted{color:var(--muted)} .small{font-size:.85rem}
+.num{font-family:var(--f-num);font-variant-numeric:tabular-nums}
+.tbl{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:.9rem}
+th{font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);text-align:left;padding:8px 6px;border-bottom:1px solid var(--line);white-space:nowrap}
+td{padding:8px 6px;border-bottom:1px solid var(--line)}
+td.r,th.r{text-align:right}
+.chip{display:inline-block;font-size:.75rem;font-weight:700;padding:2px 8px;border-radius:999px;white-space:nowrap}
+.chip.ok{background:var(--ok-soft);color:var(--ok)} .chip.warn{background:var(--warn-soft);color:var(--warn)} .chip.bad{background:var(--bad-soft);color:var(--bad)} .chip.g{background:var(--grape-soft);color:var(--grape)}
+.empty{border:1px dashed var(--line);border-radius:10px;padding:14px;color:var(--muted);font-size:.9rem}
+.login{max-width:380px;margin:40px auto;display:flex;flex-direction:column;gap:12px}
+.pin{font-family:var(--f-num);font-size:1.6rem;letter-spacing:.4em;text-align:center}
+.err{color:var(--bad);font-size:.9rem;min-height:1.2em}
+.day{font-weight:700;font-size:.85rem;color:var(--muted);padding-top:6px}
+@media (max-width:480px){.kpis{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}
+</style>
+</head>
+<body>
+<header><div class="wrap">
+  <span class="eyebrow">El Parralito · Portal del emprendedor</span>
+  <h1 id="hNombre">Mis ventas</h1>
+  <span class="small" id="hEspacio"></span>
+  <div class="kpis" id="kpis" hidden>
+    <div class="kpi"><span>Vendido este periodo</span><b id="kVend">0 Bs</b></div>
+    <div class="kpi"><span>Unidades vendidas</span><b id="kUni">0</b></div>
+    <div class="kpi"><span>Para el día 29</span><b id="kEnt">0 Bs</b></div>
+  </div>
+</div></header>
+
+<main class="wrap">
+  <form class="login panel" id="login" hidden>
+    <h2>Entra con tu PIN</h2>
+    <p class="small muted" style="margin:0">Es el PIN de 4 dígitos que te enviamos por WhatsApp junto con este link.</p>
+    <input id="pin" class="pin" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="one-time-code" aria-label="PIN" required>
+    <label class="small"><input type="checkbox" id="recordar" style="padding:0"> Recordar en este celular</label>
+    <button type="submit">Ver mis ventas</button>
+    <div class="err" id="err"></div>
+  </form>
+  <div class="panel" id="sinLink" hidden><h2>Falta tu link personal</h2><p class="muted" style="margin:0">Abre el link que te enviamos por WhatsApp. Si no lo tienes, pídelo a El Parralito.</p></div>
+
+  <div id="app" hidden>
+    <div class="panel">
+      <div class="row"><h2>Ventas</h2><select id="per" aria-label="Periodo"></select></div>
+      <div class="small muted" id="perInfo"></div>
+      <div id="ventas"></div>
+    </div>
+    <div class="panel">
+      <div class="row"><h2>Mi stock en la tienda</h2><span id="stockChip"></span></div>
+      <div id="stock"></div>
+    </div>
+    <div class="panel">
+      <h2>Entregas de dinero</h2>
+      <div id="liq"></div>
+    </div>
+    <div class="panel">
+      <h2>Mercadería que dejaste</h2>
+      <div id="ing" class="small"></div>
+    </div>
+    <p class="small muted" style="text-align:center">Actualizado <span id="upd"></span> · <a href="#" id="salir" style="color:var(--grape)">Salir</a></p>
+  </div>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script>
+(() => {
+  const sb = window.supabase.createClient("https://eyougzgrquztgrhlkain.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV5b3VnemdycXV6dGdyaGxrYWluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc3OTA1MjcsImV4cCI6MjEwMzM2NjUyN30.b_4ma8HLRGW2F0uFBBhu307F9KqOKz0hI4_LnhwOWJk");
+  const $ = s => document.querySelector(s);
+  const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  const bs = n => (Math.round((+n || 0) * 100) / 100).toLocaleString("es-BO", {maximumFractionDigits: 2}) + " Bs";
+  const MESES = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
+  const pad = n => String(n).padStart(2, "0");
+  const laPaz = () => new Date(new Date().toLocaleString("en-US", {timeZone: "America/La_Paz"}));
+  const perKey = d => { let y = d.getFullYear(), m = d.getMonth(); if (d.getDate() >= 29) { m++; if (m > 11) { m = 0; y++; } } return y + "-" + pad(m + 1); };
+  const perLabel = k => { const [y, m] = k.split("-").map(Number); const pm = m === 1 ? 12 : m - 1; return "29 " + MESES[pm - 1] + " – 28 " + MESES[m - 1] + " " + y; };
+  const fmtDia = iso => new Date(iso).toLocaleDateString("es-BO", {weekday: "long", day: "numeric", month: "long", timeZone: "America/La_Paz"});
+  const fmtHora = iso => new Date(iso).toLocaleTimeString("es-BO", {hour: "2-digit", minute: "2-digit", timeZone: "America/La_Paz"});
+  const token = new URLSearchParams(location.search).get("t");
+  const KEY = "pp_" + (token || "");
+  let D = null, per = perKey(laPaz()), pin = null;
+
+  if (!token) { $("#sinLink").hidden = false; return; }
+  try { pin = localStorage.getItem(KEY); } catch {}
+  if (pin) cargar(); else $("#login").hidden = false;
+
+  $("#login").addEventListener("submit", e => { e.preventDefault(); pin = $("#pin").value.trim(); cargar(true); });
+  $("#salir").addEventListener("click", e => { e.preventDefault(); try { localStorage.removeItem(KEY); } catch {} location.reload(); });
+  $("#per").addEventListener("change", e => { per = e.target.value; render(); });
+
+  async function cargar(manual) {
+    $("#err").textContent = "";
+    const {data, error} = await sb.rpc("portal", {p_token: token, p_pin: pin});
+    if (error || !data || data.error) {
+      try { localStorage.removeItem(KEY); } catch {}
+      $("#login").hidden = false; $("#app").hidden = true;
+      $("#err").textContent = error ? "No hay conexión. Inténtalo otra vez en un momento." : data?.error === "bloqueado" ? "Demasiados intentos. Espera 15 minutos e inténtalo de nuevo." : manual ? "PIN incorrecto. Revisa el que te enviamos por WhatsApp." : "";
+      return;
+    }
+    D = data;
+    if (manual && $("#recordar").checked) { try { localStorage.setItem(KEY, pin); } catch {} }
+    $("#login").hidden = true; $("#app").hidden = false; $("#kpis").hidden = false;
+    render();
+  }
+  setInterval(() => { if (D && !document.hidden) cargar(); }, 120000);
+
+  function render() {
+    const m = D.marca;
+    $("#hNombre").textContent = m.nombre; $("#hEspacio").textContent = "Tu espacio: " + (m.espacio || "—") + " · tarifa " + bs(m.tarifa) + "/mes";
+    const pers = [...new Set([perKey(laPaz()), ...D.ventas.map(v => v.periodo)])].sort().reverse();
+    $("#per").innerHTML = pers.map(k => `<option value="${k}">${perLabel(k)}</option>`).join(""); $("#per").value = per;
+    const vs = D.ventas.filter(v => v.periodo === per);
+    const vend = vs.reduce((a, v) => a + +v.total, 0), uni = vs.reduce((a, v) => a + v.cant, 0);
+    const desc = m.descuenta ? Math.min(vend, +m.tarifa) : 0;
+    $("#kVend").textContent = bs(vend); $("#kUni").textContent = uni; $("#kEnt").textContent = bs(vend - desc);
+    const mm = +per.split("-")[1];
+    $("#perInfo").textContent = "Se entrega el 29 " + MESES[mm - 1] + "." + (m.descuenta ? " De lo vendido se descuenta la tarifa del mes siguiente (" + bs(m.tarifa) + ")." : " La tarifa del mes siguiente se paga aparte.");
+    if (!vs.length) $("#ventas").innerHTML = `<div class="empty">Todavía no hay ventas en este periodo. Cada vez que se venda algo tuyo, aparece aquí con el día y la hora.</div>`;
+    else {
+      let html = "", lastDay = "";
+      html += `<div class="tbl"><table><thead><tr><th>Hora</th><th>Producto</th><th class="r">Cant.</th><th class="r">Total</th></tr></thead><tbody>`;
+      vs.forEach(v => { const d = fmtDia(v.fecha); if (d !== lastDay) { html += `<tr><td colspan="4" class="day">${esc(d)}</td></tr>`; lastDay = d; } html += `<tr><td class="num">${fmtHora(v.fecha)}</td><td>${esc(v.nombre)}</td><td class="r num">${v.cant}</td><td class="r num">${bs(v.total)}</td></tr>`; });
+      $("#ventas").innerHTML = html + `</tbody></table></div>`;
+    }
+    const low = D.productos.filter(p => p.stock <= p.minimo);
+    $("#stockChip").innerHTML = D.productos.length ? (low.length ? `<span class="chip warn">${low.length} por reponer</span>` : `<span class="chip ok">Todo con stock</span>`) : "";
+    $("#stock").innerHTML = D.productos.length ? `<div class="tbl"><table><thead><tr><th>Producto</th><th class="r">Precio</th><th class="r">Quedan</th><th></th></tr></thead><tbody>${D.productos.map(p => `<tr><td>${esc(p.nombre)}</td><td class="r num">${bs(p.precio)}</td><td class="r num">${p.stock}</td><td>${p.stock <= 0 ? `<span class="chip bad">Agotado</span>` : p.stock <= p.minimo ? `<span class="chip warn">Reponer</span>` : `<span class="chip ok">OK</span>`}</td></tr>`).join("")}</tbody></table></div>` : `<div class="empty">Tus productos aparecen aquí cuando los registramos con la ficha de ingreso el día que traes tu mercadería.</div>`;
+    const ls = [...D.liquidaciones].sort((a, b) => b.periodo.localeCompare(a.periodo));
+    $("#liq").innerHTML = ls.length ? `<div class="tbl"><table><thead><tr><th>Periodo</th><th class="r">Vendido</th><th class="r">Descontado</th><th class="r">Entregado</th><th>Cómo</th></tr></thead><tbody>${ls.map(l => `<tr><td>${perLabel(l.periodo)}</td><td class="r num">${bs(l.vendido)}</td><td class="r num">${bs(l.descontado)}</td><td class="r num"><b>${bs(l.entregado)}</b></td><td><span class="chip g">${esc(l.metodo)}</span></td></tr>`).join("")}</tbody></table></div>` : `<div class="empty">La primera entrega de tus ventas es el 29 de noviembre.</div>`;
+    $("#ing").innerHTML = D.ingresos.length ? D.ingresos.map(i => `<div style="padding:6px 0;border-bottom:1px solid var(--line)"><b>${esc(fmtDia(i.fecha))}</b> · ${i.items.map(x => esc(x.nombre) + " ×" + x.cant).join(", ")}</div>`).join("") : `<span class="muted">Aún no registramos mercadería tuya.</span>`;
+    $("#upd").textContent = new Date().toLocaleTimeString("es-BO", {hour: "2-digit", minute: "2-digit"});
+  }
+})();
+</script>
+</body>
+</html>

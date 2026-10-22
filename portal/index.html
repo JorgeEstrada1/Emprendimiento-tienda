@@ -9,7 +9,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@500;700&display=swap">
 <style>
 [hidden]{display:none!important}
-/* Layout: hoja personal de la marca — cabecera con su nombre y lo vendido, luego ventas, stock e historial en una sola columna */
+/* Layout: hoja personal de la marca — cabecera con logo y lo vendido, pestañas grandes (Ventas, Productos, Pagos, Mi marca), una columna */
 :root{
   --bg:#f4f6f1; --panel:#ffffff; --ink:#1e2a22; --muted:#5f6b62; --line:#dde3da;
   --vine:#2f5d3a; --grape:#6b2d5c; --grape-soft:#f2e7ef;
@@ -26,21 +26,31 @@
 *{box-sizing:border-box}
 html,body{margin:0}
 body{background:var(--bg);color:var(--ink);font:16px/1.45 var(--f-body);padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
-.wrap{max-width:760px;margin:0 auto;padding:0 max(16px,env(safe-area-inset-left,0px)) 40px max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:760px;margin:0 auto;padding:0 max(16px,env(safe-area-inset-right,0px)) 40px max(16px,env(safe-area-inset-left,0px))}
 header{background:#2f5d3a;color:#f4f6f1}
-header .wrap{padding-block:18px 20px;display:flex;flex-direction:column;gap:6px}
+header .wrap{padding-block:18px 0;display:flex;flex-direction:column;gap:6px}
 .eyebrow{font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;opacity:.8}
-h1{font-family:var(--f-display);font-weight:800;font-size:1.7rem;margin:0;text-wrap:balance}
+.brand{display:flex;gap:12px;align-items:center}
+.brand img{width:52px;height:52px;border-radius:12px;object-fit:cover;background:#fff}
+h1{font-family:var(--f-display);font-weight:800;font-size:1.6rem;margin:0;text-wrap:balance}
 h2{font-family:var(--f-display);font-weight:600;font-size:1.15rem;margin:0}
 .kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:10px}
 .kpi{background:rgba(255,255,255,.1);border-radius:10px;padding:10px}
 .kpi span{font-size:.75rem;opacity:.85}
-.kpi b{display:block;font-family:var(--f-num);font-size:1.1rem}
+.kpi b{display:block;font-family:var(--f-num);font-size:1.05rem}
+nav.tabs{display:flex;gap:4px;overflow-x:auto;margin-top:14px}
+nav.tabs button{flex:1 0 auto;background:transparent;color:#f4f6f1;opacity:.8;border-radius:10px 10px 0 0;padding:10px 12px;font-size:.95rem}
+nav.tabs button[aria-selected="true"]{background:var(--bg);color:var(--ink);opacity:1}
 .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:10px;margin-top:16px;min-width:0}
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:space-between}
-input,select{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;min-width:0}
-input:focus-visible,select:focus-visible,button:focus-visible{outline:3px solid var(--grape);outline-offset:2px}
+input,select,textarea{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;min-width:0;width:100%}
+input[type=checkbox]{width:auto}
+input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible{outline:3px solid var(--grape);outline-offset:2px}
 button{font:700 1rem var(--f-body);border-radius:10px;border:0;background:var(--grape);color:var(--panel);padding:12px 16px;cursor:pointer}
+button.sec{background:var(--panel);color:var(--ink);border:1px solid var(--line)}
+button.sm{padding:7px 10px;font-size:.85rem}
+button:disabled{opacity:.5;cursor:not-allowed}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:.8rem;color:var(--muted)}
 .muted{color:var(--muted)} .small{font-size:.85rem}
 .num{font-family:var(--f-num);font-variant-numeric:tabular-nums}
 .tbl{overflow-x:auto}
@@ -51,28 +61,45 @@ td.r,th.r{text-align:right}
 .chip{display:inline-block;font-size:.75rem;font-weight:700;padding:2px 8px;border-radius:999px;white-space:nowrap}
 .chip.ok{background:var(--ok-soft);color:var(--ok)} .chip.warn{background:var(--warn-soft);color:var(--warn)} .chip.bad{background:var(--bad-soft);color:var(--bad)} .chip.g{background:var(--grape-soft);color:var(--grape)}
 .empty{border:1px dashed var(--line);border-radius:10px;padding:14px;color:var(--muted);font-size:.9rem}
-.login{max-width:380px;margin:40px auto;display:flex;flex-direction:column;gap:12px}
+.login{max-width:380px;margin:40px auto}
 .pin{font-family:var(--f-num);font-size:1.6rem;letter-spacing:.4em;text-align:center}
 .err{color:var(--bad);font-size:.9rem;min-height:1.2em}
+.okm{color:var(--ok);font-size:.9rem;min-height:1.2em}
+.day{font-weight:700;font-size:.85rem;color:var(--muted);padding-top:6px}
+.prods{display:flex;flex-direction:column;gap:10px}
+.prod{display:grid;grid-template-columns:76px minmax(0,1fr);gap:12px;border:1px solid var(--line);border-radius:12px;padding:10px;align-items:start}
+.ph{width:76px;height:76px;border-radius:10px;background:var(--bg);border:1px dashed var(--line);display:flex;align-items:center;justify-content:center;font-size:.7rem;color:var(--muted);text-align:center;overflow:hidden;cursor:pointer;padding:0;position:relative}
+.ph img{width:100%;height:100%;object-fit:cover}
+.prod .meta{display:flex;flex-wrap:wrap;gap:6px 12px;font-size:.85rem;color:var(--muted)}
+.prod .meta b{color:var(--ink)}
+.precio{display:flex;gap:6px;align-items:center;margin-top:6px}
+.precio input{width:110px;padding:7px 10px}
 .carga .ln{display:grid;grid-template-columns:minmax(0,1fr) 72px 92px;gap:6px}
 .carga label{font-size:.75rem;color:var(--muted)}
-.carga input{width:100%}
-button.sec{background:var(--panel);color:var(--ink);border:1px solid var(--line)}
-.ok{color:var(--ok);font-size:.9rem;min-height:1.2em}
-.day{font-weight:700;font-size:.85rem;color:var(--muted);padding-top:6px}
+.mes{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 10px;padding:10px 0;border-bottom:1px solid var(--line);align-items:center}
+.mes .d{font-size:.82rem;color:var(--muted)}
+.qr{max-width:240px;border-radius:12px;border:1px solid var(--line);background:#fff}
+.copy{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.logo-ed{display:flex;gap:12px;align-items:center}
+.logo-ed .ph{width:96px;height:96px}
 @media (max-width:480px){.kpis{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}
 </style>
 </head>
 <body>
 <header><div class="wrap">
   <span class="eyebrow">El Parralito · Portal del emprendedor</span>
-  <h1 id="hNombre">Mis ventas</h1>
-  <span class="small" id="hEspacio"></span>
+  <div class="brand"><img id="hLogo" alt="" hidden><div><h1 id="hNombre">Mis ventas</h1><span class="small" id="hEspacio"></span></div></div>
   <div class="kpis" id="kpis" hidden>
     <div class="kpi"><span>Vendido este periodo</span><b id="kVend">0 Bs</b></div>
     <div class="kpi"><span>Unidades vendidas</span><b id="kUni">0</b></div>
     <div class="kpi"><span>Para el día 29</span><b id="kEnt">0 Bs</b></div>
   </div>
+  <nav class="tabs" id="tabs" hidden role="tablist">
+    <button role="tab" data-tab="ventas" aria-selected="true">Ventas</button>
+    <button role="tab" data-tab="productos" aria-selected="false">Productos</button>
+    <button role="tab" data-tab="pagos" aria-selected="false">Pagos</button>
+    <button role="tab" data-tab="marca" aria-selected="false">Mi marca</button>
+  </nav>
 </div></header>
 
 <main class="wrap">
@@ -80,41 +107,82 @@ button.sec{background:var(--panel);color:var(--ink);border:1px solid var(--line)
     <h2>Entra con tu PIN</h2>
     <p class="small muted" style="margin:0">Es el PIN de 4 dígitos que te enviamos por WhatsApp junto con este link.</p>
     <input id="pin" class="pin" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="one-time-code" aria-label="PIN" required>
-    <label class="small"><input type="checkbox" id="recordar" style="padding:0"> Recordar en este celular</label>
+    <label class="small"><input type="checkbox" id="recordar"> Recordar en este celular</label>
     <button type="submit">Ver mis ventas</button>
     <div class="err" id="err"></div>
   </form>
   <div class="panel" id="sinLink" hidden><h2>Falta tu link personal</h2><p class="muted" style="margin:0">Abre el link que te enviamos por WhatsApp. Si no lo tienes, pídelo a El Parralito.</p></div>
 
   <div id="app" hidden>
-    <div class="panel">
-      <div class="row"><h2>Ventas</h2><select id="per" aria-label="Periodo"></select></div>
-      <div class="small muted" id="perInfo"></div>
-      <div id="ventas"></div>
-    </div>
-    <div class="panel">
-      <div class="row"><h2>Mi stock en la tienda</h2><span id="stockChip"></span></div>
-      <div id="stock"></div>
-    </div>
-    <form class="panel carga" id="carga">
-      <h2>Cargar mis productos</h2>
-      <p class="small muted" style="margin:0">Anota lo que vas a traer a la tienda. Se suma a tu stock cuando lo recibimos y lo contamos contigo.</p>
-      <div class="ln"><label>Producto</label><label>Cantidad</label><label>Precio Bs</label></div>
-      <div id="cRows"></div>
-      <datalist id="dlMis"></datalist>
-      <button type="button" class="sec" id="cAdd">+ Otro producto</button>
-      <input id="cNota" maxlength="200" placeholder="Nota (opcional): ej. Los traigo el lunes 26 en la tarde" aria-label="Nota">
-      <button type="submit" id="cSend">Enviar a la tienda</button>
-      <div class="ok" id="cMsg"></div>
-    </form>
-    <div class="panel">
-      <h2>Entregas de dinero</h2>
-      <div id="liq"></div>
-    </div>
-    <div class="panel">
-      <h2>Mercadería declarada y recibida</h2>
-      <div id="ing" class="small"></div>
-    </div>
+    <!-- VENTAS -->
+    <section data-view="ventas">
+      <div class="panel">
+        <div class="row"><h2>Ventas</h2><select id="per" aria-label="Periodo" style="width:auto"></select></div>
+        <div class="small muted" id="perInfo"></div>
+        <div id="ventas"></div>
+      </div>
+      <div class="panel"><h2>Entregas de dinero</h2><div id="liq"></div></div>
+    </section>
+
+    <!-- PRODUCTOS -->
+    <section data-view="productos" hidden>
+      <div class="panel">
+        <div class="row"><h2>Mi inventario en la tienda</h2><span id="stockChip"></span></div>
+        <p class="small muted" style="margin:0">Toca el cuadro para subir la foto de cada producto. Puedes cambiar el precio cuando quieras; la caja lo toma al instante.</p>
+        <div id="stock" class="prods"></div>
+        <input type="file" id="fotoInput" accept="image/*" hidden>
+      </div>
+      <form class="panel carga" id="carga">
+        <h2>Cargar mis productos</h2>
+        <p class="small muted" style="margin:0">Anota lo que vas a traer a la tienda. Se suma a tu inventario cuando lo recibimos y lo contamos contigo.</p>
+        <div class="ln"><label>Producto</label><label>Cantidad</label><label>Precio Bs</label></div>
+        <div id="cRows"></div>
+        <datalist id="dlMis"></datalist>
+        <button type="button" class="sec" id="cAdd">+ Otro producto</button>
+        <input id="cNota" maxlength="200" placeholder="Nota (opcional): ej. Los traigo el lunes 26 en la tarde" aria-label="Nota">
+        <button type="submit" id="cSend">Enviar a la tienda</button>
+        <div class="okm" id="cMsg"></div>
+      </form>
+      <div class="panel"><h2>Mercadería declarada y recibida</h2><div id="ing" class="small"></div></div>
+    </section>
+
+    <!-- PAGOS -->
+    <section data-view="pagos" hidden>
+      <div class="panel">
+        <h2>Mis pagos</h2>
+        <p class="small muted" style="margin:0" id="pagInfo"></p>
+        <div id="meses"></div>
+      </div>
+      <form class="panel" id="pagoForm">
+        <h2>Pagar mi tarifa</h2>
+        <div id="qrBox"></div>
+        <div class="small">
+          <div>Banco Mercantil Santa Cruz</div>
+          <div>Titular: Stefany Quiroga Sivila</div>
+          <div class="copy">Cuenta: <b class="num" id="cuenta">1013216432</b> <button type="button" class="sec sm" id="copyCta">Copiar</button></div>
+        </div>
+        <label class="f">Mes que pagas<select id="pMes"></select></label>
+        <label class="f">Monto Bs<input id="pMonto" type="number" min="1" step="0.5" inputmode="decimal"></label>
+        <label class="f">Foto del comprobante<input id="pFoto" type="file" accept="image/*"></label>
+        <button type="submit" id="pSend">Enviar comprobante</button>
+        <div class="okm" id="pMsg"></div>
+      </form>
+    </section>
+
+    <!-- MI MARCA -->
+    <section data-view="marca" hidden>
+      <form class="panel" id="perfil">
+        <h2>Mi marca</h2>
+        <p class="small muted" style="margin:0">Esto lo usamos para presentarte en nuestras redes y en los lives.</p>
+        <div class="logo-ed"><button type="button" class="ph" id="logoBtn" aria-label="Subir logo">Subir logo</button><input type="file" id="logoInput" accept="image/*" hidden><span class="small muted">Tu logo, cuadrado si es posible.</span></div>
+        <label class="f">Instagram<input id="mIg" maxlength="60" placeholder="@tumarca"></label>
+        <label class="f">TikTok<input id="mTk" maxlength="60" placeholder="@tumarca"></label>
+        <label class="f">Cuéntanos de tu marca<textarea id="mDesc" maxlength="300" rows="4" placeholder="Qué haces, qué te hace especial, algo para contar en un live"></textarea></label>
+        <button type="submit" id="mSave">Guardar</button>
+        <div class="okm" id="mMsg"></div>
+      </form>
+    </section>
+
     <p class="small muted" style="text-align:center">Actualizado <span id="upd"></span> · <a href="#" id="salir" style="color:var(--grape)">Salir</a></p>
   </div>
 </main>
@@ -122,21 +190,26 @@ button.sec{background:var(--panel);color:var(--ink);border:1px solid var(--line)
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script>
 (() => {
-  const sb = window.supabase.createClient("https://eyougzgrquztgrhlkain.supabase.co", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV5b3VnemdycXV6dGdyaGxrYWluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc3OTA1MjcsImV4cCI6MjEwMzM2NjUyN30.b_4ma8HLRGW2F0uFBBhu307F9KqOKz0hI4_LnhwOWJk");
+  const URL_SB = "https://eyougzgrquztgrhlkain.supabase.co";
+  const sb = window.supabase.createClient(URL_SB, "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV5b3VnemdycXV6dGdyaGxrYWluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc3OTA1MjcsImV4cCI6MjEwMzM2NjUyN30.b_4ma8HLRGW2F0uFBBhu307F9KqOKz0hI4_LnhwOWJk");
+  const IMG = r => r ? URL_SB + "/storage/v1/object/public/parralito/" + r : "";
   const $ = s => document.querySelector(s);
+  const $$ = s => [...document.querySelectorAll(s)];
   const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   const bs = n => (Math.round((+n || 0) * 100) / 100).toLocaleString("es-BO", {maximumFractionDigits: 2}) + " Bs";
   const MESES = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
   const pad = n => String(n).padStart(2, "0");
   const laPaz = () => new Date(new Date().toLocaleString("en-US", {timeZone: "America/La_Paz"}));
   const perKey = d => { let y = d.getFullYear(), m = d.getMonth(); if (d.getDate() >= 29) { m++; if (m > 11) { m = 0; y++; } } return y + "-" + pad(m + 1); };
+  const PER0 = () => { const k = perKey(laPaz()); return k < "2026-11" ? "2026-11" : k; };
+  const shift = (k, n) => { let [y, m] = k.split("-").map(Number); m += n; while (m > 12) { m -= 12; y++; } while (m < 1) { m += 12; y--; } return y + "-" + pad(m); };
   const perLabel = k => { const [y, m] = k.split("-").map(Number); const pm = m === 1 ? 12 : m - 1; return "29 " + MESES[pm - 1] + " – 28 " + MESES[m - 1] + " " + y; };
+  const mesLabel = k => { const [y, m] = k.split("-").map(Number); const nm = m === 12 ? 1 : m + 1; return "29 " + MESES[m - 1] + " – 29 " + MESES[nm - 1] + (m === 12 ? " " + (y + 1) : " " + y); };
   const fmtDia = iso => new Date(iso).toLocaleDateString("es-BO", {weekday: "long", day: "numeric", month: "long", timeZone: "America/La_Paz"});
   const fmtHora = iso => new Date(iso).toLocaleTimeString("es-BO", {hour: "2-digit", minute: "2-digit", timeZone: "America/La_Paz"});
   const token = new URLSearchParams(location.search).get("t");
   const KEY = "pp_" + (token || "");
-  const PER0 = () => { const k = perKey(laPaz()); return k < "2026-11" ? "2026-11" : k; };
-  let D = null, per = PER0(), pin = null;
+  let D = null, per = PER0(), pin = null, tab = "ventas";
 
   if (!token) { $("#sinLink").hidden = false; return; }
   try { pin = localStorage.getItem(KEY); } catch {}
@@ -145,22 +218,59 @@ button.sec{background:var(--panel);color:var(--ink);border:1px solid var(--line)
   $("#login").addEventListener("submit", e => { e.preventDefault(); pin = $("#pin").value.trim(); cargar(true); });
   $("#salir").addEventListener("click", e => { e.preventDefault(); try { localStorage.removeItem(KEY); } catch {} location.reload(); });
   $("#per").addEventListener("change", e => { per = e.target.value; render(); });
+  $$("#tabs button").forEach(b => b.addEventListener("click", () => { tab = b.dataset.tab; $$("#tabs button").forEach(x => x.setAttribute("aria-selected", x === b)); $$("section[data-view]").forEach(s => s.hidden = s.dataset.view !== tab); }));
 
   async function cargar(manual) {
     $("#err").textContent = "";
     const {data, error} = await sb.rpc("portal", {p_token: token, p_pin: pin});
     if (error || !data || data.error) {
-      try { localStorage.removeItem(KEY); } catch {}
+      if (!error) { try { localStorage.removeItem(KEY); } catch {} }
       $("#login").hidden = false; $("#app").hidden = true;
       $("#err").textContent = error ? "No hay conexión. Inténtalo otra vez en un momento." : data?.error === "bloqueado" ? "Demasiados intentos. Espera 15 minutos e inténtalo de nuevo." : manual ? "PIN incorrecto. Revisa el que te enviamos por WhatsApp." : "";
       return;
     }
     D = data;
     if (manual && $("#recordar").checked) { try { localStorage.setItem(KEY, pin); } catch {} }
-    $("#login").hidden = true; $("#app").hidden = false; $("#kpis").hidden = false;
+    $("#login").hidden = true; $("#app").hidden = false; $("#kpis").hidden = false; $("#tabs").hidden = false;
     render();
   }
-  setInterval(() => { if (D && !document.hidden) cargar(); }, 120000);
+  setInterval(() => { if (D && !document.hidden && !document.activeElement?.closest("form")) cargar(); }, 120000);
+
+  // ---------- imágenes ----------
+  function achicar(file, max = 1000) {
+    return new Promise((res, rej) => {
+      const img = new Image(); const u = URL.createObjectURL(file);
+      img.onload = () => { const k = Math.min(1, max / Math.max(img.width, img.height)); const c = document.createElement("canvas"); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k); c.getContext("2d").drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(u); res(c.toDataURL("image/jpeg", 0.82)); };
+      img.onerror = () => rej(new Error("No pudimos leer esa imagen."));
+      img.src = u;
+    });
+  }
+  async function subir(file, tipo) {
+    const imagen = await achicar(file, tipo === "comprobante" ? 1400 : 1000);
+    const {data, error} = await sb.functions.invoke("parralito-subir", {body: {token, pin, tipo, imagen}});
+    if (error || !data?.ruta) throw new Error("No se pudo subir la imagen. Inténtalo otra vez.");
+    return data.ruta;
+  }
+
+  // ---------- productos ----------
+  let fotoPara = null;
+  $("#stock").addEventListener("click", async e => {
+    const ph = e.target.closest("[data-foto]"); const sv = e.target.closest("[data-precio]");
+    if (ph) { fotoPara = ph.dataset.foto; $("#fotoInput").value = ""; $("#fotoInput").click(); }
+    if (sv) {
+      const inp = $(`input[data-pid="${sv.dataset.precio}"]`); const v = parseFloat(inp.value);
+      if (!(v >= 0)) { inp.focus(); return; }
+      sv.disabled = true;
+      const {data} = await sb.rpc("portal_precio", {p_token: token, p_pin: pin, p_producto: sv.dataset.precio, p_precio: v});
+      sv.disabled = false; sv.textContent = data?.ok ? "Guardado" : "Error"; setTimeout(() => cargar(), 800);
+    }
+  });
+  $("#fotoInput").addEventListener("change", async e => {
+    const f = e.target.files[0]; if (!f || !fotoPara) return;
+    const box = $(`[data-foto="${fotoPara}"]`); box.innerHTML = "Subiendo…";
+    try { const ruta = await subir(f, "producto"); await sb.rpc("portal_foto", {p_token: token, p_pin: pin, p_producto: fotoPara, p_ruta: ruta}); await cargar(); }
+    catch (er) { box.textContent = er.message; }
+  });
 
   function addRow() {
     const d = document.createElement("div"); d.className = "ln";
@@ -170,9 +280,9 @@ button.sec{background:var(--panel);color:var(--ink);border:1px solid var(--line)
   }
   $("#cAdd").addEventListener("click", addRow);
   $("#carga").addEventListener("submit", async e => {
-    e.preventDefault(); $("#cMsg").textContent = ""; $("#cMsg").style.color = "";
+    e.preventDefault(); const msg = $("#cMsg"); msg.className = "okm"; msg.textContent = "";
     const items = [...$("#cRows").children].map(r => ({nombre: r.querySelector('[data-k="nombre"]').value.trim(), cant: r.querySelector('[data-k="cant"]').value.trim(), precio: r.querySelector('[data-k="precio"]').value.trim()})).filter(x => x.nombre);
-    const err = m => { $("#cMsg").style.color = "var(--bad)"; $("#cMsg").textContent = m; };
+    const err = m => { msg.className = "err"; msg.textContent = m; };
     if (!items.length) return err("Escribe al menos un producto.");
     if (items.some(x => !/^\d+$/.test(x.cant) || +x.cant < 1)) return err("Revisa las cantidades: deben ser números enteros.");
     if (items.some(x => x.precio === "" || isNaN(+x.precio) || +x.precio < 0)) return err("Pon el precio de venta de cada producto.");
@@ -181,12 +291,68 @@ button.sec{background:var(--panel);color:var(--ink);border:1px solid var(--line)
     $("#cSend").disabled = false;
     if (error) return err("No hay conexión. Inténtalo otra vez.");
     if (data?.error) return err({muchos_pendientes: "Tienes muchas cargas por recibir. Espera a que la tienda las reciba.", bloqueado: "Demasiados intentos. Espera 15 minutos."}[data.error] || "Revisa los datos de los productos.");
-    $("#cRows").innerHTML = ""; $("#cNota").value = ""; $("#cMsg").textContent = "Listo. Cuando traigas tus productos, los contamos y se suman a tu stock.";
+    $("#cRows").innerHTML = ""; $("#cNota").value = ""; msg.textContent = "Listo. Cuando traigas tus productos, los contamos y se suman a tu inventario.";
     cargar();
   });
+
+  // ---------- pagos ----------
+  function estadoMeses() {
+    const m = D.marca, hoy = laPaz(), out = [];
+    const ym = hoy.getFullYear() + "-" + pad(hoy.getMonth() + 1);
+    let ultimo = hoy.getDate() >= 29 ? ym : shift(ym, -1); if (ultimo < "2026-10") ultimo = "2026-10";
+    for (let k = "2026-10"; k <= ultimo && out.length < 24; k = shift(k, 1)) {
+      const ps = D.pagos.filter(p => p.mes === k);
+      const conf = ps.filter(p => p.estado === "confirmado").reduce((a, p) => a + +p.monto, 0);
+      const rev = ps.filter(p => p.estado === "por_verificar").reduce((a, p) => a + +p.monto, 0);
+      const liq = D.liquidaciones.find(l => l.periodo === k);
+      const desc = liq ? +liq.descontado : 0;
+      let pagado = conf + desc;
+      if (k === "2026-10") pagado += +m.adelanto + (m.saldo_pagado ? +m.saldo : 0);
+      const tarifa = +m.tarifa, falta = Math.max(0, tarifa - pagado);
+      out.push({k, tarifa, pagado, rev, falta, desc, conf, liq});
+    }
+    return out;
+  }
+  $("#copyCta").addEventListener("click", () => navigator.clipboard?.writeText("1013216432").then(() => { $("#copyCta").textContent = "Copiado"; }, () => {}));
+  $("#pagoForm").addEventListener("submit", async e => {
+    e.preventDefault(); const msg = $("#pMsg"); msg.className = "okm"; msg.textContent = "";
+    const err = t => { msg.className = "err"; msg.textContent = t; };
+    const f = $("#pFoto").files[0], monto = parseFloat($("#pMonto").value), mes = $("#pMes").value;
+    if (!mes) return err("No tienes meses pendientes.");
+    if (!(monto > 0)) return err("Escribe el monto que pagaste.");
+    if (!f) return err("Sube la foto del comprobante.");
+    $("#pSend").disabled = true; msg.textContent = "Enviando…";
+    try {
+      const ruta = await subir(f, "comprobante");
+      const {data} = await sb.rpc("portal_pago", {p_token: token, p_pin: pin, p_mes: mes, p_monto: monto, p_ruta: ruta});
+      if (!data?.ok) throw new Error(data?.error === "muchos" ? "Ya tienes varios comprobantes en revisión. Espera la confirmación." : "No se pudo registrar el pago.");
+      $("#pFoto").value = ""; msg.className = "okm"; msg.textContent = "Comprobante enviado. Lo revisamos y lo verás como «Pagado».";
+      cargar();
+    } catch (er) { err(er.message); }
+    $("#pSend").disabled = false;
+  });
+
+  // ---------- mi marca ----------
+  $("#logoBtn").addEventListener("click", () => { $("#logoInput").value = ""; $("#logoInput").click(); });
+  let logoNuevo = "";
+  $("#logoInput").addEventListener("change", async e => {
+    const f = e.target.files[0]; if (!f) return; $("#logoBtn").textContent = "Subiendo…";
+    try { logoNuevo = await subir(f, "logo"); $("#logoBtn").innerHTML = `<img src="${esc(IMG(logoNuevo))}" alt="Logo">`; $("#mMsg").textContent = "Logo listo. Toca «Guardar»."; }
+    catch (er) { $("#logoBtn").textContent = "Subir logo"; $("#mMsg").className = "err"; $("#mMsg").textContent = er.message; }
+  });
+  $("#perfil").addEventListener("submit", async e => {
+    e.preventDefault(); $("#mSave").disabled = true;
+    const {data} = await sb.rpc("portal_perfil", {p_token: token, p_pin: pin, p_logo: logoNuevo, p_ig: $("#mIg").value.trim(), p_tiktok: $("#mTk").value.trim(), p_desc: $("#mDesc").value.trim()});
+    $("#mSave").disabled = false; $("#mMsg").className = data?.ok ? "okm" : "err"; $("#mMsg").textContent = data?.ok ? "Guardado. ¡Gracias!" : "No se pudo guardar.";
+    logoNuevo = ""; cargar();
+  });
+
+  // ---------- render ----------
   function render() {
     const m = D.marca;
     $("#hNombre").textContent = m.nombre; $("#hEspacio").textContent = "Tu espacio: " + (m.espacio || "—") + " · tarifa " + bs(m.tarifa) + "/mes";
+    if (m.logo) { $("#hLogo").src = IMG(m.logo); $("#hLogo").hidden = false; }
+    // ventas
     const pers = [...new Set([PER0(), ...D.ventas.map(v => v.periodo)])].sort().reverse();
     $("#per").innerHTML = pers.map(k => `<option value="${k}">${perLabel(k)}</option>`).join(""); $("#per").value = per;
     const vs = D.ventas.filter(v => v.periodo === per);
@@ -197,16 +363,16 @@ button.sec{background:var(--panel);color:var(--ink);border:1px solid var(--line)
     $("#perInfo").textContent = "Se entrega el 29 " + MESES[mm - 1] + "." + (m.descuenta ? " De lo vendido se descuenta la tarifa del mes siguiente (" + bs(m.tarifa) + ")." : " La tarifa del mes siguiente se paga aparte.");
     if (!vs.length) $("#ventas").innerHTML = `<div class="empty">Todavía no hay ventas en este periodo. Cada vez que se venda algo tuyo, aparece aquí con el día y la hora.</div>`;
     else {
-      let html = "", lastDay = "";
-      html += `<div class="tbl"><table><thead><tr><th>Hora</th><th>Producto</th><th class="r">Cant.</th><th class="r">Total</th></tr></thead><tbody>`;
+      let html = `<div class="tbl"><table><thead><tr><th>Hora</th><th>Producto</th><th class="r">Cant.</th><th class="r">Total</th></tr></thead><tbody>`, lastDay = "";
       vs.forEach(v => { const d = fmtDia(v.fecha); if (d !== lastDay) { html += `<tr><td colspan="4" class="day">${esc(d)}</td></tr>`; lastDay = d; } html += `<tr><td class="num">${fmtHora(v.fecha)}</td><td>${esc(v.nombre)}</td><td class="r num">${v.cant}</td><td class="r num">${bs(v.total)}</td></tr>`; });
       $("#ventas").innerHTML = html + `</tbody></table></div>`;
     }
-    const low = D.productos.filter(p => p.stock <= p.minimo);
-    $("#stockChip").innerHTML = D.productos.length ? (low.length ? `<span class="chip warn">${low.length} por reponer</span>` : `<span class="chip ok">Todo con stock</span>`) : "";
-    $("#stock").innerHTML = D.productos.length ? `<div class="tbl"><table><thead><tr><th>Producto</th><th class="r">Precio</th><th class="r">Vendidos</th><th class="r">Quedan</th><th></th></tr></thead><tbody>${D.productos.map(p => `<tr><td>${esc(p.nombre)}</td><td class="r num">${bs(p.precio)}</td><td class="r num">${p.vendidos ?? 0}</td><td class="r num">${p.stock}</td><td>${p.stock <= 0 ? `<span class="chip bad">Agotado</span>` : p.stock <= p.minimo ? `<span class="chip warn">Reponer</span>` : `<span class="chip ok">OK</span>`}</td></tr>`).join("")}</tbody></table></div>` : `<div class="empty">Todavía no tienes productos en la tienda. Cárgalos abajo y aparecen aquí cuando los recibimos.</div>`;
     const ls = [...D.liquidaciones].sort((a, b) => b.periodo.localeCompare(a.periodo));
     $("#liq").innerHTML = ls.length ? `<div class="tbl"><table><thead><tr><th>Periodo</th><th class="r">Vendido</th><th class="r">Descontado</th><th class="r">Entregado</th><th>Cómo</th></tr></thead><tbody>${ls.map(l => `<tr><td>${perLabel(l.periodo)}</td><td class="r num">${bs(l.vendido)}</td><td class="r num">${bs(l.descontado)}</td><td class="r num"><b>${bs(l.entregado)}</b></td><td><span class="chip g">${esc(l.metodo)}</span></td></tr>`).join("")}</tbody></table></div>` : `<div class="empty">La primera entrega de tus ventas es el 29 de noviembre.</div>`;
+    // productos
+    const low = D.productos.filter(p => p.stock <= p.minimo);
+    $("#stockChip").innerHTML = D.productos.length ? (low.length ? `<span class="chip warn">${low.length} por reponer</span>` : `<span class="chip ok">Todo con stock</span>`) : "";
+    if (!document.activeElement?.matches("#stock input")) $("#stock").innerHTML = D.productos.length ? D.productos.map(p => `<div class="prod"><button type="button" class="ph" data-foto="${esc(p.id)}" aria-label="Foto de ${esc(p.nombre)}">${p.foto ? `<img src="${esc(IMG(p.foto))}" alt="" loading="lazy">` : "Subir foto"}</button><div style="min-width:0"><b>${esc(p.nombre)}</b> ${p.stock <= 0 ? `<span class="chip bad">Agotado</span>` : p.stock <= p.minimo ? `<span class="chip warn">Reponer</span>` : `<span class="chip ok">OK</span>`}<div class="meta"><span>Quedan <b class="num">${p.stock}</b></span><span>Vendidos <b class="num">${p.vendidos ?? 0}</b></span></div><div class="precio"><input type="number" min="0" step="0.5" inputmode="decimal" value="${p.precio}" data-pid="${esc(p.id)}" aria-label="Precio de ${esc(p.nombre)}"><span class="small muted">Bs</span><button type="button" class="sec sm" data-precio="${esc(p.id)}">Guardar precio</button></div></div></div>`).join("") : `<div class="empty">Todavía no tienes productos en la tienda. Cárgalos abajo y aparecen aquí cuando los recibimos.</div>`;
     const chipE = {pendiente: `<span class="chip warn">Por recibir</span>`, recibido: `<span class="chip ok">Recibido</span>`, rechazado: `<span class="chip bad">No recibido</span>`};
     $("#ing").innerHTML = D.ingresos.length ? D.ingresos.map(i => {
       const dec = {}; (i.declarado || []).forEach(x => dec[x.nombre.toLowerCase()] = x.cant);
@@ -214,8 +380,34 @@ button.sec{background:var(--panel);color:var(--ink);border:1px solid var(--line)
       return `<div style="padding:8px 0;border-bottom:1px solid var(--line)">${chipE[i.estado] || ""} <b>${esc(fmtDia(i.fecha))}</b> · ${items}${i.nota ? ` <span class="muted">· ${esc(i.nota)}</span>` : ""}</div>`; }).join("") : `<span class="muted">Aún no hay mercadería registrada.</span>`;
     $("#dlMis").innerHTML = D.productos.map(p => `<option value="${esc(p.nombre)}"></option>`).join("");
     if (!$("#cRows").children.length) addRow();
+    // pagos
+    const ms = estadoMeses();
+    $("#pagInfo").textContent = "Tu tarifa es de " + bs(m.tarifa) + " al mes y se paga cada día 29 por adelantado." + (m.descuenta ? " Como aceptaste el descuento, se resta de tus ventas y solo pagas lo que falte." : "");
+    $("#meses").innerHTML = ms.slice().reverse().map(x => {
+      const est = x.falta <= 0 ? `<span class="chip ok">Pagado</span>` : x.rev > 0 ? `<span class="chip g">En revisión</span>` : `<span class="chip warn">Falta ${bs(x.falta)}</span>`;
+      const det = [];
+      if (x.k === "2026-10") det.push("Adelanto " + bs(m.adelanto) + (m.saldo > 0 ? " · saldo " + bs(m.saldo) + (m.saldo_pagado ? " pagado" : " (el lunes 26)") : ""));
+      if (x.desc) det.push("Descontado de ventas " + bs(x.desc));
+      if (x.conf) det.push("Pagaste " + bs(x.conf));
+      if (x.rev) det.push(bs(x.rev) + " en revisión");
+      return `<div class="mes"><div><b>${mesLabel(x.k)}</b><div class="d">${det.join(" · ") || "Vence el 29 " + MESES[+x.k.split("-")[1] - 1]}</div></div><div style="text-align:right">${est}<div class="d num">${bs(x.tarifa)}</div></div></div>`;
+    }).join("");
+    const pend = ms.filter(x => x.falta > 0 && !x.rev);
+    const sig = shift(ms[ms.length - 1].k, 1);
+    const opts = [...pend.map(x => [x.k, x.falta]), ...(pend.length ? [] : [[sig, +m.tarifa]])];
+    const cur = $("#pMes").value;
+    $("#pMes").innerHTML = opts.map(([k, f]) => `<option value="${k}" data-f="${f}">${mesLabel(k)} · ${bs(f)}</option>`).join("");
+    if (cur && opts.some(o => o[0] === cur)) $("#pMes").value = cur;
+    if (!$("#pMonto").value || !document.activeElement?.matches("#pMonto")) $("#pMonto").value = $("#pMes").selectedOptions[0]?.dataset.f || "";
+    $("#qrBox").innerHTML = D.qr ? `<img class="qr" src="${esc(IMG(D.qr))}" alt="QR de pago de El Parralito"><div class="small muted">Escanea el QR con tu app del banco y pon el monto.</div>` : "";
+    // perfil
+    if (!document.activeElement?.closest("#perfil")) {
+      $("#mIg").value = m.ig || ""; $("#mTk").value = m.tiktok || ""; $("#mDesc").value = m.descripcion || "";
+      if (!logoNuevo) $("#logoBtn").innerHTML = m.logo ? `<img src="${esc(IMG(m.logo))}" alt="Logo">` : "Subir logo";
+    }
     $("#upd").textContent = new Date().toLocaleTimeString("es-BO", {hour: "2-digit", minute: "2-digit"});
   }
+  $("#pMes").addEventListener("change", () => { $("#pMonto").value = $("#pMes").selectedOptions[0]?.dataset.f || ""; });
 })();
 </script>
 </body>

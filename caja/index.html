@@ -85,6 +85,9 @@ tr.void td{text-decoration:line-through;color:var(--muted)}
 .empty{border:1px dashed var(--line);border-radius:10px;padding:16px;color:var(--muted);font-size:.9rem}
 .banner{background:var(--warn-soft);color:var(--warn);border-radius:10px;padding:12px 14px;font-size:.9rem;margin-top:16px}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:999px;font-weight:700;z-index:20;max-width:calc(100% - 32px)}
+.prod img{width:100%;height:84px;object-fit:cover;border-radius:8px;margin-bottom:4px}
+.mlogo{width:34px;height:34px;border-radius:8px;object-fit:cover;vertical-align:middle;margin-right:6px}
+.comp{width:110px;height:110px;object-fit:cover;border-radius:10px;border:1px solid var(--line)}
 .liq{display:flex;flex-direction:column;gap:8px}
 .liqcard{border:1px solid var(--line);border-radius:10px;padding:12px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 12px;align-items:center}
 .liqcard .amt{font-family:var(--f-num);font-weight:700;font-size:1.1rem;text-align:right}
@@ -215,6 +218,7 @@ details summary{cursor:pointer;font-weight:700}
       <div class="row small" id="liqTotals"></div>
       <div class="liq" id="liqList"></div>
     </div>
+    <div class="panel" style="margin-top:16px" id="pagosPanel"></div>
     <div class="panel" style="margin-top:16px" id="repPanel" hidden>
       <div class="row" style="justify-content:space-between"><h2 id="repTitle">Reporte</h2><button class="b sm" id="repClose">Cerrar</button></div>
       <textarea class="rep" id="repText" readonly></textarea>
@@ -233,6 +237,10 @@ details summary{cursor:pointer;font-weight:700}
       </table></div>
     </div>
 
+    <div class="panel" style="margin-top:16px" id="qrPanel">
+      <div class="row" style="justify-content:space-between"><h2>QR de pago</h2><span class="small muted">Las marcas lo ven en su portal para pagar la tarifa.</span></div>
+      <div class="row" style="justify-content:flex-start"><img id="qrImg" class="comp" alt="QR de pago" hidden><label class="b" style="cursor:pointer">Subir imagen del QR<input type="file" id="qrInput" accept="image/*" hidden></label></div>
+    </div>
     <div class="panel" style="margin-top:16px" id="acPanel" hidden>
       <div class="row" style="justify-content:space-between"><h2 id="acTitle">Acceso al portal</h2><button class="b sm" id="acClose">Cerrar</button></div>
       <label class="f">Link personal de la marca<input id="acLink" readonly></label>
@@ -265,6 +273,7 @@ details summary{cursor:pointer;font-weight:700}
   const SUPA_URL = "https://eyougzgrquztgrhlkain.supabase.co", SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV5b3VnemdycXV6dGdyaGxrYWluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc3OTA1MjcsImV4cCI6MjEwMzM2NjUyN30.b_4ma8HLRGW2F0uFBBhu307F9KqOKz0hI4_LnhwOWJk";
   const PORTAL_URL = location.origin + location.pathname.replace(/caja\/?(index\.html)?$/, "") + "portal/";
   const sb = window.supabase.createClient(SUPA_URL, SUPA_KEY);
+  const IMG = r => r ? SUPA_URL + "/storage/v1/object/public/parralito/" + r : "";
   const $ = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => [...r.querySelectorAll(s)];
   const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
@@ -281,7 +290,7 @@ details summary{cursor:pointer;font-weight:700}
   const hora = iso => new Date(iso).toLocaleTimeString("es-BO", {hour: "2-digit", minute: "2-digit", timeZone: "America/La_Paz"});
   const fechaCorta = iso => new Date(iso).toLocaleDateString("es-BO", {day: "2-digit", month: "2-digit", year: "numeric", timeZone: "America/La_Paz"});
 
-  const S = { pend: [], uid: null, marcas: {}, productos: {}, ventas: {}, liq: {}, cart: [], metodo: "efectivo", tab: "caja", marcaCaja: null, liqPer: PER_ACT(), editMarca: null, ficha: [] };
+  const S = { pagos: [], aj: {}, pend: [], uid: null, marcas: {}, productos: {}, ventas: {}, liq: {}, cart: [], metodo: "efectivo", tab: "caja", marcaCaja: null, liqPer: PER_ACT(), editMarca: null, ficha: [] };
 
   let tt;
   const toast = msg => { const t = $("#toast"); t.textContent = msg; t.hidden = false; clearTimeout(tt); tt = setTimeout(() => t.hidden = true, 3200); };
@@ -301,8 +310,10 @@ details summary{cursor:pointer;font-weight:700}
     S.ventas = {}; d.forEach(v => S.ventas[v.id] = v);
   }
   async function loadIngresos() { const d = chk(await sb.from("ingresos").select("*").eq("estado", "pendiente").order("fecha")); S.pend = d; }
+  async function loadPagos() { const d = chk(await sb.from("pagos").select("*").eq("estado", "por_verificar").order("fecha")); S.pagos = d; }
+  async function loadAjustes() { const d = chk(await sb.from("ajustes").select("*")); S.aj = {}; d.forEach(a => S.aj[a.clave] = a.valor); }
   async function loadLiq() { const d = chk(await sb.from("liquidaciones").select("*").eq("periodo", S.liqPer)); S.liq = {}; d.forEach(l => S.liq[l.periodo + "__" + l.marca] = l); }
-  const loaders = {marcas: loadMarcas, productos: loadProductos, ventas: loadVentas, liquidaciones: loadLiq, ingresos: loadIngresos};
+  const loaders = {marcas: loadMarcas, productos: loadProductos, ventas: loadVentas, liquidaciones: loadLiq, ingresos: loadIngresos, pagos: loadPagos, ajustes: loadAjustes};
   const pend = new Set(); let tmr;
   function refresh(...tables) { tables.forEach(t => pend.add(t)); clearTimeout(tmr); tmr = setTimeout(async () => { const ts = [...pend]; pend.clear(); try { await Promise.all(ts.map(t => loaders[t]())); } catch (e) { fail(e); } render(); }, 150); }
 
@@ -364,6 +375,7 @@ details summary{cursor:pointer;font-weight:700}
     $("#kN").textContent = hoy.length;
     $("#kPer").textContent = bs(ventasPer(PER_ACT()).reduce((a, v) => a + +v.total, 0));
     $('nav.tabs button[data-tab="stock"]').textContent = "Stock" + (S.pend.length ? " (" + S.pend.length + ")" : "");
+    $('nav.tabs button[data-tab="liq"]').textContent = "Liquidación" + (S.pagos.length ? " (" + S.pagos.length + ")" : "");
     $("#kLow").textContent = Object.values(S.productos).filter(p => p.stock <= p.minimo).length;
     $("#perLabel").textContent = "Periodo " + perLabel(PER_ACT());
   }
@@ -381,7 +393,7 @@ details summary{cursor:pointer;font-weight:700}
     if (!S.marcaCaja) box.innerHTML = `<div class="empty">Elige una marca para ver sus productos. Si todavía no los registraron, usa «Producto sin registrar».</div>`;
     else {
       const ps = prodsDe(S.marcaCaja);
-      box.innerHTML = ps.length ? `<div class="prods">${ps.map(p => `<button class="prod" data-add="${esc(p.id)}" ${p.stock <= 0 ? "disabled" : ""}><span>${esc(p.nombre)}</span><span class="p">${bs(p.precio)}</span><span class="s">Stock: ${p.stock}</span></button>`).join("")}</div>`
+      box.innerHTML = ps.length ? `<div class="prods">${ps.map(p => `<button class="prod" data-add="${esc(p.id)}" ${p.stock <= 0 ? "disabled" : ""}>${p.foto ? `<img src="${esc(IMG(p.foto))}" alt="" loading="lazy">` : ""}<span>${esc(p.nombre)}</span><span class="p">${bs(p.precio)}</span><span class="s">Stock: ${p.stock}</span></button>`).join("")}</div>`
         : `<div class="empty">${esc(S.marcas[S.marcaCaja].nombre)} no tiene productos registrados. Regístralos en Stock con la ficha de ingreso, o vende con «Producto sin registrar».</div>`;
     }
     $("#cart").innerHTML = S.cart.length ? S.cart.map((l, i) => `<li><span style="min-width:0"><b>${esc(l.nombre)}</b><br><span class="small muted">${esc(S.marcas[l.marca]?.nombre || "")}</span></span><span class="row" style="flex-wrap:nowrap"><button class="b sm" data-dec="${i}" aria-label="Quitar uno">−</button><span class="num">${l.cant}</span><button class="b sm" data-inc="${i}" aria-label="Agregar uno">+</button><span class="num" style="min-width:76px;text-align:right">${bs(l.cant * l.precio)}</span></span></li>`).join("")
@@ -514,7 +526,30 @@ details summary{cursor:pointer;font-weight:700}
     const desc = m.descuenta ? Math.min(vendido, tarifa) : 0;
     return {vs, vendido, desc, entregar: vendido - desc, falta: m.descuenta ? Math.max(0, tarifa - vendido) : tarifa};
   }
+  function renderPagos() {
+    const mesLabel = k => { const [y, m] = k.split("-").map(Number); const nm = m === 12 ? 1 : m + 1; return "29 " + MESES[m - 1] + " – 29 " + MESES[nm - 1]; };
+    $("#pagosPanel").innerHTML = `<div class="row" style="justify-content:space-between"><h2>Pagos por verificar</h2><span class="chip ${S.pagos.length ? "warn" : "ok"}">${S.pagos.length ? S.pagos.length + " comprobantes" : "Nada pendiente"}</span></div>` +
+      (S.pagos.length ? S.pagos.map(p => `<div class="liqcard"><div class="row" style="justify-content:flex-start;flex-wrap:nowrap"><a href="${esc(IMG(p.comprobante))}" target="_blank" rel="noopener"><img class="comp" src="${esc(IMG(p.comprobante))}" alt="Comprobante"></a><div><b>${esc(S.marcas[p.marca]?.nombre || p.marca)}</b><div class="meta">Tarifa ${mesLabel(p.mes)} · enviado ${fechaCorta(p.fecha)}</div><div class="amt" style="text-align:left">${bs(p.monto)}</div></div></div><div class="amt"></div><div class="acts"><button class="b sm pri" data-pconf="${esc(p.id)}">Confirmar pago</button><button class="b sm danger" data-prech="${esc(p.id)}">No llegó</button></div></div>`).join("")
+        : `<p class="small muted" style="margin:0">Cuando una marca pague su tarifa desde el portal, su comprobante aparece aquí. Revísalo en tu banco y confírmalo.</p>`);
+  }
+  $("#pagosPanel").addEventListener("click", async e => {
+    const c = e.target.closest("[data-pconf]"), r = e.target.closest("[data-prech]");
+    try {
+      if (c) { chk(await sb.from("pagos").update({estado: "confirmado", verificado: new Date().toISOString(), por: S.uid}).eq("id", c.dataset.pconf)); toast("Pago confirmado"); refresh("pagos"); }
+      if (r) { chk(await sb.from("pagos").update({estado: "rechazado", verificado: new Date().toISOString(), por: S.uid}).eq("id", r.dataset.prech)); toast("Comprobante marcado como no recibido"); refresh("pagos"); }
+    } catch (er) { fail(er); }
+  });
+  $("#qrInput").addEventListener("change", async e => {
+    const f = e.target.files[0]; if (!f) return;
+    try {
+      const ruta = "ajustes/qr-" + crypto.randomUUID() + "." + (f.type === "image/png" ? "png" : "jpg");
+      chk(await sb.storage.from("parralito").upload(ruta, f, {contentType: f.type || "image/jpeg"}));
+      chk(await sb.from("ajustes").upsert({clave: "qr", valor: ruta}));
+      toast("QR actualizado: las marcas ya lo ven en su portal"); refresh("ajustes");
+    } catch (er) { fail(er); }
+  });
   function renderLiq() {
+    renderPagos();
     const sel = $("#liqPer"); const opts = []; for (let i = 3; i >= -6; i--) opts.push(perShift(PER_ACT(), i));
     sel.innerHTML = [...new Set(opts)].filter(k => k >= "2026-11").map(k => `<option value="${k}">${perLabel(k)}${k === PER_ACT() ? " (actual)" : ""}</option>`).join("");
     sel.value = S.liqPer;
@@ -556,7 +591,7 @@ details summary{cursor:pointer;font-weight:700}
     const ms = all.filter(m => !q || [m.nombre, m.titular, m.espacio, m.rubro].join(" ").toLowerCase().includes(q));
     const pend = all.filter(m => !m.saldo_pagado).reduce((a, m) => a + +m.saldo, 0);
     $("#mTotals").innerHTML = `<span class="chip g">${all.length} marcas</span><span class="chip ok">Tarifas ${bs(all.reduce((a, m) => a + +m.tarifa, 0))}/mes</span><span class="chip ${pend ? "warn" : "ok"}">Saldo por cobrar ${bs(pend)}</span><span class="chip ${all.some(m => !m.pin_hash) ? "warn" : "ok"}">${all.filter(m => m.pin_hash).length}/${all.length} con acceso al portal</span>`;
-    $("#mBody").innerHTML = ms.map(m => `<tr><td class="num muted">${m.n || ""}</td><td><b>${esc(m.nombre)}</b><div class="small muted">${esc(m.titular || "")}${m.rubro ? " · " + esc(m.rubro) : ""}</div></td><td class="small">${esc(m.espacio)}</td><td class="r num">${bs(m.tarifa)}</td><td>${+m.saldo > 0 ? `<button class="b sm" data-saldo="${esc(m.id)}">${m.saldo_pagado ? `<span class="chip ok">Pagado</span>` : `<span class="chip warn">Debe ${bs(m.saldo)}</span>`}</button>` : `<span class="chip ok">Mes pagado</span>`}</td><td><label class="row small" style="flex-wrap:nowrap"><input type="checkbox" data-desc="${esc(m.id)}" ${m.descuenta ? "checked" : ""} style="width:auto"> Sí</label></td><td class="num small">${esc(m.celular || "—")}</td><td><button class="b sm" data-portal="${esc(m.id)}">${m.pin_hash ? "Acceso" : "Crear acceso"}</button> <button class="b sm" data-edit="${esc(m.id)}">Editar</button></td></tr>`).join("") || `<tr><td colspan="8" class="muted">Ninguna marca coincide con la búsqueda.</td></tr>`;
+    $("#mBody").innerHTML = ms.map(m => `<tr><td class="num muted">${m.n || ""}</td><td>${m.logo ? `<img class="mlogo" src="${esc(IMG(m.logo))}" alt="">` : ""}<b>${esc(m.nombre)}</b><div class="small muted">${esc(m.titular || "")}${m.rubro ? " · " + esc(m.rubro) : ""}${m.ig ? " · IG " + esc(m.ig) : ""}${m.tiktok ? " · TikTok " + esc(m.tiktok) : ""}</div></td><td class="small">${esc(m.espacio)}</td><td class="r num">${bs(m.tarifa)}</td><td>${+m.saldo > 0 ? `<button class="b sm" data-saldo="${esc(m.id)}">${m.saldo_pagado ? `<span class="chip ok">Pagado</span>` : `<span class="chip warn">Debe ${bs(m.saldo)}</span>`}</button>` : `<span class="chip ok">Mes pagado</span>`}</td><td><label class="row small" style="flex-wrap:nowrap"><input type="checkbox" data-desc="${esc(m.id)}" ${m.descuenta ? "checked" : ""} style="width:auto"> Sí</label></td><td class="num small">${esc(m.celular || "—")}</td><td><button class="b sm" data-portal="${esc(m.id)}">${m.pin_hash ? "Acceso" : "Crear acceso"}</button> <button class="b sm" data-edit="${esc(m.id)}">Editar</button></td></tr>`).join("") || `<tr><td colspan="8" class="muted">Ninguna marca coincide con la búsqueda.</td></tr>`;
   }
   $("#mBuscar").addEventListener("input", renderMarcas);
   $("#mBody").addEventListener("click", async e => {
@@ -607,7 +642,7 @@ details summary{cursor:pointer;font-weight:700}
     if (S.tab === "caja") renderCaja();
     if (S.tab === "stock") renderStock();
     if (S.tab === "liq") renderLiq();
-    if (S.tab === "marcas") renderMarcas();
+    if (S.tab === "marcas") { renderMarcas(); const q = $("#qrImg"); if (S.aj.qr) { q.src = IMG(S.aj.qr); q.hidden = false; } else q.hidden = true; }
   }
   try { const t = localStorage.getItem("tab"); if (t) { const b = $(`nav.tabs button[data-tab="${t}"]`); b && b.click(); } } catch {}
   start().catch(fail);

@@ -3,189 +3,232 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Mis ventas · El Parralito</title>
+<title>Mi tienda · El Parralito</title>
 <meta name="robots" content="noindex">
+<meta name="theme-color" content="#2f5d3a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Mi Parralito">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%232f5d3a'/%3E%3Ccircle cx='24' cy='28' r='7' fill='%23c98bc0'/%3E%3Ccircle cx='38' cy='28' r='7' fill='%23c98bc0'/%3E%3Ccircle cx='31' cy='40' r='7' fill='%23c98bc0'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,700;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&display=swap">
 <style>
 [hidden]{display:none!important}
-/* Layout: hoja personal de la marca — cabecera con logo y lo vendido, pestañas grandes (Ventas, Productos, Pagos, Mi marca), una columna */
+/* Layout: una sola columna tipo app — inicio con tres números grandes y cuatro botones; cada pantalla tiene "Volver" arriba y un botón de ayuda fijo abajo */
 :root{
   --bg:#f4f6f1; --panel:#ffffff; --ink:#1e2a22; --muted:#5f6b62; --line:#dde3da;
-  --vine:#2f5d3a; --grape:#6b2d5c; --grape-soft:#f2e7ef;
-  --ok:#2e7d4f; --warn:#b26a00; --bad:#b3261e; --ok-soft:#e3f2e8; --warn-soft:#fbefdc; --bad-soft:#fbe4e2;
+  --vine:#2f5d3a; --vine-soft:#e4efe6; --grape:#6b2d5c; --grape-soft:#f2e7ef;
+  --ok:#2e7d4f; --warn:#a85f00; --bad:#b3261e; --ok-soft:#e3f2e8; --warn-soft:#fbefdc; --bad-soft:#fbe4e2;
+  --wa:#1f9d55;
   --f-display:"Bricolage Grotesque","Segoe UI",system-ui,sans-serif;
   --f-body:"Atkinson Hyperlegible","Segoe UI",system-ui,sans-serif;
-  --f-num:"JetBrains Mono",ui-monospace,Menlo,monospace;
   color-scheme:light;
 }
 @media (prefers-color-scheme: dark){:root{
-  --bg:#121814; --panel:#1b231e; --ink:#e7eee8; --muted:#9cab9f; --line:#2d3a31;
-  --vine:#8fc79b; --grape:#e3a6d3; --grape-soft:#3a2234;
-  --ok:#7fd39f; --warn:#f0b45c; --bad:#ff8a80; --ok-soft:#1f3a2a; --warn-soft:#3d2e12; --bad-soft:#40201d; color-scheme:dark}}
+  --bg:#121814; --panel:#1b231e; --ink:#e7eee8; --muted:#a2b1a5; --line:#2d3a31;
+  --vine:#8fc79b; --vine-soft:#1f3326; --grape:#e3a6d3; --grape-soft:#3a2234;
+  --ok:#7fd39f; --warn:#f0b45c; --bad:#ff8a80; --ok-soft:#1f3a2a; --warn-soft:#3d2e12; --bad-soft:#40201d; --wa:#3fcf7d; color-scheme:dark}}
 *{box-sizing:border-box}
 html,body{margin:0}
-body{background:var(--bg);color:var(--ink);font:16px/1.45 var(--f-body);padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
-.wrap{max-width:760px;margin:0 auto;padding:0 max(16px,env(safe-area-inset-right,0px)) 40px max(16px,env(safe-area-inset-left,0px))}
+body{background:var(--bg);color:var(--ink);font:18px/1.45 var(--f-body);padding-top:env(safe-area-inset-top,0px);padding-bottom:calc(90px + env(safe-area-inset-bottom,0px))}
+.wrap{max-width:560px;margin:0 auto;padding:0 max(16px,env(safe-area-inset-right,0px)) 0 max(16px,env(safe-area-inset-left,0px))}
 header{background:#2f5d3a;color:#f4f6f1}
-header .wrap{padding-block:18px 0;display:flex;flex-direction:column;gap:6px}
-.eyebrow{font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;opacity:.8}
-.brand{display:flex;gap:12px;align-items:center}
-.brand img{width:52px;height:52px;border-radius:12px;object-fit:cover;background:#fff}
-h1{font-family:var(--f-display);font-weight:800;font-size:1.6rem;margin:0;text-wrap:balance}
-h2{font-family:var(--f-display);font-weight:600;font-size:1.15rem;margin:0}
-.kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:10px}
-.kpi{background:rgba(255,255,255,.1);border-radius:10px;padding:10px}
-.kpi span{font-size:.75rem;opacity:.85}
-.kpi b{display:block;font-family:var(--f-num);font-size:1.05rem}
-nav.tabs{display:flex;gap:4px;overflow-x:auto;margin-top:14px}
-nav.tabs button{flex:1 0 auto;background:transparent;color:#f4f6f1;opacity:.8;border-radius:10px 10px 0 0;padding:10px 12px;font-size:.95rem}
-nav.tabs button[aria-selected="true"]{background:var(--bg);color:var(--ink);opacity:1}
-.panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:10px;margin-top:16px;min-width:0}
-.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;justify-content:space-between}
-input,select,textarea{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;min-width:0;width:100%}
-input[type=checkbox]{width:auto}
-input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible{outline:3px solid var(--grape);outline-offset:2px}
-button{font:700 1rem var(--f-body);border-radius:10px;border:0;background:var(--grape);color:var(--panel);padding:12px 16px;cursor:pointer}
+header .wrap{padding-block:16px 18px;display:flex;gap:12px;align-items:center}
+header img{width:48px;height:48px;border-radius:12px;object-fit:cover;background:#fff}
+header .t{font-size:.8rem;opacity:.85}
+header h1{font-family:var(--f-display);font-weight:800;font-size:1.45rem;margin:0;line-height:1.1}
+h2{font-family:var(--f-display);font-weight:800;font-size:1.35rem;margin:0;text-wrap:balance}
+p{margin:0}
+.muted{color:var(--muted)} .small{font-size:.9rem}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.stack{display:flex;flex-direction:column;gap:14px;padding-top:16px}
+.big{display:flex;flex-direction:column;gap:2px}
+.big span{font-size:.95rem;color:var(--muted)}
+.big b{font-family:var(--f-display);font-weight:800;font-size:2.3rem;line-height:1.05;font-variant-numeric:tabular-nums}
+.big small{font-size:.9rem;color:var(--muted)}
+.hero{background:var(--vine-soft);border-color:transparent}
+.hero .big b{color:var(--vine)}
+.three{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}
+.alert{border-radius:14px;padding:12px 14px;font-size:1rem;display:flex;gap:10px;align-items:flex-start}
+.alert.warn{background:var(--warn-soft);color:var(--warn)}
+.alert.bad{background:var(--bad-soft);color:var(--bad)}
+.alert.ok{background:var(--ok-soft);color:var(--ok)}
+.alert button{margin-left:auto}
+.menu{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+.menu button{display:flex;flex-direction:column;align-items:flex-start;gap:6px;text-align:left;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:16px;padding:16px;min-height:112px;font:700 1.05rem var(--f-body)}
+.menu button .ic{font-size:1.8rem;line-height:1}
+.menu button small{font-weight:400;font-size:.85rem;color:var(--muted)}
+button{font:700 1.05rem var(--f-body);border-radius:14px;border:0;background:var(--grape);color:#fff;padding:14px 18px;cursor:pointer;min-height:52px}
 button.sec{background:var(--panel);color:var(--ink);border:1px solid var(--line)}
-button.sm{padding:7px 10px;font-size:.85rem}
+button.full{width:100%}
+button.sm{min-height:40px;padding:8px 12px;font-size:.92rem}
 button:disabled{opacity:.5;cursor:not-allowed}
-label.f{display:flex;flex-direction:column;gap:4px;font-size:.8rem;color:var(--muted)}
-.muted{color:var(--muted)} .small{font-size:.85rem}
-.num{font-family:var(--f-num);font-variant-numeric:tabular-nums}
-.tbl{overflow-x:auto}
-table{width:100%;border-collapse:collapse;font-size:.9rem}
-th{font-size:.72rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);text-align:left;padding:8px 6px;border-bottom:1px solid var(--line);white-space:nowrap}
-td{padding:8px 6px;border-bottom:1px solid var(--line)}
-td.r,th.r{text-align:right}
-.chip{display:inline-block;font-size:.75rem;font-weight:700;padding:2px 8px;border-radius:999px;white-space:nowrap}
-.chip.ok{background:var(--ok-soft);color:var(--ok)} .chip.warn{background:var(--warn-soft);color:var(--warn)} .chip.bad{background:var(--bad-soft);color:var(--bad)} .chip.g{background:var(--grape-soft);color:var(--grape)}
-.empty{border:1px dashed var(--line);border-radius:10px;padding:14px;color:var(--muted);font-size:.9rem}
-.login{max-width:380px;margin:40px auto}
-.pin{font-family:var(--f-num);font-size:1.6rem;letter-spacing:.4em;text-align:center}
-.err{color:var(--bad);font-size:.9rem;min-height:1.2em}
-.okm{color:var(--ok);font-size:.9rem;min-height:1.2em}
-.day{font-weight:700;font-size:.85rem;color:var(--muted);padding-top:6px}
-.prods{display:flex;flex-direction:column;gap:10px}
-.prod{display:grid;grid-template-columns:76px minmax(0,1fr);gap:12px;border:1px solid var(--line);border-radius:12px;padding:10px;align-items:start}
-.ph{width:76px;height:76px;border-radius:10px;background:var(--bg);border:1px dashed var(--line);display:flex;align-items:center;justify-content:center;font-size:.7rem;color:var(--muted);text-align:center;overflow:hidden;cursor:pointer;padding:0;position:relative}
-.ph img{width:100%;height:100%;object-fit:cover}
-.prod .meta{display:flex;flex-wrap:wrap;gap:6px 12px;font-size:.85rem;color:var(--muted)}
-.prod .meta b{color:var(--ink)}
-.precio{display:flex;gap:6px;align-items:center;margin-top:6px}
-.precio input{width:110px;padding:7px 10px}
-.carga .ln{display:grid;grid-template-columns:minmax(0,1fr) 72px 92px;gap:6px}
-.carga label{font-size:.75rem;color:var(--muted)}
-.mes{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 10px;padding:10px 0;border-bottom:1px solid var(--line);align-items:center}
-.mes .d{font-size:.82rem;color:var(--muted)}
-.qr{max-width:240px;border-radius:12px;border:1px solid var(--line);background:#fff}
-.copy{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.logo-ed{display:flex;gap:12px;align-items:center}
-.logo-ed .ph{width:96px;height:96px}
-@media (max-width:480px){.kpis{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}
+:focus-visible{outline:3px solid var(--grape);outline-offset:2px}
+.back{background:none;color:var(--grape);padding:8px 0;min-height:44px;font-size:1rem;align-self:flex-start}
+input,select,textarea{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:12px 14px;width:100%;min-width:0}
+label.f{display:flex;flex-direction:column;gap:6px;font-weight:700;font-size:1rem}
+.pin{font-family:var(--f-display);font-size:2rem;letter-spacing:.5em;text-align:center}
+.err{color:var(--bad);min-height:1.3em}
+.okm{color:var(--ok);min-height:1.3em}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chips button{min-height:42px;padding:8px 14px;font-size:.95rem;background:var(--panel);color:var(--ink);border:1px solid var(--line)}
+.chips button[aria-pressed="true"]{background:var(--vine);color:#fff;border-color:var(--vine)}
+.sale{display:flex;justify-content:space-between;gap:10px;padding:12px 0;border-bottom:1px solid var(--line)}
+.sale b{font-variant-numeric:tabular-nums}
+.dayh{font-weight:700;color:var(--muted);font-size:.9rem;padding-top:8px;text-transform:capitalize}
+.prod{display:grid;grid-template-columns:96px minmax(0,1fr);gap:14px;align-items:start;padding:12px 0;border-bottom:1px solid var(--line)}
+.ph{width:96px;height:96px;border-radius:14px;background:var(--bg);border:2px dashed var(--line);display:flex;align-items:center;justify-content:center;flex-direction:column;font-size:.8rem;color:var(--muted);text-align:center;overflow:hidden;cursor:pointer;padding:4px;min-height:0;font-weight:700}
+.ph img{width:100%;height:100%;object-fit:cover;border-radius:10px}
+.ph .ic{font-size:1.6rem}
+.pill{display:inline-block;font-size:.85rem;font-weight:700;padding:3px 10px;border-radius:999px}
+.pill.ok{background:var(--ok-soft);color:var(--ok)} .pill.warn{background:var(--warn-soft);color:var(--warn)} .pill.bad{background:var(--bad-soft);color:var(--bad)} .pill.g{background:var(--grape-soft);color:var(--grape)}
+.qty{display:flex;align-items:center;gap:10px}
+.qty button{width:52px;padding:0;font-size:1.6rem}
+.qty input{text-align:center;font-size:1.4rem;font-weight:700;width:90px}
+.foto-grande{width:100%;aspect-ratio:4/3;max-width:100%;border-radius:16px;border:2px dashed var(--line);background:var(--bg);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:6px;color:var(--muted);overflow:hidden;cursor:pointer;padding:0}
+.foto-grande img{width:100%;height:100%;object-fit:cover}
+.foto-grande .ic{font-size:2.6rem}
+.lista-item{display:flex;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
+.lista-item img,.lista-item .sinfoto{width:52px;height:52px;border-radius:10px;object-fit:cover;background:var(--bg);flex:none}
+.qr{width:220px;max-width:100%;border-radius:14px;background:#fff;align-self:center}
+.mes{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:12px 0;border-bottom:1px solid var(--line)}
+.help{position:fixed;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px));background:var(--wa);color:#fff;border-radius:999px;padding:14px 20px;font-weight:700;text-decoration:none;display:flex;gap:8px;align-items:center;box-shadow:0 6px 20px rgba(0,0,0,.2);z-index:5}
+.install ol{margin:0;padding-left:1.2em}
+.logo-ed{display:flex;gap:14px;align-items:center}
+@media (prefers-reduced-motion:no-preference){.menu button:active{transform:scale(.98)}}
 </style>
 </head>
 <body>
 <header><div class="wrap">
-  <span class="eyebrow">El Parralito · Portal del emprendedor</span>
-  <div class="brand"><img id="hLogo" alt="" hidden><div><h1 id="hNombre">Mis ventas</h1><span class="small" id="hEspacio"></span></div></div>
-  <div class="kpis" id="kpis" hidden>
-    <div class="kpi"><span>Vendido este periodo</span><b id="kVend">0 Bs</b></div>
-    <div class="kpi"><span>Unidades vendidas</span><b id="kUni">0</b></div>
-    <div class="kpi"><span>Para el día 29</span><b id="kEnt">0 Bs</b></div>
-  </div>
-  <nav class="tabs" id="tabs" hidden role="tablist">
-    <button role="tab" data-tab="ventas" aria-selected="true">Ventas</button>
-    <button role="tab" data-tab="productos" aria-selected="false">Productos</button>
-    <button role="tab" data-tab="pagos" aria-selected="false">Pagos</button>
-    <button role="tab" data-tab="marca" aria-selected="false">Mi marca</button>
-  </nav>
+  <img id="hLogo" alt="" hidden>
+  <div><div class="t">El Parralito · Mi tienda</div><h1 id="hNombre">Bienvenido</h1></div>
 </div></header>
 
 <main class="wrap">
-  <form class="login panel" id="login" hidden>
-    <h2>Entra con tu PIN</h2>
-    <p class="small muted" style="margin:0">Es el PIN de 4 dígitos que te enviamos por WhatsApp junto con este link.</p>
-    <input id="pin" class="pin" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="one-time-code" aria-label="PIN" required>
-    <label class="small"><input type="checkbox" id="recordar"> Recordar en este celular</label>
-    <button type="submit">Ver mis ventas</button>
-    <div class="err" id="err"></div>
+  <!-- ENTRAR -->
+  <form class="stack" id="vLogin" hidden>
+    <div class="card">
+      <h2>Escribe tu PIN</h2>
+      <p class="muted">Son los 4 números que te mandamos por WhatsApp junto con este link. Solo lo pides una vez.</p>
+      <input id="pin" class="pin" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="one-time-code" aria-label="PIN" required>
+      <button type="submit" class="full">Entrar</button>
+      <div class="err" id="err"></div>
+    </div>
   </form>
-  <div class="panel" id="sinLink" hidden><h2>Falta tu link personal</h2><p class="muted" style="margin:0">Abre el link que te enviamos por WhatsApp. Si no lo tienes, pídelo a El Parralito.</p></div>
+  <div class="stack" id="vSinLink" hidden><div class="card"><h2>Abre tu link personal</h2><p class="muted">Usa el link que te mandamos por WhatsApp. Si no lo tienes, pídelo con el botón verde de ayuda.</p></div></div>
 
-  <div id="app" hidden>
-    <!-- VENTAS -->
-    <section data-view="ventas">
-      <div class="panel">
-        <div class="row"><h2>Ventas</h2><select id="per" aria-label="Periodo" style="width:auto"></select></div>
-        <div class="small muted" id="perInfo"></div>
-        <div id="ventas"></div>
-      </div>
-      <div class="panel"><h2>Entregas de dinero</h2><div id="liq"></div></div>
-    </section>
+  <!-- INICIO -->
+  <section class="stack" data-v="inicio" hidden>
+    <div id="alertas" class="stack" style="padding-top:0"></div>
+    <div class="card hero"><div class="big"><span>Hoy vendiste</span><b id="kHoy">0 Bs</b><small id="kHoyN"></small></div></div>
+    <div class="three">
+      <div class="card"><div class="big"><span>Este mes llevas</span><b id="kMes" style="font-size:1.7rem">0 Bs</b></div></div>
+      <div class="card"><div class="big"><span id="kPagoT">El 29 te pagamos</span><b id="kPago" style="font-size:1.7rem">0 Bs</b></div></div>
+    </div>
+    <div class="menu">
+      <button data-go="vendi"><span class="ic" aria-hidden="true">🧾</span>Lo que vendí<small>Cada venta con su día y hora</small></button>
+      <button data-go="productos"><span class="ic" aria-hidden="true">📦</span>Mis productos<small>Cuántos quedan y sus precios</small></button>
+      <button data-go="traer"><span class="ic" aria-hidden="true">📷</span>Traer productos<small>Avísanos qué vas a traer</small></button>
+      <button data-go="pagar"><span class="ic" aria-hidden="true">💳</span>Pagar mi repisa<small id="mPagoSub">Tu pago del mes</small></button>
+    </div>
+    <button class="sec full" data-go="marca">⭐ Mi marca: logo e Instagram</button>
+    <div class="card install" id="instalar">
+      <h2 style="font-size:1.1rem">Guarda esta página en tu celular</h2>
+      <p class="muted small">Así la abres como una app, sin buscar el link.</p>
+      <button id="btnInstalar" hidden>Guardar en mi celular</button>
+      <ol class="small" id="pasosInstalar">
+        <li>Toca los <b>3 puntitos ⋮</b> arriba a la derecha (en iPhone, el botón <b>Compartir</b>).</li>
+        <li>Elige <b>«Agregar a pantalla principal»</b>.</li>
+        <li>Listo: te aparece el ícono de El Parralito.</li>
+      </ol>
+    </div>
+  </section>
 
-    <!-- PRODUCTOS -->
-    <section data-view="productos" hidden>
-      <div class="panel">
-        <div class="row"><h2>Mi inventario en la tienda</h2><span id="stockChip"></span></div>
-        <p class="small muted" style="margin:0">Toca el cuadro para subir la foto de cada producto. Puedes cambiar el precio cuando quieras; la caja lo toma al instante.</p>
-        <div id="stock" class="prods"></div>
-        <input type="file" id="fotoInput" accept="image/*" hidden>
-      </div>
-      <form class="panel carga" id="carga">
-        <h2>Cargar mis productos</h2>
-        <p class="small muted" style="margin:0">Anota lo que vas a traer a la tienda. Se suma a tu inventario cuando lo recibimos y lo contamos contigo.</p>
-        <div class="ln"><label>Producto</label><label>Cantidad</label><label>Precio Bs</label></div>
-        <div id="cRows"></div>
-        <datalist id="dlMis"></datalist>
-        <button type="button" class="sec" id="cAdd">+ Otro producto</button>
-        <input id="cNota" maxlength="200" placeholder="Nota (opcional): ej. Los traigo el lunes 26 en la tarde" aria-label="Nota">
-        <button type="submit" id="cSend">Enviar a la tienda</button>
-        <div class="okm" id="cMsg"></div>
-      </form>
-      <div class="panel"><h2>Mercadería declarada y recibida</h2><div id="ing" class="small"></div></div>
-    </section>
+  <!-- LO QUE VENDÍ -->
+  <section class="stack" data-v="vendi" hidden>
+    <button class="back" data-go="inicio">← Volver al inicio</button>
+    <h2>Lo que vendí</h2>
+    <div class="chips" id="meses"></div>
+    <div class="card"><div class="big"><span id="vTotT">Vendiste este mes</span><b id="vTot">0 Bs</b><small id="vTotN"></small></div></div>
+    <div class="card" id="vLista"></div>
+    <div class="card"><h2 style="font-size:1.1rem">Lo que te pagamos</h2><div id="vPagos"></div></div>
+  </section>
 
-    <!-- PAGOS -->
-    <section data-view="pagos" hidden>
-      <div class="panel">
-        <h2>Mis pagos</h2>
-        <p class="small muted" style="margin:0" id="pagInfo"></p>
-        <div id="meses"></div>
-      </div>
-      <form class="panel" id="pagoForm">
-        <h2>Pagar mi tarifa</h2>
-        <div id="qrBox"></div>
-        <div class="small">
-          <div>Banco Mercantil Santa Cruz</div>
-          <div>Titular: Stefany Quiroga Sivila</div>
-          <div class="copy">Cuenta: <b class="num" id="cuenta">1013216432</b> <button type="button" class="sec sm" id="copyCta">Copiar</button></div>
-        </div>
-        <label class="f">Mes que pagas<select id="pMes"></select></label>
-        <label class="f">Monto Bs<input id="pMonto" type="number" min="1" step="0.5" inputmode="decimal"></label>
-        <label class="f">Foto del comprobante<input id="pFoto" type="file" accept="image/*"></label>
-        <button type="submit" id="pSend">Enviar comprobante</button>
-        <div class="okm" id="pMsg"></div>
-      </form>
-    </section>
+  <!-- MIS PRODUCTOS -->
+  <section class="stack" data-v="productos" hidden>
+    <button class="back" data-go="inicio">← Volver al inicio</button>
+    <h2>Mis productos en la tienda</h2>
+    <p class="muted small">Toca la foto para cambiarla. Si cambias un precio, la tienda lo usa desde ese momento.</p>
+    <div class="card" id="pLista"></div>
+    <button class="full" data-go="traer">📷 Traer más productos</button>
+    <input type="file" id="fotoInput" accept="image/*" capture="environment" hidden>
+  </section>
 
-    <!-- MI MARCA -->
-    <section data-view="marca" hidden>
-      <form class="panel" id="perfil">
-        <h2>Mi marca</h2>
-        <p class="small muted" style="margin:0">Esto lo usamos para presentarte en nuestras redes y en los lives.</p>
-        <div class="logo-ed"><button type="button" class="ph" id="logoBtn" aria-label="Subir logo">Subir logo</button><input type="file" id="logoInput" accept="image/*" hidden><span class="small muted">Tu logo, cuadrado si es posible.</span></div>
-        <label class="f">Instagram<input id="mIg" maxlength="60" placeholder="@tumarca"></label>
-        <label class="f">TikTok<input id="mTk" maxlength="60" placeholder="@tumarca"></label>
-        <label class="f">Cuéntanos de tu marca<textarea id="mDesc" maxlength="300" rows="4" placeholder="Qué haces, qué te hace especial, algo para contar en un live"></textarea></label>
-        <button type="submit" id="mSave">Guardar</button>
-        <div class="okm" id="mMsg"></div>
-      </form>
-    </section>
+  <!-- TRAER PRODUCTOS -->
+  <section class="stack" data-v="traer" hidden>
+    <button class="back" data-go="inicio">← Volver al inicio</button>
+    <h2>Traer productos</h2>
+    <p class="muted">Agrega uno por uno lo que vas a traer. Cuando llegues a la tienda, lo contamos contigo y aparece en «Mis productos».</p>
+    <form class="card" id="tForm">
+      <button type="button" class="foto-grande" id="tFotoBtn"><span class="ic" aria-hidden="true">📷</span><span>Tomar foto del producto</span><span class="small">(opcional)</span></button>
+      <input type="file" id="tFoto" accept="image/*" capture="environment" hidden>
+      <label class="f">¿Qué producto es?<input id="tNombre" list="dlMis" maxlength="80" placeholder="Ej. Llavero de corazón" autocomplete="off"></label>
+      <datalist id="dlMis"></datalist>
+      <label class="f">¿Cuántos traes?
+        <div class="qty"><button type="button" class="sec" id="tMenos" aria-label="Uno menos">−</button><input id="tCant" type="number" min="1" max="9999" value="1" inputmode="numeric"><button type="button" class="sec" id="tMas" aria-label="Uno más">+</button></div>
+      </label>
+      <label class="f">¿A cuánto lo vendes? (Bs)<input id="tPrecio" type="number" min="0" step="0.5" inputmode="decimal" placeholder="Ej. 25"></label>
+      <button type="submit" class="full">Agregar a mi lista</button>
+      <div class="err" id="tErr"></div>
+    </form>
+    <div class="card" id="tListaCard" hidden>
+      <h2 style="font-size:1.1rem">Mi lista para traer</h2>
+      <div id="tLista"></div>
+      <label class="f" style="font-weight:400">¿Cuándo los traes? (opcional)<input id="tNota" maxlength="200" placeholder="Ej. El lunes en la tarde"></label>
+      <button class="full" id="tEnviar">✅ Listo, avisar a la tienda</button>
+    </div>
+    <div class="okm" id="tOk"></div>
+    <div class="card" id="tPend" hidden></div>
+  </section>
 
-    <p class="small muted" style="text-align:center">Actualizado <span id="upd"></span> · <a href="#" id="salir" style="color:var(--grape)">Salir</a></p>
-  </div>
+  <!-- PAGAR -->
+  <section class="stack" data-v="pagar" hidden>
+    <button class="back" data-go="inicio">← Volver al inicio</button>
+    <h2>Pagar mi repisa</h2>
+    <div class="card hero" id="pagoHero"></div>
+    <form class="card" id="pagoForm">
+      <h2 style="font-size:1.1rem">1. Paga con QR o transferencia</h2>
+      <div id="qrBox" style="display:flex;flex-direction:column;gap:8px"></div>
+      <p class="small">Banco Mercantil Santa Cruz<br>A nombre de: Stefany Quiroga Sivila<br>Cuenta: <b id="cta">1013216432</b></p>
+      <button type="button" class="sec" id="copyCta">Copiar número de cuenta</button>
+      <h2 style="font-size:1.1rem;margin-top:6px">2. Mándanos la foto del comprobante</h2>
+      <label class="f" style="font-weight:400">¿Cuánto pagaste? (Bs)<input id="pMonto" type="number" min="1" step="0.5" inputmode="decimal"></label>
+      <button type="button" class="foto-grande" id="pFotoBtn" style="aspect-ratio:16/9"><span class="ic" aria-hidden="true">🧾</span><span>Tomar foto o elegir captura</span></button>
+      <input type="file" id="pFoto" accept="image/*" hidden>
+      <button type="submit" class="full" id="pSend">Enviar comprobante</button>
+      <div class="okm" id="pMsg"></div>
+    </form>
+    <div class="card"><h2 style="font-size:1.1rem">Mis pagos</h2><div id="pMeses"></div></div>
+  </section>
+
+  <!-- MI MARCA -->
+  <section class="stack" data-v="marca" hidden>
+    <button class="back" data-go="inicio">← Volver al inicio</button>
+    <h2>Mi marca</h2>
+    <p class="muted">Lo usamos para presentarte en nuestras redes y en los lives.</p>
+    <form class="card" id="perfil">
+      <div class="logo-ed"><button type="button" class="ph" id="logoBtn"><span class="ic" aria-hidden="true">🖼️</span>Subir logo</button><span class="small muted">Tu logo o una foto de tu marca.</span></div>
+      <input type="file" id="logoInput" accept="image/*" hidden>
+      <label class="f">Instagram<input id="mIg" maxlength="60" placeholder="@tumarca"></label>
+      <label class="f">TikTok<input id="mTk" maxlength="60" placeholder="@tumarca"></label>
+      <label class="f">Cuéntanos de tu marca<textarea id="mDesc" maxlength="300" rows="4" placeholder="Qué haces y qué te hace especial"></textarea></label>
+      <button type="submit" class="full" id="mSave">Guardar</button>
+      <div class="okm" id="mMsg"></div>
+    </form>
+    <p class="small muted" style="text-align:center">Tu repisa: <span id="mEspacio"></span> · <a href="#" id="salir" style="color:var(--grape)">Salir de este celular</a></p>
+  </section>
 </main>
+
+<a class="help" id="help" href="https://wa.me/59162792888" target="_blank" rel="noopener"><span aria-hidden="true">💬</span> ¿Ayuda?</a>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script>
@@ -197,136 +240,160 @@ td.r,th.r{text-align:right}
   const $$ = s => [...document.querySelectorAll(s)];
   const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   const bs = n => (Math.round((+n || 0) * 100) / 100).toLocaleString("es-BO", {maximumFractionDigits: 2}) + " Bs";
-  const MESES = ["ene","feb","mar","abr","may","jun","jul","ago","sep","oct","nov","dic"];
+  const MESES = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+  const MES3 = MESES.map(m => m.slice(0, 3));
   const pad = n => String(n).padStart(2, "0");
   const laPaz = () => new Date(new Date().toLocaleString("en-US", {timeZone: "America/La_Paz"}));
+  const diaKey = d => d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate());
+  const diaDe = iso => diaKey(new Date(new Date(iso).toLocaleString("en-US", {timeZone: "America/La_Paz"})));
   const perKey = d => { let y = d.getFullYear(), m = d.getMonth(); if (d.getDate() >= 29) { m++; if (m > 11) { m = 0; y++; } } return y + "-" + pad(m + 1); };
   const PER0 = () => { const k = perKey(laPaz()); return k < "2026-11" ? "2026-11" : k; };
   const shift = (k, n) => { let [y, m] = k.split("-").map(Number); m += n; while (m > 12) { m -= 12; y++; } while (m < 1) { m += 12; y--; } return y + "-" + pad(m); };
-  const perLabel = k => { const [y, m] = k.split("-").map(Number); const pm = m === 1 ? 12 : m - 1; return "29 " + MESES[pm - 1] + " – 28 " + MESES[m - 1] + " " + y; };
-  const mesLabel = k => { const [y, m] = k.split("-").map(Number); const nm = m === 12 ? 1 : m + 1; return "29 " + MESES[m - 1] + " – 29 " + MESES[nm - 1] + (m === 12 ? " " + (y + 1) : " " + y); };
+  const perNombre = k => { const [, m] = k.split("-").map(Number); const pm = m === 1 ? 12 : m - 1; return "Del 29 de " + MESES[pm - 1] + " al 28 de " + MESES[m - 1]; };
+  const mesNombre = k => { const [, m] = k.split("-").map(Number); const nm = m === 12 ? 1 : m + 1; return "Del 29 de " + MESES[m - 1] + " al 29 de " + MESES[nm - 1]; };
   const fmtDia = iso => new Date(iso).toLocaleDateString("es-BO", {weekday: "long", day: "numeric", month: "long", timeZone: "America/La_Paz"});
   const fmtHora = iso => new Date(iso).toLocaleTimeString("es-BO", {hour: "2-digit", minute: "2-digit", timeZone: "America/La_Paz"});
   const token = new URLSearchParams(location.search).get("t");
   const KEY = "pp_" + (token || "");
-  let D = null, per = PER0(), pin = null, tab = "ventas";
+  let D = null, pin = null, vista = "inicio", verMes = PER0(), lista = [], fotoT = "", logoNuevo = "", fotoPara = null, fotoPago = null;
 
-  if (!token) { $("#sinLink").hidden = false; return; }
+  const go = v => { vista = v; $$("section[data-v]").forEach(s => s.hidden = s.dataset.v !== v); window.scrollTo(0, 0); try { history.replaceState(null, "", location.pathname + location.search + (v === "inicio" ? "" : "#" + v)); } catch {} };
+  document.addEventListener("click", e => { const b = e.target.closest("[data-go]"); if (b) { e.preventDefault(); go(b.dataset.go); } });
+
+  if (!token) { $("#vSinLink").hidden = false; return; }
   try { pin = localStorage.getItem(KEY); } catch {}
-  if (pin) cargar(); else $("#login").hidden = false;
+  if (pin) cargar(); else $("#vLogin").hidden = false;
 
-  $("#login").addEventListener("submit", e => { e.preventDefault(); pin = $("#pin").value.trim(); cargar(true); });
+  $("#vLogin").addEventListener("submit", e => { e.preventDefault(); pin = $("#pin").value.trim(); cargar(true); });
   $("#salir").addEventListener("click", e => { e.preventDefault(); try { localStorage.removeItem(KEY); } catch {} location.reload(); });
-  $("#per").addEventListener("change", e => { per = e.target.value; render(); });
-  $$("#tabs button").forEach(b => b.addEventListener("click", () => { tab = b.dataset.tab; $$("#tabs button").forEach(x => x.setAttribute("aria-selected", x === b)); $$("section[data-view]").forEach(s => s.hidden = s.dataset.view !== tab); }));
 
   async function cargar(manual) {
     $("#err").textContent = "";
     const {data, error} = await sb.rpc("portal", {p_token: token, p_pin: pin});
     if (error || !data || data.error) {
       if (!error) { try { localStorage.removeItem(KEY); } catch {} }
-      $("#login").hidden = false; $("#app").hidden = true;
-      $("#err").textContent = error ? "No hay conexión. Inténtalo otra vez en un momento." : data?.error === "bloqueado" ? "Demasiados intentos. Espera 15 minutos e inténtalo de nuevo." : manual ? "PIN incorrecto. Revisa el que te enviamos por WhatsApp." : "";
+      $("#vLogin").hidden = false; $$("section[data-v]").forEach(s => s.hidden = true);
+      $("#err").textContent = error ? "No hay internet. Inténtalo otra vez en un momento." : data?.error === "bloqueado" ? "Muchos intentos. Espera 15 minutos o pide ayuda con el botón verde." : manual ? "Ese PIN no es. Revisa el que te mandamos por WhatsApp." : "";
       return;
     }
-    D = data;
-    if (manual && $("#recordar").checked) { try { localStorage.setItem(KEY, pin); } catch {} }
-    $("#login").hidden = true; $("#app").hidden = false; $("#kpis").hidden = false; $("#tabs").hidden = false;
+    const first = !D; D = data;
+    try { localStorage.setItem(KEY, pin); } catch {}
+    $("#vLogin").hidden = true;
+    if (first) { const h = location.hash.slice(1); go(["vendi","productos","traer","pagar","marca"].includes(h) ? h : "inicio"); }
     render();
   }
-  setInterval(() => { if (D && !document.hidden && !document.activeElement?.closest("form")) cargar(); }, 120000);
+  setInterval(() => { if (D && !document.hidden && !document.activeElement?.closest("form")) cargar(); }, 90000);
+  document.addEventListener("visibilitychange", () => { if (!document.hidden && D) cargar(); });
+
+  // ---------- instalar ----------
+  let promptInst = null;
+  window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); promptInst = e; $("#btnInstalar").hidden = false; });
+  $("#btnInstalar").addEventListener("click", async () => { if (!promptInst) return; promptInst.prompt(); await promptInst.userChoice; promptInst = null; $("#btnInstalar").hidden = true; });
+  if (matchMedia("(display-mode: standalone)").matches || navigator.standalone) $("#instalar").hidden = true;
 
   // ---------- imágenes ----------
-  function achicar(file, max = 1000) {
+  function achicar(file, max) {
     return new Promise((res, rej) => {
       const img = new Image(); const u = URL.createObjectURL(file);
       img.onload = () => { const k = Math.min(1, max / Math.max(img.width, img.height)); const c = document.createElement("canvas"); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k); c.getContext("2d").drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(u); res(c.toDataURL("image/jpeg", 0.82)); };
-      img.onerror = () => rej(new Error("No pudimos leer esa imagen."));
+      img.onerror = () => rej(new Error("No pudimos leer esa foto. Prueba con otra."));
       img.src = u;
     });
   }
   async function subir(file, tipo) {
     const imagen = await achicar(file, tipo === "comprobante" ? 1400 : 1000);
     const {data, error} = await sb.functions.invoke("parralito-subir", {body: {token, pin, tipo, imagen}});
-    if (error || !data?.ruta) throw new Error("No se pudo subir la imagen. Inténtalo otra vez.");
+    if (error || !data?.ruta) throw new Error("No se pudo subir la foto. Revisa tu internet e inténtalo otra vez.");
     return data.ruta;
   }
 
-  // ---------- productos ----------
-  let fotoPara = null;
-  $("#stock").addEventListener("click", async e => {
-    const ph = e.target.closest("[data-foto]"); const sv = e.target.closest("[data-precio]");
+  // ---------- mis productos ----------
+  $("#pLista").addEventListener("click", async e => {
+    const ph = e.target.closest("[data-foto]"), ed = e.target.closest("[data-editar]"), sv = e.target.closest("[data-guardar]");
     if (ph) { fotoPara = ph.dataset.foto; $("#fotoInput").value = ""; $("#fotoInput").click(); }
+    if (ed) { const box = $(`[data-precio-box="${ed.dataset.editar}"]`); box.hidden = false; box.querySelector("input").focus(); }
     if (sv) {
-      const inp = $(`input[data-pid="${sv.dataset.precio}"]`); const v = parseFloat(inp.value);
+      const inp = $(`input[data-pid="${sv.dataset.guardar}"]`); const v = parseFloat(inp.value);
       if (!(v >= 0)) { inp.focus(); return; }
-      sv.disabled = true;
-      const {data} = await sb.rpc("portal_precio", {p_token: token, p_pin: pin, p_producto: sv.dataset.precio, p_precio: v});
-      sv.disabled = false; sv.textContent = data?.ok ? "Guardado" : "Error"; setTimeout(() => cargar(), 800);
+      sv.disabled = true; sv.textContent = "Guardando…";
+      const {data} = await sb.rpc("portal_precio", {p_token: token, p_pin: pin, p_producto: sv.dataset.guardar, p_precio: v});
+      sv.textContent = data?.ok ? "✅ Guardado" : "No se pudo"; setTimeout(() => cargar(), 700);
     }
   });
   $("#fotoInput").addEventListener("change", async e => {
     const f = e.target.files[0]; if (!f || !fotoPara) return;
-    const box = $(`[data-foto="${fotoPara}"]`); box.innerHTML = "Subiendo…";
+    const box = $(`[data-foto="${fotoPara}"]`); box.textContent = "Subiendo…";
     try { const ruta = await subir(f, "producto"); await sb.rpc("portal_foto", {p_token: token, p_pin: pin, p_producto: fotoPara, p_ruta: ruta}); await cargar(); }
     catch (er) { box.textContent = er.message; }
   });
 
-  function addRow() {
-    const d = document.createElement("div"); d.className = "ln";
-    d.innerHTML = `<input list="dlMis" maxlength="80" placeholder="Ej. Llavero acrílico" aria-label="Producto" data-k="nombre"><input type="number" min="1" max="9999" step="1" value="1" inputmode="numeric" aria-label="Cantidad" data-k="cant"><input type="number" min="0" step="0.5" inputmode="decimal" placeholder="0" aria-label="Precio" data-k="precio">`;
-    d.querySelector('[data-k="nombre"]').addEventListener("change", e => { const p = D?.productos.find(p => p.nombre.toLowerCase() === e.target.value.trim().toLowerCase()); const pr = d.querySelector('[data-k="precio"]'); if (p && !pr.value) pr.value = p.precio; });
-    $("#cRows").appendChild(d);
+  // ---------- traer productos ----------
+  $("#tFotoBtn").addEventListener("click", () => { $("#tFoto").value = ""; $("#tFoto").click(); });
+  $("#tFoto").addEventListener("change", async e => {
+    const f = e.target.files[0]; if (!f) return; const btn = $("#tFotoBtn"); btn.innerHTML = "<span>Subiendo foto…</span>";
+    try { fotoT = await subir(f, "producto"); btn.innerHTML = `<img src="${esc(IMG(fotoT))}" alt="Foto del producto">`; }
+    catch (er) { fotoT = ""; btn.innerHTML = `<span class="ic">📷</span><span>${esc(er.message)}</span>`; }
+  });
+  $("#tMas").addEventListener("click", () => { $("#tCant").value = Math.min(9999, (parseInt($("#tCant").value, 10) || 0) + 1); });
+  $("#tMenos").addEventListener("click", () => { $("#tCant").value = Math.max(1, (parseInt($("#tCant").value, 10) || 1) - 1); });
+  $("#tNombre").addEventListener("change", e => { const p = D?.productos.find(p => p.nombre.toLowerCase() === e.target.value.trim().toLowerCase()); if (p && !$("#tPrecio").value) $("#tPrecio").value = p.precio; });
+  $("#tForm").addEventListener("submit", e => {
+    e.preventDefault(); const err = $("#tErr"); err.textContent = "";
+    const nombre = $("#tNombre").value.trim(), cant = parseInt($("#tCant").value, 10), precio = parseFloat($("#tPrecio").value);
+    if (!nombre) { err.textContent = "Escribe qué producto es."; $("#tNombre").focus(); return; }
+    if (!(cant >= 1)) { err.textContent = "Pon cuántos traes."; return; }
+    if (!(precio >= 0) || $("#tPrecio").value === "") { err.textContent = "Pon a cuánto lo vendes."; $("#tPrecio").focus(); return; }
+    lista.push({nombre, cant, precio, foto: fotoT});
+    fotoT = ""; $("#tNombre").value = ""; $("#tCant").value = 1; $("#tPrecio").value = "";
+    $("#tFotoBtn").innerHTML = `<span class="ic" aria-hidden="true">📷</span><span>Tomar foto del producto</span><span class="small">(opcional)</span>`;
+    $("#tOk").textContent = ""; pintarLista(); $("#tListaCard").scrollIntoView({block: "nearest"});
+  });
+  function pintarLista() {
+    $("#tListaCard").hidden = !lista.length;
+    $("#tLista").innerHTML = lista.map((x, i) => `<div class="lista-item">${x.foto ? `<img src="${esc(IMG(x.foto))}" alt="">` : `<span class="sinfoto"></span>`}<div style="flex:1;min-width:0"><b>${esc(x.nombre)}</b><div class="small muted">${x.cant} unidades · ${bs(x.precio)} c/u</div></div><button class="sec sm" data-quitar="${i}" aria-label="Quitar">Quitar</button></div>`).join("");
   }
-  $("#cAdd").addEventListener("click", addRow);
-  $("#carga").addEventListener("submit", async e => {
-    e.preventDefault(); const msg = $("#cMsg"); msg.className = "okm"; msg.textContent = "";
-    const items = [...$("#cRows").children].map(r => ({nombre: r.querySelector('[data-k="nombre"]').value.trim(), cant: r.querySelector('[data-k="cant"]').value.trim(), precio: r.querySelector('[data-k="precio"]').value.trim()})).filter(x => x.nombre);
-    const err = m => { msg.className = "err"; msg.textContent = m; };
-    if (!items.length) return err("Escribe al menos un producto.");
-    if (items.some(x => !/^\d+$/.test(x.cant) || +x.cant < 1)) return err("Revisa las cantidades: deben ser números enteros.");
-    if (items.some(x => x.precio === "" || isNaN(+x.precio) || +x.precio < 0)) return err("Pon el precio de venta de cada producto.");
-    $("#cSend").disabled = true;
-    const {data, error} = await sb.rpc("portal_cargar", {p_token: token, p_pin: pin, p_items: items.map(x => ({...x, precio: String(Math.round(+x.precio * 100) / 100)})), p_nota: $("#cNota").value.trim()});
-    $("#cSend").disabled = false;
-    if (error) return err("No hay conexión. Inténtalo otra vez.");
-    if (data?.error) return err({muchos_pendientes: "Tienes muchas cargas por recibir. Espera a que la tienda las reciba.", bloqueado: "Demasiados intentos. Espera 15 minutos."}[data.error] || "Revisa los datos de los productos.");
-    $("#cRows").innerHTML = ""; $("#cNota").value = ""; msg.textContent = "Listo. Cuando traigas tus productos, los contamos y se suman a tu inventario.";
+  $("#tLista").addEventListener("click", e => { const q = e.target.closest("[data-quitar]"); if (q) { lista.splice(+q.dataset.quitar, 1); pintarLista(); } });
+  $("#tEnviar").addEventListener("click", async () => {
+    if (!lista.length) return; const b = $("#tEnviar"); b.disabled = true; b.textContent = "Enviando…";
+    const {data, error} = await sb.rpc("portal_cargar", {p_token: token, p_pin: pin, p_items: lista.map(x => ({nombre: x.nombre, cant: String(x.cant), precio: String(Math.round(x.precio * 100) / 100), foto: x.foto || ""})), p_nota: $("#tNota").value.trim()});
+    b.disabled = false; b.textContent = "✅ Listo, avisar a la tienda";
+    if (error || data?.error) { $("#tOk").className = "err"; $("#tOk").textContent = error ? "No hay internet. Inténtalo otra vez." : "No se pudo enviar. Pide ayuda con el botón verde."; return; }
+    lista = []; $("#tNota").value = ""; pintarLista(); $("#tOk").className = "okm"; $("#tOk").textContent = "¡Listo! Ya sabemos qué vas a traer. Cuando llegues, lo contamos contigo.";
     cargar();
   });
 
-  // ---------- pagos ----------
-  function estadoMeses() {
+  // ---------- pagar ----------
+  function meses() {
     const m = D.marca, hoy = laPaz(), out = [];
     const ym = hoy.getFullYear() + "-" + pad(hoy.getMonth() + 1);
     let ultimo = hoy.getDate() >= 29 ? ym : shift(ym, -1); if (ultimo < "2026-10") ultimo = "2026-10";
-    for (let k = "2026-10"; k <= ultimo && out.length < 24; k = shift(k, 1)) {
+    for (let k = "2026-10"; k <= shift(ultimo, 1) && out.length < 24; k = shift(k, 1)) {
       const ps = D.pagos.filter(p => p.mes === k);
       const conf = ps.filter(p => p.estado === "confirmado").reduce((a, p) => a + +p.monto, 0);
       const rev = ps.filter(p => p.estado === "por_verificar").reduce((a, p) => a + +p.monto, 0);
-      const liq = D.liquidaciones.find(l => l.periodo === k);
-      const desc = liq ? +liq.descontado : 0;
-      let pagado = conf + desc;
-      if (k === "2026-10") pagado += +m.adelanto + (m.saldo_pagado ? +m.saldo : 0);
-      const tarifa = +m.tarifa, falta = Math.max(0, tarifa - pagado);
-      out.push({k, tarifa, pagado, rev, falta, desc, conf, liq});
+      const liq = D.liquidaciones.find(l => l.periodo === k); const desc = liq ? +liq.descontado : 0;
+      let pagado = conf + desc; if (k === "2026-10") pagado += +m.adelanto + (m.saldo_pagado ? +m.saldo : 0);
+      out.push({k, tarifa: +m.tarifa, pagado, rev, desc, conf, falta: Math.max(0, +m.tarifa - pagado), futuro: k > ultimo});
     }
     return out;
   }
-  $("#copyCta").addEventListener("click", () => navigator.clipboard?.writeText("1013216432").then(() => { $("#copyCta").textContent = "Copiado"; }, () => {}));
+  function deuda() { const ms = meses(); return ms.find(x => !x.futuro && x.falta > 0 && !x.rev) || ms.find(x => x.futuro && x.falta > 0 && !x.rev) || null; }
+  $("#copyCta").addEventListener("click", () => navigator.clipboard?.writeText("1013216432").then(() => { $("#copyCta").textContent = "✅ Copiado"; }, () => {}));
+  $("#pFotoBtn").addEventListener("click", () => { $("#pFoto").value = ""; $("#pFoto").click(); });
+  $("#pFoto").addEventListener("change", e => { fotoPago = e.target.files[0] || null; if (fotoPago) { const u = URL.createObjectURL(fotoPago); $("#pFotoBtn").innerHTML = `<img src="${u}" alt="Comprobante">`; } });
   $("#pagoForm").addEventListener("submit", async e => {
-    e.preventDefault(); const msg = $("#pMsg"); msg.className = "okm"; msg.textContent = "";
-    const err = t => { msg.className = "err"; msg.textContent = t; };
-    const f = $("#pFoto").files[0], monto = parseFloat($("#pMonto").value), mes = $("#pMes").value;
-    if (!mes) return err("No tienes meses pendientes.");
-    if (!(monto > 0)) return err("Escribe el monto que pagaste.");
-    if (!f) return err("Sube la foto del comprobante.");
-    $("#pSend").disabled = true; msg.textContent = "Enviando…";
+    e.preventDefault(); const msg = $("#pMsg"); const err = t => { msg.className = "err"; msg.textContent = t; };
+    const d = deuda(), monto = parseFloat($("#pMonto").value);
+    if (!d) return err("No tienes pagos pendientes. ¡Estás al día!");
+    if (!(monto > 0)) return err("Escribe cuánto pagaste.");
+    if (!fotoPago) return err("Toma la foto del comprobante o elige la captura.");
+    $("#pSend").disabled = true; msg.className = "okm"; msg.textContent = "Enviando…";
     try {
-      const ruta = await subir(f, "comprobante");
-      const {data} = await sb.rpc("portal_pago", {p_token: token, p_pin: pin, p_mes: mes, p_monto: monto, p_ruta: ruta});
-      if (!data?.ok) throw new Error(data?.error === "muchos" ? "Ya tienes varios comprobantes en revisión. Espera la confirmación." : "No se pudo registrar el pago.");
-      $("#pFoto").value = ""; msg.className = "okm"; msg.textContent = "Comprobante enviado. Lo revisamos y lo verás como «Pagado».";
+      const ruta = await subir(fotoPago, "comprobante");
+      const {data} = await sb.rpc("portal_pago", {p_token: token, p_pin: pin, p_mes: d.k, p_monto: monto, p_ruta: ruta});
+      if (!data?.ok) throw new Error("No se pudo enviar. Pide ayuda con el botón verde.");
+      fotoPago = null; $("#pFotoBtn").innerHTML = `<span class="ic">🧾</span><span>Tomar foto o elegir captura</span>`;
+      msg.className = "okm"; msg.textContent = "¡Gracias! Revisamos tu pago y te aparece como «Pagado».";
       cargar();
     } catch (er) { err(er.message); }
     $("#pSend").disabled = false;
@@ -334,80 +401,69 @@ td.r,th.r{text-align:right}
 
   // ---------- mi marca ----------
   $("#logoBtn").addEventListener("click", () => { $("#logoInput").value = ""; $("#logoInput").click(); });
-  let logoNuevo = "";
   $("#logoInput").addEventListener("change", async e => {
     const f = e.target.files[0]; if (!f) return; $("#logoBtn").textContent = "Subiendo…";
-    try { logoNuevo = await subir(f, "logo"); $("#logoBtn").innerHTML = `<img src="${esc(IMG(logoNuevo))}" alt="Logo">`; $("#mMsg").textContent = "Logo listo. Toca «Guardar»."; }
+    try { logoNuevo = await subir(f, "logo"); $("#logoBtn").innerHTML = `<img src="${esc(IMG(logoNuevo))}" alt="Logo">`; $("#mMsg").className = "okm"; $("#mMsg").textContent = "Foto lista. Toca «Guardar»."; }
     catch (er) { $("#logoBtn").textContent = "Subir logo"; $("#mMsg").className = "err"; $("#mMsg").textContent = er.message; }
   });
   $("#perfil").addEventListener("submit", async e => {
     e.preventDefault(); $("#mSave").disabled = true;
     const {data} = await sb.rpc("portal_perfil", {p_token: token, p_pin: pin, p_logo: logoNuevo, p_ig: $("#mIg").value.trim(), p_tiktok: $("#mTk").value.trim(), p_desc: $("#mDesc").value.trim()});
-    $("#mSave").disabled = false; $("#mMsg").className = data?.ok ? "okm" : "err"; $("#mMsg").textContent = data?.ok ? "Guardado. ¡Gracias!" : "No se pudo guardar.";
+    $("#mSave").disabled = false; $("#mMsg").className = data?.ok ? "okm" : "err"; $("#mMsg").textContent = data?.ok ? "✅ Guardado. ¡Gracias!" : "No se pudo guardar.";
     logoNuevo = ""; cargar();
   });
 
-  // ---------- render ----------
+  // ---------- pintar ----------
   function render() {
-    const m = D.marca;
-    $("#hNombre").textContent = m.nombre; $("#hEspacio").textContent = "Tu espacio: " + (m.espacio || "—") + " · tarifa " + bs(m.tarifa) + "/mes";
+    const m = D.marca, hoy = diaKey(laPaz()), per = PER0();
+    $("#hNombre").textContent = m.nombre; $("#mEspacio").textContent = m.espacio || "—";
     if (m.logo) { $("#hLogo").src = IMG(m.logo); $("#hLogo").hidden = false; }
-    // ventas
-    const pers = [...new Set([PER0(), ...D.ventas.map(v => v.periodo)])].sort().reverse();
-    $("#per").innerHTML = pers.map(k => `<option value="${k}">${perLabel(k)}</option>`).join(""); $("#per").value = per;
-    const vs = D.ventas.filter(v => v.periodo === per);
-    const vend = vs.reduce((a, v) => a + +v.total, 0), uni = vs.reduce((a, v) => a + v.cant, 0);
-    const desc = m.descuenta ? Math.min(vend, +m.tarifa) : 0;
-    $("#kVend").textContent = bs(vend); $("#kUni").textContent = uni; $("#kEnt").textContent = bs(vend - desc);
-    const mm = +per.split("-")[1];
-    $("#perInfo").textContent = "Se entrega el 29 " + MESES[mm - 1] + "." + (m.descuenta ? " De lo vendido se descuenta la tarifa del mes siguiente (" + bs(m.tarifa) + ")." : " La tarifa del mes siguiente se paga aparte.");
-    if (!vs.length) $("#ventas").innerHTML = `<div class="empty">Todavía no hay ventas en este periodo. Cada vez que se venda algo tuyo, aparece aquí con el día y la hora.</div>`;
-    else {
-      let html = `<div class="tbl"><table><thead><tr><th>Hora</th><th>Producto</th><th class="r">Cant.</th><th class="r">Total</th></tr></thead><tbody>`, lastDay = "";
-      vs.forEach(v => { const d = fmtDia(v.fecha); if (d !== lastDay) { html += `<tr><td colspan="4" class="day">${esc(d)}</td></tr>`; lastDay = d; } html += `<tr><td class="num">${fmtHora(v.fecha)}</td><td>${esc(v.nombre)}</td><td class="r num">${v.cant}</td><td class="r num">${bs(v.total)}</td></tr>`; });
-      $("#ventas").innerHTML = html + `</tbody></table></div>`;
-    }
+    $("#help").href = "https://wa.me/59162792888?text=" + encodeURIComponent("Hola, soy de " + m.nombre + " y necesito ayuda con mi página de El Parralito");
+    // inicio
+    const vHoy = D.ventas.filter(v => diaDe(v.fecha) === hoy), vMes = D.ventas.filter(v => v.periodo === per);
+    const tHoy = vHoy.reduce((a, v) => a + +v.total, 0), tMes = vMes.reduce((a, v) => a + +v.total, 0);
+    const desc = m.descuenta ? Math.min(tMes, +m.tarifa) : 0;
+    $("#kHoy").textContent = bs(tHoy); $("#kHoyN").textContent = vHoy.length ? vHoy.reduce((a, v) => a + v.cant, 0) + " productos vendidos hoy" : "Todavía no hay ventas hoy";
+    $("#kMes").textContent = bs(tMes);
+    $("#kPagoT").textContent = "El 29 de " + MESES[+per.split("-")[1] - 1] + " te pagamos"; $("#kPago").textContent = bs(tMes - desc);
+    const al = [], low = D.productos.filter(p => p.stock <= p.minimo), d = deuda(), pendT = D.ingresos.filter(i => i.estado === "pendiente").length;
+    if (d && !d.futuro) al.push(`<div class="alert bad"><span>💳</span><span>Te falta pagar tu repisa: <b>${bs(d.falta)}</b></span><button class="sm" data-go="pagar">Pagar</button></div>`);
+    if (low.length) al.push(`<div class="alert warn"><span>⚠️</span><span>Se te está acabando: <b>${low.slice(0, 3).map(p => esc(p.nombre) + " (" + (p.stock <= 0 ? "agotado" : "quedan " + p.stock) + ")").join(", ")}</b></span><button class="sm" data-go="traer">Traer</button></div>`);
+    if (pendT) al.push(`<div class="alert ok"><span>📦</span><span>Te estamos esperando con ${pendT === 1 ? "los productos que avisaste" : pendT + " entregas que avisaste"}.</span></div>`);
+    if (!D.productos.length && !pendT) al.push(`<div class="alert ok"><span>👋</span><span>Para empezar, avísanos qué productos vas a traer.</span><button class="sm" data-go="traer">Empezar</button></div>`);
+    $("#alertas").innerHTML = al.join(""); $("#alertas").hidden = !al.length;
+    $("#mPagoSub").textContent = d ? (d.futuro ? "Próximo pago: " + bs(d.falta) : "Te falta " + bs(d.falta)) : "Estás al día ✅";
+    // lo que vendí
+    const pers = [...new Set([per, ...D.ventas.map(v => v.periodo)])].sort().reverse().slice(0, 6);
+    if (!pers.includes(verMes)) verMes = per;
+    $("#meses").innerHTML = pers.map((k, i) => `<button aria-pressed="${k === verMes}" data-mes="${k}">${i === 0 ? "Este mes" : i === 1 ? "Mes pasado" : MESES[+k.split("-")[1] - 1]}</button>`).join("");
+    const vs = D.ventas.filter(v => v.periodo === verMes);
+    $("#vTotT").textContent = perNombre(verMes) + " vendiste"; $("#vTot").textContent = bs(vs.reduce((a, v) => a + +v.total, 0)); $("#vTotN").textContent = vs.reduce((a, v) => a + v.cant, 0) + " productos";
+    let html = "", last = "";
+    vs.forEach(v => { const dd = fmtDia(v.fecha); if (dd !== last) { html += `<div class="dayh">${esc(dd)}</div>`; last = dd; } html += `<div class="sale"><span>${v.cant} × ${esc(v.nombre)}<br><span class="small muted">${fmtHora(v.fecha)}</span></span><b>${bs(v.total)}</b></div>`; });
+    $("#vLista").innerHTML = html || `<p class="muted">Todavía no hay ventas en este mes. Cuando se venda algo tuyo, aparece aquí al momento.</p>`;
     const ls = [...D.liquidaciones].sort((a, b) => b.periodo.localeCompare(a.periodo));
-    $("#liq").innerHTML = ls.length ? `<div class="tbl"><table><thead><tr><th>Periodo</th><th class="r">Vendido</th><th class="r">Descontado</th><th class="r">Entregado</th><th>Cómo</th></tr></thead><tbody>${ls.map(l => `<tr><td>${perLabel(l.periodo)}</td><td class="r num">${bs(l.vendido)}</td><td class="r num">${bs(l.descontado)}</td><td class="r num"><b>${bs(l.entregado)}</b></td><td><span class="chip g">${esc(l.metodo)}</span></td></tr>`).join("")}</tbody></table></div>` : `<div class="empty">La primera entrega de tus ventas es el 29 de noviembre.</div>`;
+    $("#vPagos").innerHTML = ls.length ? ls.map(l => `<div class="sale"><span>29 de ${MESES[+l.periodo.split("-")[1] - 1]}<br><span class="small muted">Vendiste ${bs(l.vendido)}${+l.descontado ? " · descontamos tu repisa " + bs(l.descontado) : ""}</span></span><b>${bs(l.entregado)}</b></div>`).join("") : `<p class="muted">Te pagamos tus ventas el 29 de cada mes. El primer pago es el 29 de noviembre.</p>`;
     // productos
-    const low = D.productos.filter(p => p.stock <= p.minimo);
-    $("#stockChip").innerHTML = D.productos.length ? (low.length ? `<span class="chip warn">${low.length} por reponer</span>` : `<span class="chip ok">Todo con stock</span>`) : "";
-    if (!document.activeElement?.matches("#stock input")) $("#stock").innerHTML = D.productos.length ? D.productos.map(p => `<div class="prod"><button type="button" class="ph" data-foto="${esc(p.id)}" aria-label="Foto de ${esc(p.nombre)}">${p.foto ? `<img src="${esc(IMG(p.foto))}" alt="" loading="lazy">` : "Subir foto"}</button><div style="min-width:0"><b>${esc(p.nombre)}</b> ${p.stock <= 0 ? `<span class="chip bad">Agotado</span>` : p.stock <= p.minimo ? `<span class="chip warn">Reponer</span>` : `<span class="chip ok">OK</span>`}<div class="meta"><span>Quedan <b class="num">${p.stock}</b></span><span>Vendidos <b class="num">${p.vendidos ?? 0}</b></span></div><div class="precio"><input type="number" min="0" step="0.5" inputmode="decimal" value="${p.precio}" data-pid="${esc(p.id)}" aria-label="Precio de ${esc(p.nombre)}"><span class="small muted">Bs</span><button type="button" class="sec sm" data-precio="${esc(p.id)}">Guardar precio</button></div></div></div>`).join("") : `<div class="empty">Todavía no tienes productos en la tienda. Cárgalos abajo y aparecen aquí cuando los recibimos.</div>`;
-    const chipE = {pendiente: `<span class="chip warn">Por recibir</span>`, recibido: `<span class="chip ok">Recibido</span>`, rechazado: `<span class="chip bad">No recibido</span>`};
-    $("#ing").innerHTML = D.ingresos.length ? D.ingresos.map(i => {
-      const dec = {}; (i.declarado || []).forEach(x => dec[x.nombre.toLowerCase()] = x.cant);
-      const items = i.items.map(x => { const d = dec[x.nombre.toLowerCase()]; return esc(x.nombre) + " ×" + x.cant + (i.estado === "recibido" && d != null && d !== x.cant ? ` <span class="muted">(declaraste ${d})</span>` : ""); }).join(", ");
-      return `<div style="padding:8px 0;border-bottom:1px solid var(--line)">${chipE[i.estado] || ""} <b>${esc(fmtDia(i.fecha))}</b> · ${items}${i.nota ? ` <span class="muted">· ${esc(i.nota)}</span>` : ""}</div>`; }).join("") : `<span class="muted">Aún no hay mercadería registrada.</span>`;
+    if (!document.activeElement?.matches("#pLista input")) $("#pLista").innerHTML = D.productos.length ? D.productos.map(p => `<div class="prod"><button type="button" class="ph" data-foto="${esc(p.id)}" aria-label="Foto de ${esc(p.nombre)}">${p.foto ? `<img src="${esc(IMG(p.foto))}" alt="" loading="lazy">` : `<span class="ic">📷</span>Poner foto`}</button><div style="min-width:0;display:flex;flex-direction:column;gap:6px"><b>${esc(p.nombre)}</b><div>${p.stock <= 0 ? `<span class="pill bad">Se acabó</span>` : p.stock <= p.minimo ? `<span class="pill warn">Quedan ${p.stock}</span>` : `<span class="pill ok">Quedan ${p.stock}</span>`} <span class="small muted">· vendiste ${p.vendidos ?? 0}</span></div><div class="small">Precio: <b>${bs(p.precio)}</b> <button type="button" class="sec sm" data-editar="${esc(p.id)}">Cambiar precio</button></div><div data-precio-box="${esc(p.id)}" hidden style="display:flex;gap:8px"><input type="number" min="0" step="0.5" inputmode="decimal" value="${p.precio}" data-pid="${esc(p.id)}" aria-label="Nuevo precio" style="max-width:120px"><button type="button" class="sm" data-guardar="${esc(p.id)}">Guardar</button></div></div></div>`).join("") : `<p class="muted">Todavía no tienes productos en la tienda. Toca «Traer más productos» para avisarnos qué vas a traer.</p>`;
     $("#dlMis").innerHTML = D.productos.map(p => `<option value="${esc(p.nombre)}"></option>`).join("");
-    if (!$("#cRows").children.length) addRow();
-    // pagos
-    const ms = estadoMeses();
-    $("#pagInfo").textContent = "Tu tarifa es de " + bs(m.tarifa) + " al mes y se paga cada día 29 por adelantado." + (m.descuenta ? " Como aceptaste el descuento, se resta de tus ventas y solo pagas lo que falte." : "");
-    $("#meses").innerHTML = ms.slice().reverse().map(x => {
-      const est = x.falta <= 0 ? `<span class="chip ok">Pagado</span>` : x.rev > 0 ? `<span class="chip g">En revisión</span>` : `<span class="chip warn">Falta ${bs(x.falta)}</span>`;
-      const det = [];
-      if (x.k === "2026-10") det.push("Adelanto " + bs(m.adelanto) + (m.saldo > 0 ? " · saldo " + bs(m.saldo) + (m.saldo_pagado ? " pagado" : " (el lunes 26)") : ""));
-      if (x.desc) det.push("Descontado de ventas " + bs(x.desc));
-      if (x.conf) det.push("Pagaste " + bs(x.conf));
-      if (x.rev) det.push(bs(x.rev) + " en revisión");
-      return `<div class="mes"><div><b>${mesLabel(x.k)}</b><div class="d">${det.join(" · ") || "Vence el 29 " + MESES[+x.k.split("-")[1] - 1]}</div></div><div style="text-align:right">${est}<div class="d num">${bs(x.tarifa)}</div></div></div>`;
-    }).join("");
-    const pend = ms.filter(x => x.falta > 0 && !x.rev);
-    const sig = shift(ms[ms.length - 1].k, 1);
-    const opts = [...pend.map(x => [x.k, x.falta]), ...(pend.length ? [] : [[sig, +m.tarifa]])];
-    const cur = $("#pMes").value;
-    $("#pMes").innerHTML = opts.map(([k, f]) => `<option value="${k}" data-f="${f}">${mesLabel(k)} · ${bs(f)}</option>`).join("");
-    if (cur && opts.some(o => o[0] === cur)) $("#pMes").value = cur;
-    if (!$("#pMonto").value || !document.activeElement?.matches("#pMonto")) $("#pMonto").value = $("#pMes").selectedOptions[0]?.dataset.f || "";
-    $("#qrBox").innerHTML = D.qr ? `<img class="qr" src="${esc(IMG(D.qr))}" alt="QR de pago de El Parralito"><div class="small muted">Escanea el QR con tu app del banco y pon el monto.</div>` : "";
-    // perfil
+    const pend = D.ingresos.filter(i => i.estado === "pendiente");
+    $("#tPend").hidden = !pend.length;
+    $("#tPend").innerHTML = `<h2 style="font-size:1.1rem">Ya nos avisaste</h2>` + pend.map(i => `<div class="small" style="padding:6px 0;border-bottom:1px solid var(--line)"><span class="pill warn">Te esperamos</span> ${i.items.map(x => esc(x.nombre) + " ×" + x.cant).join(", ")}${i.nota ? ` <span class="muted">· ${esc(i.nota)}</span>` : ""}</div>`).join("");
+    // pagar
+    const ms = meses();
+    $("#pagoHero").innerHTML = d ? `<div class="big"><span>${d.futuro ? "Tu próximo pago" : "Te falta pagar"}</span><b>${bs(d.falta)}</b><small>${mesNombre(d.k)} · ${d.k === "2026-10" ? "es el saldo de tu primer mes, se paga al firmar el contrato" : "se paga hasta el 29 de " + MESES[+d.k.split("-")[1] - 1]}</small></div>` : `<div class="big"><span>Tu repisa</span><b>Al día ✅</b><small>No tienes pagos pendientes</small></div>`;
+    $("#pagoForm").hidden = !d;
+    if (d && !document.activeElement?.matches("#pMonto")) $("#pMonto").value = d.falta;
+    $("#qrBox").innerHTML = D.qr ? `<img class="qr" src="${esc(IMG(D.qr))}" alt="QR para pagar a El Parralito"><p class="small muted" style="text-align:center">Abre la app de tu banco, escanea el QR y pon el monto.</p>` : "";
+    $("#pMeses").innerHTML = ms.filter(x => !x.futuro || x.pagado > 0 || x.rev > 0).reverse().map(x => `<div class="mes"><span>${mesNombre(x.k)}<br><span class="small muted">${x.desc ? "Descontado de tus ventas " + bs(x.desc) + ". " : ""}${x.rev ? bs(x.rev) + " en revisión" : ""}</span></span>${x.falta <= 0 ? `<span class="pill ok">Pagado</span>` : x.rev ? `<span class="pill g">Revisando</span>` : `<span class="pill bad">Falta ${bs(x.falta)}</span>`}</div>`).join("");
+    // marca
     if (!document.activeElement?.closest("#perfil")) {
       $("#mIg").value = m.ig || ""; $("#mTk").value = m.tiktok || ""; $("#mDesc").value = m.descripcion || "";
-      if (!logoNuevo) $("#logoBtn").innerHTML = m.logo ? `<img src="${esc(IMG(m.logo))}" alt="Logo">` : "Subir logo";
+      if (!logoNuevo) $("#logoBtn").innerHTML = m.logo ? `<img src="${esc(IMG(m.logo))}" alt="Logo">` : `<span class="ic">🖼️</span>Subir logo`;
     }
-    $("#upd").textContent = new Date().toLocaleTimeString("es-BO", {hour: "2-digit", minute: "2-digit"});
   }
-  $("#pMes").addEventListener("change", () => { $("#pMonto").value = $("#pMes").selectedOptions[0]?.dataset.f || ""; });
+  $("#meses").addEventListener("click", e => { const b = e.target.closest("[data-mes]"); if (b) { verMes = b.dataset.mes; render(); } });
 })();
 </script>
 </body>

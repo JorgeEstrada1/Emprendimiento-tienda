@@ -219,6 +219,11 @@ details summary{cursor:pointer;font-weight:700}
       <div class="liq" id="liqList"></div>
     </div>
     <div class="panel" style="margin-top:16px" id="pagosPanel"></div>
+    <div class="panel" style="margin-top:16px">
+      <div class="row" style="justify-content:space-between"><h2>Resumen de la semana</h2><button class="b pri" id="semBtn">Armar mensajes de los últimos 7 días</button></div>
+      <p class="small muted" style="margin:0">Para las marcas que no entran a su página: arma un mensaje corto con lo que vendieron. Tocas «Abrir WhatsApp» y lo envías. Ideal los domingos.</p>
+      <div id="semList" class="liq"></div>
+    </div>
     <div class="panel" style="margin-top:16px" id="repPanel" hidden>
       <div class="row" style="justify-content:space-between"><h2 id="repTitle">Reporte</h2><button class="b sm" id="repClose">Cerrar</button></div>
       <textarea class="rep" id="repText" readonly></textarea>
@@ -246,6 +251,16 @@ details summary{cursor:pointer;font-weight:700}
       <label class="f">Link personal de la marca<input id="acLink" readonly></label>
       <div class="row"><button class="b" id="acCopyLink">Copiar link</button><button class="b pri" id="acGen">Generar PIN nuevo</button></div>
       <div id="acPinBox"></div>
+      <details><summary>Cómo darle la bienvenida el lunes 26 (5 minutos)</summary>
+        <ol class="small" style="margin:8px 0 0;padding-left:1.2em;display:flex;flex-direction:column;gap:4px">
+          <li>Con el contrato firmado, pídele su celular y ábrele su link (cópialo de arriba y mándaselo por WhatsApp).</li>
+          <li>Que escriba su PIN. El celular lo recuerda, ya no se lo vuelve a pedir.</li>
+          <li>Toquen juntos <b>«Traer productos»</b> y agreguen su primer producto con foto, cantidad y precio.</li>
+          <li>Recíbelo en la caja (Stock → Mercadería por recibir) y muéstrale cómo aparece en <b>«Mis productos»</b>.</li>
+          <li>Guarden la página en su pantalla de inicio: 3 puntitos ⋮ → «Agregar a pantalla principal».</li>
+          <li>Muéstrale el botón verde <b>«¿Ayuda?»</b>: les escribe directo a ustedes.</li>
+        </ol>
+      </details>
       <div id="acMsgWrap" hidden><label class="f">Mensaje para WhatsApp<textarea id="acMsg" class="rep" style="min-height:110px" readonly></textarea></label><button class="b pri" id="acCopyMsg">Copiar mensaje</button></div>
     </div>
     <div class="panel" style="margin-top:16px">
@@ -459,7 +474,7 @@ details summary{cursor:pointer;font-weight:700}
     $("#lowPanel").innerHTML = `<div class="row" style="justify-content:space-between"><h2>Avisar para reponer</h2><span class="chip ${low.length ? "warn" : "ok"}">${low.length ? low.length + " productos" : "Todo con stock"}</span></div>` +
       (low.length ? `<div class="tbl"><table><thead><tr><th>Marca</th><th>Producto</th><th class="r">Quedan</th><th>Contacto</th></tr></thead><tbody>${low.map(p => { const m = S.marcas[p.marca] || {}; return `<tr><td>${esc(m.nombre)}</td><td>${esc(p.nombre)}</td><td class="r num"><span class="chip ${p.stock <= 0 ? "bad" : "warn"}">${p.stock}</span></td><td class="num small">${esc(m.celular || "—")}</td></tr>`; }).join("")}</tbody></table></div>` : `<p class="small muted" style="margin:0">Cuando a un producto le quede su stock mínimo o menos, aparece aquí con el celular de la marca.</p>`);
     $("#pendPanel").innerHTML = `<div class="row" style="justify-content:space-between"><h2>Mercadería por recibir</h2><span class="chip ${S.pend.length ? "warn" : "ok"}">${S.pend.length ? S.pend.length + " cargas" : "Nada pendiente"}</span></div>` +
-      (S.pend.length ? S.pend.map(i => `<div class="liqcard" data-ing="${esc(i.id)}"><div style="grid-column:1/-1"><b>${esc(S.marcas[i.marca]?.nombre || i.marca)}</b> <span class="small muted">· declarado ${fechaCorta(i.fecha)}${i.nota ? " · " + esc(i.nota) : ""}</span></div><div style="grid-column:1/-1" class="tbl"><table><thead><tr><th>Producto</th><th class="r">Precio</th><th class="r">Declaró</th><th class="r">Recibido</th></tr></thead><tbody>${i.items.map((x, k) => `<tr><td>${esc(x.nombre)}${prodsDe(i.marca).some(p => p.nombre.toLowerCase() === x.nombre.toLowerCase()) ? "" : ` <span class="chip g">nuevo</span>`}</td><td class="r num">${bs(x.precio)}</td><td class="r num">${x.cant}</td><td class="r"><input type="number" min="0" step="1" value="${x.cant}" data-rc="${k}" style="width:76px" aria-label="Cantidad recibida"></td></tr>`).join("")}</tbody></table></div><div class="acts"><button class="b sm pri" data-recibir="${esc(i.id)}">Recibir y sumar al stock</button><span><button class="b sm danger" data-rechazar="${esc(i.id)}">No llegó</button></span></div></div>`).join("")
+      (S.pend.length ? S.pend.map(i => `<div class="liqcard" data-ing="${esc(i.id)}"><div style="grid-column:1/-1"><b>${esc(S.marcas[i.marca]?.nombre || i.marca)}</b> <span class="small muted">· declarado ${fechaCorta(i.fecha)}${i.nota ? " · " + esc(i.nota) : ""}</span></div><div style="grid-column:1/-1" class="tbl"><table><thead><tr><th>Producto</th><th class="r">Precio</th><th class="r">Declaró</th><th class="r">Recibido</th></tr></thead><tbody>${i.items.map((x, k) => `<tr><td>${x.foto ? `<img class="mlogo" src="${esc(IMG(x.foto))}" alt="">` : ""}${esc(x.nombre)}${prodsDe(i.marca).some(p => p.nombre.toLowerCase() === x.nombre.toLowerCase()) ? "" : ` <span class="chip g">nuevo</span>`}</td><td class="r num">${bs(x.precio)}</td><td class="r num">${x.cant}</td><td class="r"><input type="number" min="0" step="1" value="${x.cant}" data-rc="${k}" style="width:76px" aria-label="Cantidad recibida"></td></tr>`).join("")}</tbody></table></div><div class="acts"><button class="b sm pri" data-recibir="${esc(i.id)}">Recibir y sumar al stock</button><span><button class="b sm danger" data-rechazar="${esc(i.id)}">No llegó</button></span></div></div>`).join("")
         : `<p class="small muted" style="margin:0">Cuando una marca cargue sus productos desde su portal, aparecen aquí. Al recibirlos, cuenta lo que trajo, corrige la cantidad si hace falta y se suma al stock.</p>`);
     const ps = prodsDe(mid);
     $("#stockList").innerHTML = ps.length ? `<div class="tbl"><table><thead><tr><th>Producto</th><th class="r">Precio</th><th class="r">Stock</th><th class="r">Mínimo</th><th></th></tr></thead><tbody>${ps.map(p => `<tr><td><input data-pf="nombre" data-id="${esc(p.id)}" value="${esc(p.nombre)}" aria-label="Nombre"></td><td class="r"><input data-pf="precio" data-id="${esc(p.id)}" type="number" min="0" step="0.5" value="${p.precio}" style="width:90px" aria-label="Precio"></td><td class="r"><input data-pf="stock" data-id="${esc(p.id)}" type="number" min="0" step="1" value="${p.stock}" style="width:76px" aria-label="Stock"></td><td class="r"><input data-pf="minimo" data-id="${esc(p.id)}" type="number" min="0" step="1" value="${p.minimo}" style="width:70px" aria-label="Mínimo"></td><td><span class="chip ${p.stock <= 0 ? "bad" : p.stock <= p.minimo ? "warn" : "ok"}">${p.stock <= 0 ? "Agotado" : p.stock <= p.minimo ? "Reponer" : "OK"}</span></td></tr>`).join("")}</tbody></table></div><p class="small muted" style="margin:0">Corrige precio o stock directamente; se guarda al salir del campo.</p>`
@@ -508,7 +523,7 @@ details summary{cursor:pointer;font-weight:700}
     try {
       if (r) {
         const card = r.closest("[data-ing]"); const ing = S.pend.find(i => i.id === r.dataset.recibir);
-        const items = ing.items.map((it, k) => ({nombre: it.nombre, precio: it.precio, cant: parseInt(card.querySelector(`[data-rc="${k}"]`).value, 10) || 0}));
+        const items = ing.items.map((it, k) => ({nombre: it.nombre, precio: it.precio, foto: it.foto || "", cant: parseInt(card.querySelector(`[data-rc="${k}"]`).value, 10) || 0}));
         r.disabled = true; chk(await sb.rpc("recibir_ingreso", {p_id: ing.id, p_items: items}));
         toast("Recibido: " + items.reduce((a, i) => a + i.cant, 0) + " unidades sumadas al stock"); refresh("ingresos", "productos");
       }
@@ -548,6 +563,26 @@ details summary{cursor:pointer;font-weight:700}
       toast("QR actualizado: las marcas ya lo ven en su portal"); refresh("ajustes");
     } catch (er) { fail(er); }
   });
+  $("#semBtn").addEventListener("click", async () => {
+    const b = $("#semBtn"); b.disabled = true; b.textContent = "Armando…";
+    try {
+      const desde = new Date(Date.now() - 7 * 864e5).toISOString();
+      const vs = chk(await sb.from("ventas").select("marca,nombre,cant,total").eq("anulada", false).gte("fecha", desde).limit(5000));
+      const por = {}; vs.forEach(v => { (por[v.marca] = por[v.marca] || []).push(v); });
+      $("#semList").innerHTML = marcasOrden().map(m => {
+        const xs = por[m.id] || []; const tot = xs.reduce((a, v) => a + +v.total, 0), n = xs.reduce((a, v) => a + v.cant, 0);
+        const g = {}; xs.forEach(v => g[v.nombre] = (g[v.nombre] || 0) + v.cant);
+        const top = Object.entries(g).sort((a, b) => b[1] - a[1])[0];
+        const low = prodsDe(m.id).filter(p => p.stock <= p.minimo).map(p => p.nombre);
+        const nom = (m.titular || "").split(" ")[0] || m.nombre;
+        const txt = `¡Hola ${nom}! 🍇 Este es tu resumen de la semana en El Parralito:\n\n` + (n ? `🛍️ Vendiste ${n} producto${n === 1 ? "" : "s"}: ${bs(tot)}` + (top ? `\n⭐ Lo que más se vendió: ${top[0]}` : "") : `Esta semana todavía no hubo ventas de ${m.nombre}. Si quieres, cambiamos la presentación o probamos otros productos 💪`) + (low.length ? `\n⚠️ Se te está acabando: ${low.slice(0, 3).join(", ")}` : "") + (m.pin_hash ? `\n\nMira todo el detalle aquí: ${PORTAL_URL}?t=${m.token}` : "") + `\n\n¡Gracias por ser parte de El Parralito!`;
+        const cel = (m.celular || "").replace(/\D/g, ""); const wa = cel ? "https://wa.me/" + (cel.length === 8 ? "591" + cel : cel) + "?text=" + encodeURIComponent(txt) : "";
+        return `<div class="liqcard"><div><b>${esc(m.nombre)}</b><div class="meta">${n ? n + " productos · " + bs(tot) : "Sin ventas esta semana"}${low.length ? " · " + low.length + " por reponer" : ""}</div></div><div class="amt">${bs(tot)}</div><div class="acts">${wa ? `<a class="b sm pri" href="${esc(wa)}" target="_blank" rel="noopener" style="text-decoration:none">Abrir WhatsApp</a>` : `<span class="chip warn">Falta su celular</span>`}<button class="b sm" data-semcopy="${esc(m.id)}">Copiar mensaje</button></div><textarea hidden data-semtxt="${esc(m.id)}">${esc(txt)}</textarea></div>`;
+      }).join("");
+    } catch (er) { fail(er); }
+    b.disabled = false; b.textContent = "Armar mensajes de los últimos 7 días";
+  });
+  $("#semList").addEventListener("click", e => { const c = e.target.closest("[data-semcopy]"); if (c) { const t = $(`[data-semtxt="${c.dataset.semcopy}"]`); copiar(t.value, t); } });
   function renderLiq() {
     renderPagos();
     const sel = $("#liqPer"); const opts = []; for (let i = 3; i >= -6; i--) opts.push(perShift(PER_ACT(), i));
@@ -608,7 +643,7 @@ details summary{cursor:pointer;font-weight:700}
     $("#acTitle").textContent = "Acceso al portal · " + m.nombre;
     $("#acLink").value = link;
     $("#acPinBox").innerHTML = pin ? `PIN nuevo: <b class="num" style="font-size:1.3rem">${pin}</b> <span class="small muted">· anótalo o envíalo ahora; después no se puede volver a ver.</span>` : (m.pin_hash ? `<span class="small muted">Esta marca ya tiene PIN. Si lo olvidó, genera uno nuevo.</span>` : `<span class="small muted">Todavía no tiene PIN. Genera uno para activar su acceso.</span>`);
-    $("#acMsg").value = pin ? `¡Hola! Ya puedes ver tus ventas y tu stock de El Parralito cuando quieras desde tu celular:\n${link}\nTu PIN es: ${pin}\nGuárdalo y no lo compartas.` : "";
+    $("#acMsg").value = pin ? `¡Hola! 🍇 Esta es tu página de El Parralito. Ahí ves lo que vendes, tus productos y tus pagos, desde tu celular:\n${link}\nTu PIN es: ${pin} (te lo pide una sola vez)\n\nSi tienes dudas, toca el botón verde «¿Ayuda?» y nos escribes.` : "";
     $("#acMsgWrap").hidden = !pin;
     $("#acPanel").dataset.marca = mid; $("#acPanel").hidden = false; $("#acPanel").scrollIntoView({block: "center"});
   }

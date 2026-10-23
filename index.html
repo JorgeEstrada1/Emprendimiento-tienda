@@ -1,5 +1,1173 @@
 <!doctype html>
 <html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="description" content="El Parralito, tienda de emprendedores en Tarija. Elige tu repisa en 3D y resérvala por WhatsApp."></head><body>
+<title>El Parralito</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: encabezado → renders → visor 3D con panel de reserva → barra de vistas/fases → disponibilidad → leyenda */
+:root{
+  --bg:#ECEEEB; --surface:#FFFFFF; --stage:#DDE2DE; --fg:#1C2321; --muted:#56605C; --line:#C9CFCB;
+  --libre:#2E9A52; --ocupado:#7D8481; --premium:#C9971F; --accent:#2457A6; --wa:#1F8A4C;
+  --display:"Archivo", "Helvetica Neue", Arial, sans-serif;
+  --mono:"IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#151A18; --surface:#1E2522; --stage:#232B28; --fg:#E8ECEA; --muted:#A3ADA8; --line:#36403C;
+  --libre:#4CC173; --ocupado:#8E9692; --premium:#E2B23E; --accent:#6E9BE0; --wa:#2FA864; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#151A18; --surface:#1E2522; --stage:#232B28; --fg:#E8ECEA; --muted:#A3ADA8; --line:#36403C;
+  --libre:#4CC173; --ocupado:#8E9692; --premium:#E2B23E; --accent:#6E9BE0; --wa:#2FA864; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--display);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 32px}
+.wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+header{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:8px 24px}
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase}
+h1{margin:4px 0 0;font-size:clamp(26px,4vw,38px);font-weight:800;letter-spacing:-.01em;text-wrap:balance}
+h2{margin:0;font-size:20px;font-weight:700}
+.note{font-family:var(--mono);font-size:12px;color:var(--muted);max-width:440px;margin:0}
+.renders{display:flex;flex-direction:column;gap:10px}
+#main-shot{margin:0;display:flex;flex-direction:column;gap:6px}
+#main-shot img{width:100%;height:auto;aspect-ratio:16/10;object-fit:cover;border-radius:8px;border:1px solid var(--line);display:block;background:var(--stage)}
+#main-shot figcaption{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.thumbs{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+.th{padding:0;min-height:0;border-radius:6px;overflow:hidden;border:2px solid transparent;background:var(--surface);cursor:pointer}
+.th img{width:100%;aspect-ratio:16/10;object-fit:cover;display:block}
+.th[aria-pressed="true"]{border-color:var(--fg)}
+.intro{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:6px 18px;margin-top:8px}
+.intro p{margin:0;color:var(--muted);font-size:14px;max-width:620px}
+.stage{position:relative;height:min(72vh,680px);min-height:420px;background:var(--stage);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+#view{position:absolute;inset:0}
+#view canvas{display:block;touch-action:none}
+.hint{position:absolute;left:12px;top:10px;font-family:var(--mono);font-size:11px;color:var(--muted);pointer-events:none;background:color-mix(in srgb,var(--stage) 80%,transparent);padding:3px 6px;border-radius:4px}
+.lbl{font-family:var(--mono);font-size:11px;font-weight:500;color:#fff;padding:2px 6px;border-radius:3px;white-space:nowrap;pointer-events:none;background:rgba(28,35,33,.85)}
+#panel{width:min(340px,calc(100% - 32px));background:var(--surface);color:var(--fg);border:1px solid var(--line);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:10px;box-shadow:0 10px 30px rgba(0,0,0,.18)}
+#panel .top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+#p-code{font-family:var(--mono);font-size:20px;font-weight:500;letter-spacing:.02em}
+#p-desc{font-size:13px;color:var(--muted);margin-top:2px}
+.chip{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.06em;padding:3px 8px;border-radius:99px;color:#fff;width:fit-content}
+.chip.libre{background:var(--libre)} .chip.ocupado{background:var(--ocupado)} .chip.premium{background:var(--premium);color:#1C2321}
+dl{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;margin:0;font-size:14px}
+dt{color:var(--muted)} dd{margin:0;font-weight:500;font-variant-numeric:tabular-nums}
+.cta{display:flex;justify-content:center;align-items:center;gap:8px;min-height:46px;border-radius:8px;background:var(--wa);color:#fff;text-decoration:none;font-weight:700;font-size:15px}
+.cta:hover{filter:brightness(1.08)}
+.num{display:flex;align-items:center;justify-content:space-between;gap:8px;font-family:var(--mono);font-size:12px;color:var(--muted)}
+.num span{user-select:all;color:var(--fg)}
+.msg{margin:0;font-size:14px;color:var(--muted)}
+.x{min-height:36px;min-width:36px;padding:0;font-size:18px;line-height:1}
+.bar{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;justify-content:space-between}
+.group{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.group span{font-family:var(--mono);font-size:11px;color:var(--muted);margin-right:4px;text-transform:uppercase;letter-spacing:.08em}
+button{font-family:var(--display);font-weight:500;font-size:14px;color:var(--fg);background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:9px 14px;min-height:40px;cursor:pointer}
+button:hover{border-color:var(--muted)}
+button[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+#admin-bar{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;justify-content:space-between;background:var(--surface);border:1px dashed var(--accent);border-radius:8px;padding:10px 14px;font-size:14px}
+#admin-bar .acts{display:flex;gap:8px;flex-wrap:wrap}
+#btn-save{background:var(--accent);border-color:var(--accent);color:#fff}
+.avail{display:flex;flex-wrap:wrap;gap:8px 22px;align-items:center;font-size:14px}
+.avail .k{display:flex;align-items:center;gap:8px}
+.sw{width:14px;height:14px;border-radius:3px;flex-shrink:0}
+.avail strong{font-size:22px;font-weight:800;font-variant-numeric:tabular-nums}
+.prices{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+.item{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:12px 14px;display:flex;flex-direction:column;gap:3px}
+.item b{font-size:22px;font-weight:800;font-variant-numeric:tabular-nums}
+.item small{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.picker{display:flex;flex-direction:column;gap:12px}
+.tabs{display:flex;flex-wrap:wrap;gap:6px}
+.photo-scroll{overflow-x:auto;border-radius:8px;border:1px solid var(--line);-webkit-overflow-scrolling:touch}
+.photo{position:relative;width:100%;min-width:760px;aspect-ratio:16/10;background:var(--stage)}
+.photo img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;max-width:none}
+.marks{position:absolute;inset:0}
+.mk{position:absolute;transform:translate(-50%,-50%);width:var(--s);aspect-ratio:1;min-width:13px;min-height:0;padding:0;border-radius:50%;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.45);cursor:pointer;transition:transform .12s}
+.mk::before{content:"";position:absolute;inset:-7px;border-radius:50%}
+.mk:hover{transform:translate(-50%,-50%) scale(1.25)}
+.mk.libre{background:var(--libre)} .mk.premium{background:var(--premium)} .mk.ocupado{background:var(--ocupado);opacity:.85}
+.mk.sel{background:#3D8BFF;outline:3px solid #3D8BFF;outline-offset:3px;transform:translate(-50%,-50%) scale(1.35)}
+.small{font-family:var(--mono);font-size:12px;color:var(--muted)}
+#panel{position:fixed;z-index:20;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px))}
+@media (max-width:560px){#panel{left:12px;right:12px;width:auto}}
+@media (prefers-reduced-motion:reduce){.mk{transition:none}}
+[hidden]{display:none!important}
+.promo{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:6px 16px;background:var(--fg);color:var(--bg);border-radius:8px;padding:12px 16px}
+.promo b{font-size:16px;font-weight:700;text-wrap:balance}
+.zona{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;border:1px solid var(--line,#ccc);border-radius:8px;padding:10px 14px;font-size:14px}
+.zona b{font-weight:700}.zona .bar{flex:1 1 140px;height:8px;border-radius:99px;background:color-mix(in srgb,var(--fg) 12%,transparent);overflow:hidden}.zona .bar i{display:block;height:100%;background:var(--libre)}
+#btn-disp{position:absolute;left:50%;bottom:18px;transform:translateX(-50%);z-index:5;font:700 17px/1.1 inherit;font-family:inherit;padding:14px 22px;border-radius:99px;border:0;background:var(--libre);color:#fff;box-shadow:0 6px 20px rgba(0,0,0,.25);cursor:pointer;display:flex;align-items:center;gap:8px;white-space:nowrap;animation:pulso 1.8s ease-in-out infinite}
+#btn-disp[aria-pressed="true"]{background:var(--fg);color:var(--bg);animation:none}
+@keyframes pulso{0%,100%{box-shadow:0 0 0 0 rgba(46,154,82,.55),0 6px 20px rgba(0,0,0,.25)}50%{box-shadow:0 0 0 12px rgba(46,154,82,0),0 6px 20px rgba(0,0,0,.25)}}
+@media (prefers-reduced-motion:reduce){#btn-disp{animation:none}}
+.chip.pronto{background:#C8A87A;color:#1C2321}
+.promo .cupos{font-family:var(--mono);font-size:12px;letter-spacing:.04em;background:var(--premium);color:#1C2321;padding:4px 10px;border-radius:99px;white-space:nowrap}
+#panel{max-height:min(82vh,680px);overflow:auto;overscroll-behavior:contain}
+.sec{display:flex;flex-direction:column;gap:10px}
+.sec h3{margin:0;font-size:13px;font-family:var(--mono);font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.packs{display:flex;flex-direction:column;gap:6px;border:0;margin:0;padding:0}
+.pack{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:8px;padding:10px 12px;cursor:pointer;font-size:14px}
+.pack input{accent-color:var(--accent);width:18px;height:18px;margin:0}
+.pack .pn{flex:1;min-width:0}
+.pack .pn small{display:block;color:var(--muted);font-size:12px}
+.pack .pp{font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.pack:has(input:checked){border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
+.pack .save{font-family:var(--mono);font-size:11px;color:var(--libre)}
+.form{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.form label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--muted)}
+.form label.full{grid-column:1/-1}
+.form input,.form select,.form textarea{font:inherit;font-size:14px;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:8px 10px;min-height:38px;width:100%}
+.form input:focus-visible,.form select:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.req{color:var(--premium)}
+.cta[aria-disabled="true"]{opacity:.55}
+.err{margin:0;font-size:13px;color:#C2410C}
+.incl{margin:0;font-size:13px;color:var(--fg);background:color-mix(in srgb,var(--premium) 18%,transparent);border-radius:6px;padding:8px 10px}
+.brand{display:flex;gap:12px;align-items:center}
+.brand img{width:56px;height:56px;border-radius:10px;object-fit:cover;border:1px solid var(--line);background:var(--bg)}
+.brand b{font-size:17px;display:block}
+.brand span{font-size:13px;color:var(--muted)}
+.fotos{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.fotos img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:6px;border:1px solid var(--line);background:var(--bg)}
+.fotos .f{position:relative}
+.fotos .f button{position:absolute;top:2px;right:2px;min-height:24px;min-width:24px;padding:0;font-size:14px;line-height:1;border-radius:50%}
+.ig{display:flex;justify-content:center;align-items:center;min-height:42px;border-radius:8px;border:1px solid var(--line);color:var(--fg);text-decoration:none;font-weight:600}
+.seg{display:flex;gap:6px}
+.seg button{flex:1}
+.admin-promo{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;width:100%}
+.admin-promo label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--muted)}
+.admin-promo input{font:inherit;font-size:14px;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:7px 9px;min-height:36px}
+.admin-promo .grow{flex:1 1 260px}
+.admin-promo .grow input{width:100%}
+.admin-promo .num input{width:84px}
+#solic{display:flex;flex-direction:column;gap:8px}
+.sol{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px 14px;display:grid;grid-template-columns:1fr auto;gap:2px 12px;font-size:14px}
+.sol small{color:var(--muted);font-family:var(--mono);font-size:12px}
+.sol .codes{grid-column:1/-1;font-family:var(--mono);font-size:12px;color:var(--fg);overflow-wrap:anywhere}
+.filters button{min-height:36px;padding:6px 12px}
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <div class="eyebrow">Tarija · Pasá nomás</div>
+      <h1>El Parralito</h1>
+    </div>
+    <p class="note">Lo mejor de lo local, en un solo racimo. Elige tu repisa en el 3D y resérvala por WhatsApp.</p>
+  </header>
+
+  <div class="promo" id="promo" hidden><b id="promo-txt"></b><span class="cupos" id="promo-cupos"></span></div>
+  <div class="zona" id="zona" hidden><span>Zona abierta: <b id="zona-nom"></b></span><span class="bar"><i id="zona-bar"></i></span><span id="zona-n"></span></div>
+
+  <div id="admin-bar" hidden>
+    <span id="admin-txt">Modo admin: toca un espacio para marcarlo, asignarle una marca o subir fotos.</span>
+    <div class="acts"><button id="btn-discard">Descartar</button><button id="btn-save">Guardar cambios</button></div>
+    <div class="admin-promo">
+      <label class="grow">Texto de la promoción<input id="ad-promo-txt" maxlength="120"></label>
+      <label class="num">Cupos<input id="ad-promo-cupos" type="number" min="0" max="999"></label>
+      <label class="num">Tomados<input id="ad-promo-tom" type="number" min="0" max="999"></label>
+      <button id="ad-promo-on" aria-pressed="true">Promo visible</button>
+    </div>
+  </div>
+
+  <div class="intro">
+    <h2>Elige tu espacio</h2>
+    <p>Gira el local con el dedo, acércate y toca una repisa verde o dorada para ver su código, precio y reservarla. En las grises puedes ver qué marca está ahí, y las de madera todavía no están habilitadas. Toca «Repisas disponibles» para ver solo los espacios que puedes reservar ahora.</p>
+  </div>
+  <div class="avail" aria-live="polite">
+    <div class="k"><div class="sw" style="background:var(--libre)"></div><span><strong id="n-libre">0</strong> libres</span></div>
+    <div class="k"><div class="sw" style="background:var(--premium)"></div><span><strong id="n-prem">0</strong> premium libres</span></div>
+    <div class="k"><div class="sw" style="background:var(--ocupado)"></div><span><strong id="n-ocup">0</strong> ocupados</span></div>
+    <div class="k" id="k-pronto"><div class="sw" style="background:#C8A87A"></div><span><strong id="n-pronto">0</strong> próximamente</span></div>
+  </div>
+  <div class="group filters" role="group" aria-label="Filtrar espacios">
+    <span>Ver</span>
+    <button data-f="todos" aria-pressed="true">Todos</button>
+    <button data-f="libres" aria-pressed="false">Solo libres</button>
+    <button data-f="premium" aria-pressed="false">Solo premium</button>
+    <button data-f="barato" aria-pressed="false">Hasta 150 Bs</button>
+    <button data-f="marcas" aria-pressed="false">Marcas</button>
+  </div>
+
+  <div class="stage">
+    <div id="view" aria-label="Modelo 3D del local. Cada repisa muestra si está libre, ocupada o es premium." role="img"></div>
+    <div class="hint">Arrastra para girar · pellizca para acercar · toca una repisa</div>
+    <button id="btn-disp" aria-pressed="false" hidden>🟢 Repisas disponibles</button>
+  </div>
+
+  <div class="bar">
+    <div class="group" role="group" aria-label="Vistas">
+      <span>Vista</span>
+      <button id="v-aerea" aria-pressed="false">Aérea</button>
+      <button id="v-entrada" aria-pressed="true">Desde la esquina</button>
+      <button id="v-fondo" aria-pressed="false">Desde el fondo</button>
+    </div>
+    <div class="group" role="group" aria-label="Opciones">
+      <span>Mostrar</span>
+      <button id="p-1" aria-pressed="false">Fase 1</button>
+      <button id="p-all" aria-pressed="true">Local completo</button>
+      <button id="t-lbl" aria-pressed="true">Etiquetas</button>
+      <button id="t-avail" aria-pressed="true">Disponibilidad</button>
+      <button id="t-admin" aria-pressed="false" hidden>Modo admin</button>
+    </div>
+  </div>
+
+  <div class="prices">
+    <div class="item"><small>1 repisa</small><b>150 Bs/mes</b><small>60 × 30 cm por espacio</small></div>
+    <div class="item"><small>Pack 3 repisas juntas</small><b>300 Bs/mes</b><small>Sale a 100 Bs cada una</small></div>
+    <div class="item"><small>Estante completo (5 niveles)</small><b>450 Bs/mes</b><small>Sale a 90 Bs cada una</small></div>
+    <div class="item"><small>Premium junto al vidrio</small><b>250–300 Bs/mes</b><small>Mesas de vitrina ME</small></div>
+  </div>
+
+  <section id="solic-wrap" hidden aria-label="Solicitudes de reserva">
+    <div class="intro"><h2>Solicitudes recibidas</h2><p id="solic-note">Las reservas enviadas desde esta página por personas con sesión iniciada.</p></div>
+    <div id="solic"></div>
+  </section>
+</div>
+
+<div id="panel" hidden role="dialog" aria-labelledby="p-code">
+  <div class="top">
+    <div><div id="p-code">M1-N1-A</div><div id="p-desc"></div></div>
+    <button class="x" id="p-close" aria-label="Cerrar">×</button>
+  </div>
+  <span class="chip libre" id="p-chip">Libre</span>
+  <dl><dt>Tamaño</dt><dd id="p-size">60 × 30 cm</dd><dt>Precio</dt><dd id="p-price">150 Bs/mes</dd><dt>Ubicación</dt><dd id="p-where"></dd></dl>
+
+  <div class="sec" id="p-brand" hidden>
+    <div class="brand"><img id="b-logo" alt=""><div><b id="b-name"></b><span id="b-rubro"></span></div></div>
+    <div class="fotos" id="b-fotos"></div>
+    <a class="ig" id="b-ig" target="_blank" rel="noopener">Ver en Instagram</a>
+  </div>
+  <p class="msg" id="p-pronto" hidden>Este espacio todavía no está habilitado. Estamos llenando la tienda por etapas para que todo luzca lleno el día de la inauguración. Toca «Repisas disponibles» para ver los espacios que puedes reservar ahora.</p>
+  <p class="msg" id="p-taken" hidden>Este espacio ya está ocupado. Elige otro espacio verde o dorado.</p>
+
+  <div class="sec" id="p-free">
+    <h3>Elige cómo alquilar</h3>
+    <fieldset class="packs" id="p-packs"></fieldset>
+    <p class="incl" id="p-incl" hidden></p>
+    <h3>Tus datos</h3>
+    <div class="form">
+      <label><span>Tu nombre <span class="req">*</span></span><input id="f-nombre" autocomplete="name" maxlength="60"></label>
+      <label>Celular<input id="f-cel" inputmode="tel" autocomplete="tel" maxlength="20"></label>
+      <label class="full"><span>¿Qué vendes? <span class="req">*</span></span><input id="f-rubro" maxlength="80" placeholder="Ej.: velas aromáticas, ropa tejida, cuadros"></label>
+      <label class="full">Instagram o TikTok<input id="f-ig" maxlength="60" placeholder="@tu_marca"></label>
+    </div>
+    <p class="err" id="f-err" hidden>Completa tu nombre y qué vendes.</p>
+    <a class="cta" id="p-wa" href="https://wa.me/59162792888" target="_blank" rel="noopener">Reservar por WhatsApp</a>
+    <div class="num">WhatsApp: <span id="p-num">+591 627 92888</span><button id="p-copy" style="min-height:32px;padding:4px 10px;font-size:12px">Copiar</button></div>
+  </div>
+
+  <div class="sec" id="p-admin" hidden>
+    <h3>Estado</h3>
+    <div class="seg"><button id="a-libre" aria-pressed="false">Libre</button><button id="a-ocup" aria-pressed="false">Ocupado</button></div>
+    <div class="form" id="a-brandbox">
+      <label class="full">Marca en este espacio<select id="a-marca"></select></label>
+      <label>Nombre de la marca<input id="a-nombre" maxlength="50"></label>
+      <label>Rubro<input id="a-rubro" maxlength="60"></label>
+      <label class="full">Instagram<input id="a-ig" maxlength="60" placeholder="@marca"></label>
+      <label>Logo<input id="a-logo" type="file" accept="image/*"></label>
+      <label>Fotos de productos (hasta 4)<input id="a-fotos" type="file" accept="image/*" multiple></label>
+    </div>
+    <div class="brand" id="a-logoprev" hidden><img id="a-logoimg" alt="Logo de la marca"><span>Logo actual</span></div>
+    <div class="fotos" id="a-fotolist"></div>
+    <p class="msg" id="a-msg"></p>
+  </div>
+</div>
+
+<script type="application/json" id="estado">{"ocupados": {"C1-N1": "organik", "C1-N2": "organik", "C1-N3": "organik", "C1-N4": "organik", "C1-N5": "organik", "C4-N2": "andaluza", "C4-N3": "andaluza", "C4-N4": "andaluza", "C2-N4": "glowlab", "M3-N4-A": "byfer", "C3-N3": "alfajores", "M8-N5-A": "greensplash", "M13-N4-B": "ticuva", "M7-N3-B": "emp52", "M3-N4-B": "margarita", "M7-N3-A": "viagney", "M13-N4-A": "bysilvi", "M11-N3-B": "printbo", "M11-N4-B": "printbo", "M11-N2-B": "printbo", "ME3-N3-A": "marcela", "M10-N2-B": "isa", "M10-N3-B": "isa", "M10-N4-B": "isa", "ME5-N2-A2": "calcomania", "ME5-N3-A": "pandurita", "M3-N3-B": "ara", "M11-N2-A": "valentina", "M11-N3-A": "valentina", "M11-N4-A": "valentina", "ME5-N3-B": "maudet", "M14-N1-B": "maudet", "M14-N2-B": "maudet", "M14-N3-B": "maudet", "M14-N4-B": "maudet", "M14-N5-B": "maudet", "M13-N3-B": "deo", "C3-N4": "nudo", "M2-N3-A": "bony", "C2-N3": "vinilea", "M6-N3-A": "daniela", "M10-N4-A": "malia", "M9-N4-A": "leito", "M5-N2-A": "ane", "M5-N3-A": "ane", "M5-N4-A": "ane", "M14-N2-A": "rosemary", "M13-N3-A": "gabsthink", "M9-N4-B": "ceci", "M14-N3-A": "grecia", "M14-N4-A": "grecia", "M14-N5-A": "grecia", "M1-N3-A": "melany", "M4-N3-A": "alba", "M4-N4-A": "alba", "M4-N4-B": "alba", "M8-N3-B": "tiens", "M6-N4-A": "yanesme", "M3-N3-A": "terere", "M2-N2-B": "daniela_usa", "M2-N3-B": "daniela_usa", "M2-N4-B": "daniela_usa", "M6-N2-B": "mavcar", "M6-N3-B": "mavcar", "M6-N4-B": "mavcar", "M12-N2-B": "yazzz", "M12-N3-B": "yazzz", "M12-N4-B": "yazzz", "M5-N2-B": "claudia", "M5-N3-B": "claudia", "M5-N4-B": "claudia"}, "marcas": {"organik": {"nombre": "OrganiK", "rubro": "Productos orgánicos", "ig": "", "logo": "", "fotos": []}, "andaluza": {"nombre": "Andaluza", "rubro": "Carteras, billeteras bordadas y sombreros", "ig": "", "logo": "", "fotos": []}, "glowlab": {"nombre": "GLOWLAB", "rubro": "Cosméticos naturales", "ig": "@glowlab_bo", "logo": "", "fotos": []}, "byfer": {"nombre": "ByFer Chocolatería", "rubro": "Chocolates", "ig": "", "logo": "", "fotos": []}, "alfajores": {"nombre": "Alfajores Artesanales", "rubro": "Alfajores artesanales", "ig": "", "logo": "", "fotos": []}, "yanesme": {"nombre": "Yanesme", "rubro": "Llaveros y amigurumis tejidos", "ig": "Yanesme", "logo": "", "fotos": []}, "ticuva": {"nombre": "Ticuva", "rubro": "Singani y gin", "ig": "Ticuva.bo", "logo": "", "fotos": []}, "emp52": {"nombre": "Papelería personalizada", "rubro": "Cuadernos para pintar y papelería", "ig": "", "logo": "", "fotos": []}, "margarita": {"nombre": "Café de Margarita", "rubro": "Café", "ig": "", "logo": "", "fotos": []}, "viagney": {"nombre": "CJ CAROL", "rubro": "Jabones, champús y cosméticos artesanales", "ig": "TikTok VIAGNEY", "logo": "", "fotos": []}, "bysilvi": {"nombre": "By Silvi", "rubro": "Joyas", "ig": "", "logo": "", "fotos": []}, "printbo": {"nombre": "print.bo", "rubro": "Pines, stickers y llaveros", "ig": "@print_bo", "logo": "", "fotos": []}, "marcela": {"nombre": "Marcela Zamora", "rubro": "Gorras y gafas", "ig": "", "logo": "", "fotos": []}, "isa": {"nombre": "Edén Accesorios y Regalos", "rubro": "Joyería en acero inoxidable, foleado y bañado; accesorios personalizados", "ig": "@eden_accesorios_regalostj", "logo": "", "fotos": []}, "calcomania": {"nombre": "Calco Mania", "rubro": "Stickers autoadhesivos", "ig": "@calco_mania.bo", "logo": "", "fotos": []}, "maudet": {"nombre": "Maudet (Margarita Ustarez)", "rubro": "Bisutería", "ig": "", "logo": "", "fotos": []}, "valentina": {"nombre": "Valentina Accesorios", "rubro": "Joyas en acero inoxidable y gafas", "ig": "Valentina accesorios", "logo": "", "fotos": []}, "ara": {"nombre": "Ara", "rubro": "Donas con chocolate, empanadas y rollitos con queso", "ig": "", "logo": "", "fotos": []}, "pandurita": {"nombre": "Pandurita", "rubro": "Emprendimiento", "ig": "", "logo": "", "fotos": []}, "greensplash": {"nombre": "Green Splash", "rubro": "Plantas acuáticas", "ig": "", "logo": "", "fotos": []}, "deo": {"nombre": "Dymon Estreno", "rubro": "Zapatillas y sandalias (sandalias de marca propia)", "ig": "Dymon Estreno", "logo": "", "fotos": []}, "nudo": {"nombre": "Nudo Familiar", "rubro": "Amigurumis y llaveros tejidos", "ig": "@nudo.familiar", "logo": "", "fotos": []}, "bony": {"nombre": "Victoria Aranibar (Natura)", "rubro": "Productos de belleza Natura", "ig": "@bony70119", "logo": "", "fotos": []}, "vinilea": {"nombre": "Vinilea Store", "rubro": "Stickers de vinilo de referentes de Tarija", "ig": "@vinileastorez", "logo": "", "fotos": []}, "daniela": {"nombre": "¡Qué Rico Antojo!", "rubro": "Masas", "ig": "TikTok daniela.karina.mo6", "logo": "", "fotos": []}, "malia": {"nombre": "Malia Accesorios", "rubro": "Accesorios", "ig": "@maliaaccesorios_bo", "logo": "", "fotos": []}, "leito": {"nombre": "Creaciones Leito", "rubro": "Amigurumis", "ig": "TikTok Creaciones leito", "logo": "", "fotos": []}, "claudia": {"nombre": "PURO CUERO CREACIONES SL", "rubro": "Billeteras, carteras, monederos, mochilas, morrales y riñoneras", "ig": "", "logo": "", "fotos": []}, "yazzz": {"nombre": "Yazzz", "rubro": "Poleras estampadas", "ig": "", "logo": "", "fotos": []}, "mavcar": {"nombre": "MAVCAR", "rubro": "Autos a escala de colección", "ig": "", "logo": "", "fotos": []}, "daniela_usa": {"nombre": "Daniela Arce", "rubro": "Perfumes, billeteras, accesorios, joyitas y juguetes de USA", "ig": "", "logo": "", "fotos": []}, "terere": {"nombre": "Tereré", "rubro": "Tereré empaquetado para preparar", "ig": "", "logo": "", "fotos": []}, "tiens": {"nombre": "Tiens (Sandra Aldana)", "rubro": "Suplementos, cuidado personal, Cordycafe y bloqueador", "ig": "", "logo": "", "fotos": []}, "alba": {"nombre": "Alba Angelo", "rubro": "Skin care, accesorios y agendas", "ig": "", "logo": "", "fotos": []}, "melany": {"nombre": "Melany", "rubro": "Empanadas y masitas", "ig": "", "logo": "", "fotos": []}, "grecia": {"nombre": "Grecia", "rubro": "Emprendimiento", "ig": "", "logo": "", "fotos": []}, "ceci": {"nombre": "Gold Feeling", "rubro": "Manillas personalizadas con frases o palabras a elección", "ig": "@gold_feeling_", "logo": "", "fotos": []}, "gabsthink": {"nombre": "Gabsthink", "rubro": "Repostería: galletas, budines, alfajores y bombones", "ig": "@gabsthink.tja", "logo": "", "fotos": []}, "rosemary": {"nombre": "Artesanías Rose Mary", "rubro": "Yesitos para pintar y llaveros tejidos", "ig": "TikTok @roseemary_", "logo": "", "fotos": []}, "ane": {"nombre": "Ane", "rubro": "Joyas de acero, accesorios y t-shirts", "ig": "", "logo": "", "fotos": []}}, "zona": {"nombre": "Paredes y vitrinas", "abiertos": ["M1", "M2", "M3", "M4", "M5", "M6", "M7", "M8", "M9", "M10", "M11", "M12", "M13", "M14", "C1", "C2", "C3", "C4", "ME3", "ME5"]}, "promo": {"activo": true, "texto": "Membresía Fundadores: las 20 primeras uvas del parral reciben reels gratis el primer mes y sesión de fotos", "cupos": 22, "tomados": 22}}</script>
+<script type="text/plain" id="fuente"><title>El Parralito</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: encabezado → renders → visor 3D con panel de reserva → barra de vistas/fases → disponibilidad → leyenda */
+:root{
+  --bg:#ECEEEB; --surface:#FFFFFF; --stage:#DDE2DE; --fg:#1C2321; --muted:#56605C; --line:#C9CFCB;
+  --libre:#2E9A52; --ocupado:#7D8481; --premium:#C9971F; --accent:#2457A6; --wa:#1F8A4C;
+  --display:"Archivo", "Helvetica Neue", Arial, sans-serif;
+  --mono:"IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#151A18; --surface:#1E2522; --stage:#232B28; --fg:#E8ECEA; --muted:#A3ADA8; --line:#36403C;
+  --libre:#4CC173; --ocupado:#8E9692; --premium:#E2B23E; --accent:#6E9BE0; --wa:#2FA864; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#151A18; --surface:#1E2522; --stage:#232B28; --fg:#E8ECEA; --muted:#A3ADA8; --line:#36403C;
+  --libre:#4CC173; --ocupado:#8E9692; --premium:#E2B23E; --accent:#6E9BE0; --wa:#2FA864; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--display);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:20px 32px}
+.wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+header{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:8px 24px}
+.eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.1em;color:var(--muted);text-transform:uppercase}
+h1{margin:4px 0 0;font-size:clamp(26px,4vw,38px);font-weight:800;letter-spacing:-.01em;text-wrap:balance}
+h2{margin:0;font-size:20px;font-weight:700}
+.note{font-family:var(--mono);font-size:12px;color:var(--muted);max-width:440px;margin:0}
+.renders{display:flex;flex-direction:column;gap:10px}
+#main-shot{margin:0;display:flex;flex-direction:column;gap:6px}
+#main-shot img{width:100%;height:auto;aspect-ratio:16/10;object-fit:cover;border-radius:8px;border:1px solid var(--line);display:block;background:var(--stage)}
+#main-shot figcaption{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.thumbs{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+.th{padding:0;min-height:0;border-radius:6px;overflow:hidden;border:2px solid transparent;background:var(--surface);cursor:pointer}
+.th img{width:100%;aspect-ratio:16/10;object-fit:cover;display:block}
+.th[aria-pressed="true"]{border-color:var(--fg)}
+.intro{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:6px 18px;margin-top:8px}
+.intro p{margin:0;color:var(--muted);font-size:14px;max-width:620px}
+.stage{position:relative;height:min(72vh,680px);min-height:420px;background:var(--stage);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+#view{position:absolute;inset:0}
+#view canvas{display:block;touch-action:none}
+.hint{position:absolute;left:12px;top:10px;font-family:var(--mono);font-size:11px;color:var(--muted);pointer-events:none;background:color-mix(in srgb,var(--stage) 80%,transparent);padding:3px 6px;border-radius:4px}
+.lbl{font-family:var(--mono);font-size:11px;font-weight:500;color:#fff;padding:2px 6px;border-radius:3px;white-space:nowrap;pointer-events:none;background:rgba(28,35,33,.85)}
+#panel{width:min(340px,calc(100% - 32px));background:var(--surface);color:var(--fg);border:1px solid var(--line);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:10px;box-shadow:0 10px 30px rgba(0,0,0,.18)}
+#panel .top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+#p-code{font-family:var(--mono);font-size:20px;font-weight:500;letter-spacing:.02em}
+#p-desc{font-size:13px;color:var(--muted);margin-top:2px}
+.chip{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;text-transform:uppercase;letter-spacing:.06em;padding:3px 8px;border-radius:99px;color:#fff;width:fit-content}
+.chip.libre{background:var(--libre)} .chip.ocupado{background:var(--ocupado)} .chip.premium{background:var(--premium);color:#1C2321}
+dl{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;margin:0;font-size:14px}
+dt{color:var(--muted)} dd{margin:0;font-weight:500;font-variant-numeric:tabular-nums}
+.cta{display:flex;justify-content:center;align-items:center;gap:8px;min-height:46px;border-radius:8px;background:var(--wa);color:#fff;text-decoration:none;font-weight:700;font-size:15px}
+.cta:hover{filter:brightness(1.08)}
+.num{display:flex;align-items:center;justify-content:space-between;gap:8px;font-family:var(--mono);font-size:12px;color:var(--muted)}
+.num span{user-select:all;color:var(--fg)}
+.msg{margin:0;font-size:14px;color:var(--muted)}
+.x{min-height:36px;min-width:36px;padding:0;font-size:18px;line-height:1}
+.bar{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;justify-content:space-between}
+.group{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.group span{font-family:var(--mono);font-size:11px;color:var(--muted);margin-right:4px;text-transform:uppercase;letter-spacing:.08em}
+button{font-family:var(--display);font-weight:500;font-size:14px;color:var(--fg);background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:9px 14px;min-height:40px;cursor:pointer}
+button:hover{border-color:var(--muted)}
+button[aria-pressed="true"]{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+#admin-bar{display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;justify-content:space-between;background:var(--surface);border:1px dashed var(--accent);border-radius:8px;padding:10px 14px;font-size:14px}
+#admin-bar .acts{display:flex;gap:8px;flex-wrap:wrap}
+#btn-save{background:var(--accent);border-color:var(--accent);color:#fff}
+.avail{display:flex;flex-wrap:wrap;gap:8px 22px;align-items:center;font-size:14px}
+.avail .k{display:flex;align-items:center;gap:8px}
+.sw{width:14px;height:14px;border-radius:3px;flex-shrink:0}
+.avail strong{font-size:22px;font-weight:800;font-variant-numeric:tabular-nums}
+.prices{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+.item{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:12px 14px;display:flex;flex-direction:column;gap:3px}
+.item b{font-size:22px;font-weight:800;font-variant-numeric:tabular-nums}
+.item small{font-family:var(--mono);font-size:12px;color:var(--muted)}
+.picker{display:flex;flex-direction:column;gap:12px}
+.tabs{display:flex;flex-wrap:wrap;gap:6px}
+.photo-scroll{overflow-x:auto;border-radius:8px;border:1px solid var(--line);-webkit-overflow-scrolling:touch}
+.photo{position:relative;width:100%;min-width:760px;aspect-ratio:16/10;background:var(--stage)}
+.photo img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:block;max-width:none}
+.marks{position:absolute;inset:0}
+.mk{position:absolute;transform:translate(-50%,-50%);width:var(--s);aspect-ratio:1;min-width:13px;min-height:0;padding:0;border-radius:50%;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.45);cursor:pointer;transition:transform .12s}
+.mk::before{content:"";position:absolute;inset:-7px;border-radius:50%}
+.mk:hover{transform:translate(-50%,-50%) scale(1.25)}
+.mk.libre{background:var(--libre)} .mk.premium{background:var(--premium)} .mk.ocupado{background:var(--ocupado);opacity:.85}
+.mk.sel{background:#3D8BFF;outline:3px solid #3D8BFF;outline-offset:3px;transform:translate(-50%,-50%) scale(1.35)}
+.small{font-family:var(--mono);font-size:12px;color:var(--muted)}
+#panel{position:fixed;z-index:20;right:max(16px,env(safe-area-inset-right,0px));bottom:calc(16px + env(safe-area-inset-bottom,0px))}
+@media (max-width:560px){#panel{left:12px;right:12px;width:auto}}
+@media (prefers-reduced-motion:reduce){.mk{transition:none}}
+[hidden]{display:none!important}
+.promo{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:6px 16px;background:var(--fg);color:var(--bg);border-radius:8px;padding:12px 16px}
+.promo b{font-size:16px;font-weight:700;text-wrap:balance}
+.zona{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;border:1px solid var(--line,#ccc);border-radius:8px;padding:10px 14px;font-size:14px}
+.zona b{font-weight:700}.zona .bar{flex:1 1 140px;height:8px;border-radius:99px;background:color-mix(in srgb,var(--fg) 12%,transparent);overflow:hidden}.zona .bar i{display:block;height:100%;background:var(--libre)}
+#btn-disp{position:absolute;left:50%;bottom:18px;transform:translateX(-50%);z-index:5;font:700 17px/1.1 inherit;font-family:inherit;padding:14px 22px;border-radius:99px;border:0;background:var(--libre);color:#fff;box-shadow:0 6px 20px rgba(0,0,0,.25);cursor:pointer;display:flex;align-items:center;gap:8px;white-space:nowrap;animation:pulso 1.8s ease-in-out infinite}
+#btn-disp[aria-pressed="true"]{background:var(--fg);color:var(--bg);animation:none}
+@keyframes pulso{0%,100%{box-shadow:0 0 0 0 rgba(46,154,82,.55),0 6px 20px rgba(0,0,0,.25)}50%{box-shadow:0 0 0 12px rgba(46,154,82,0),0 6px 20px rgba(0,0,0,.25)}}
+@media (prefers-reduced-motion:reduce){#btn-disp{animation:none}}
+.chip.pronto{background:#C8A87A;color:#1C2321}
+.promo .cupos{font-family:var(--mono);font-size:12px;letter-spacing:.04em;background:var(--premium);color:#1C2321;padding:4px 10px;border-radius:99px;white-space:nowrap}
+#panel{max-height:min(82vh,680px);overflow:auto;overscroll-behavior:contain}
+.sec{display:flex;flex-direction:column;gap:10px}
+.sec h3{margin:0;font-size:13px;font-family:var(--mono);font-weight:500;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.packs{display:flex;flex-direction:column;gap:6px;border:0;margin:0;padding:0}
+.pack{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:8px;padding:10px 12px;cursor:pointer;font-size:14px}
+.pack input{accent-color:var(--accent);width:18px;height:18px;margin:0}
+.pack .pn{flex:1;min-width:0}
+.pack .pn small{display:block;color:var(--muted);font-size:12px}
+.pack .pp{font-weight:700;font-variant-numeric:tabular-nums;white-space:nowrap}
+.pack:has(input:checked){border-color:var(--accent);box-shadow:0 0 0 1px var(--accent) inset}
+.pack .save{font-family:var(--mono);font-size:11px;color:var(--libre)}
+.form{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.form label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--muted)}
+.form label.full{grid-column:1/-1}
+.form input,.form select,.form textarea{font:inherit;font-size:14px;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:8px 10px;min-height:38px;width:100%}
+.form input:focus-visible,.form select:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.req{color:var(--premium)}
+.cta[aria-disabled="true"]{opacity:.55}
+.err{margin:0;font-size:13px;color:#C2410C}
+.incl{margin:0;font-size:13px;color:var(--fg);background:color-mix(in srgb,var(--premium) 18%,transparent);border-radius:6px;padding:8px 10px}
+.brand{display:flex;gap:12px;align-items:center}
+.brand img{width:56px;height:56px;border-radius:10px;object-fit:cover;border:1px solid var(--line);background:var(--bg)}
+.brand b{font-size:17px;display:block}
+.brand span{font-size:13px;color:var(--muted)}
+.fotos{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.fotos img{width:100%;aspect-ratio:1;object-fit:cover;border-radius:6px;border:1px solid var(--line);background:var(--bg)}
+.fotos .f{position:relative}
+.fotos .f button{position:absolute;top:2px;right:2px;min-height:24px;min-width:24px;padding:0;font-size:14px;line-height:1;border-radius:50%}
+.ig{display:flex;justify-content:center;align-items:center;min-height:42px;border-radius:8px;border:1px solid var(--line);color:var(--fg);text-decoration:none;font-weight:600}
+.seg{display:flex;gap:6px}
+.seg button{flex:1}
+.admin-promo{display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;width:100%}
+.admin-promo label{display:flex;flex-direction:column;gap:3px;font-size:12px;color:var(--muted)}
+.admin-promo input{font:inherit;font-size:14px;color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:7px 9px;min-height:36px}
+.admin-promo .grow{flex:1 1 260px}
+.admin-promo .grow input{width:100%}
+.admin-promo .num input{width:84px}
+#solic{display:flex;flex-direction:column;gap:8px}
+.sol{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:10px 14px;display:grid;grid-template-columns:1fr auto;gap:2px 12px;font-size:14px}
+.sol small{color:var(--muted);font-family:var(--mono);font-size:12px}
+.sol .codes{grid-column:1/-1;font-family:var(--mono);font-size:12px;color:var(--fg);overflow-wrap:anywhere}
+.filters button{min-height:36px;padding:6px 12px}
+</style>
+
+<div class="wrap">
+  <header>
+    <div>
+      <div class="eyebrow">Tarija · Pasá nomás</div>
+      <h1>El Parralito</h1>
+    </div>
+    <p class="note">Lo mejor de lo local, en un solo racimo. Elige tu repisa en el 3D y resérvala por WhatsApp.</p>
+  </header>
+
+  <div class="promo" id="promo" hidden><b id="promo-txt"></b><span class="cupos" id="promo-cupos"></span></div>
+  <div class="zona" id="zona" hidden><span>Zona abierta: <b id="zona-nom"></b></span><span class="bar"><i id="zona-bar"></i></span><span id="zona-n"></span></div>
+
+  <div id="admin-bar" hidden>
+    <span id="admin-txt">Modo admin: toca un espacio para marcarlo, asignarle una marca o subir fotos.</span>
+    <div class="acts"><button id="btn-discard">Descartar</button><button id="btn-save">Guardar cambios</button></div>
+    <div class="admin-promo">
+      <label class="grow">Texto de la promoción<input id="ad-promo-txt" maxlength="120"></label>
+      <label class="num">Cupos<input id="ad-promo-cupos" type="number" min="0" max="999"></label>
+      <label class="num">Tomados<input id="ad-promo-tom" type="number" min="0" max="999"></label>
+      <button id="ad-promo-on" aria-pressed="true">Promo visible</button>
+    </div>
+  </div>
+
+  <div class="intro">
+    <h2>Elige tu espacio</h2>
+    <p>Gira el local con el dedo, acércate y toca una repisa verde o dorada para ver su código, precio y reservarla. En las grises puedes ver qué marca está ahí, y las de madera todavía no están habilitadas. Toca «Repisas disponibles» para ver solo los espacios que puedes reservar ahora.</p>
+  </div>
+  <div class="avail" aria-live="polite">
+    <div class="k"><div class="sw" style="background:var(--libre)"></div><span><strong id="n-libre">0</strong> libres</span></div>
+    <div class="k"><div class="sw" style="background:var(--premium)"></div><span><strong id="n-prem">0</strong> premium libres</span></div>
+    <div class="k"><div class="sw" style="background:var(--ocupado)"></div><span><strong id="n-ocup">0</strong> ocupados</span></div>
+    <div class="k" id="k-pronto"><div class="sw" style="background:#C8A87A"></div><span><strong id="n-pronto">0</strong> próximamente</span></div>
+  </div>
+  <div class="group filters" role="group" aria-label="Filtrar espacios">
+    <span>Ver</span>
+    <button data-f="todos" aria-pressed="true">Todos</button>
+    <button data-f="libres" aria-pressed="false">Solo libres</button>
+    <button data-f="premium" aria-pressed="false">Solo premium</button>
+    <button data-f="barato" aria-pressed="false">Hasta 150 Bs</button>
+    <button data-f="marcas" aria-pressed="false">Marcas</button>
+  </div>
+
+  <div class="stage">
+    <div id="view" aria-label="Modelo 3D del local. Cada repisa muestra si está libre, ocupada o es premium." role="img"></div>
+    <div class="hint">Arrastra para girar · pellizca para acercar · toca una repisa</div>
+    <button id="btn-disp" aria-pressed="false" hidden>🟢 Repisas disponibles</button>
+  </div>
+
+  <div class="bar">
+    <div class="group" role="group" aria-label="Vistas">
+      <span>Vista</span>
+      <button id="v-aerea" aria-pressed="false">Aérea</button>
+      <button id="v-entrada" aria-pressed="true">Desde la esquina</button>
+      <button id="v-fondo" aria-pressed="false">Desde el fondo</button>
+    </div>
+    <div class="group" role="group" aria-label="Opciones">
+      <span>Mostrar</span>
+      <button id="p-1" aria-pressed="false">Fase 1</button>
+      <button id="p-all" aria-pressed="true">Local completo</button>
+      <button id="t-lbl" aria-pressed="true">Etiquetas</button>
+      <button id="t-avail" aria-pressed="true">Disponibilidad</button>
+      <button id="t-admin" aria-pressed="false" hidden>Modo admin</button>
+    </div>
+  </div>
+
+  <div class="prices">
+    <div class="item"><small>1 repisa</small><b>150 Bs/mes</b><small>60 × 30 cm por espacio</small></div>
+    <div class="item"><small>Pack 3 repisas juntas</small><b>300 Bs/mes</b><small>Sale a 100 Bs cada una</small></div>
+    <div class="item"><small>Estante completo (5 niveles)</small><b>450 Bs/mes</b><small>Sale a 90 Bs cada una</small></div>
+    <div class="item"><small>Premium junto al vidrio</small><b>250–300 Bs/mes</b><small>Mesas de vitrina ME</small></div>
+  </div>
+
+  <section id="solic-wrap" hidden aria-label="Solicitudes de reserva">
+    <div class="intro"><h2>Solicitudes recibidas</h2><p id="solic-note">Las reservas enviadas desde esta página por personas con sesión iniciada.</p></div>
+    <div id="solic"></div>
+  </section>
+</div>
+
+<div id="panel" hidden role="dialog" aria-labelledby="p-code">
+  <div class="top">
+    <div><div id="p-code">M1-N1-A</div><div id="p-desc"></div></div>
+    <button class="x" id="p-close" aria-label="Cerrar">×</button>
+  </div>
+  <span class="chip libre" id="p-chip">Libre</span>
+  <dl><dt>Tamaño</dt><dd id="p-size">60 × 30 cm</dd><dt>Precio</dt><dd id="p-price">150 Bs/mes</dd><dt>Ubicación</dt><dd id="p-where"></dd></dl>
+
+  <div class="sec" id="p-brand" hidden>
+    <div class="brand"><img id="b-logo" alt=""><div><b id="b-name"></b><span id="b-rubro"></span></div></div>
+    <div class="fotos" id="b-fotos"></div>
+    <a class="ig" id="b-ig" target="_blank" rel="noopener">Ver en Instagram</a>
+  </div>
+  <p class="msg" id="p-pronto" hidden>Este espacio todavía no está habilitado. Estamos llenando la tienda por etapas para que todo luzca lleno el día de la inauguración. Toca «Repisas disponibles» para ver los espacios que puedes reservar ahora.</p>
+  <p class="msg" id="p-taken" hidden>Este espacio ya está ocupado. Elige otro espacio verde o dorado.</p>
+
+  <div class="sec" id="p-free">
+    <h3>Elige cómo alquilar</h3>
+    <fieldset class="packs" id="p-packs"></fieldset>
+    <p class="incl" id="p-incl" hidden></p>
+    <h3>Tus datos</h3>
+    <div class="form">
+      <label><span>Tu nombre <span class="req">*</span></span><input id="f-nombre" autocomplete="name" maxlength="60"></label>
+      <label>Celular<input id="f-cel" inputmode="tel" autocomplete="tel" maxlength="20"></label>
+      <label class="full"><span>¿Qué vendes? <span class="req">*</span></span><input id="f-rubro" maxlength="80" placeholder="Ej.: velas aromáticas, ropa tejida, cuadros"></label>
+      <label class="full">Instagram o TikTok<input id="f-ig" maxlength="60" placeholder="@tu_marca"></label>
+    </div>
+    <p class="err" id="f-err" hidden>Completa tu nombre y qué vendes.</p>
+    <a class="cta" id="p-wa" href="https://wa.me/59162792888" target="_blank" rel="noopener">Reservar por WhatsApp</a>
+    <div class="num">WhatsApp: <span id="p-num">+591 627 92888</span><button id="p-copy" style="min-height:32px;padding:4px 10px;font-size:12px">Copiar</button></div>
+  </div>
+
+  <div class="sec" id="p-admin" hidden>
+    <h3>Estado</h3>
+    <div class="seg"><button id="a-libre" aria-pressed="false">Libre</button><button id="a-ocup" aria-pressed="false">Ocupado</button></div>
+    <div class="form" id="a-brandbox">
+      <label class="full">Marca en este espacio<select id="a-marca"></select></label>
+      <label>Nombre de la marca<input id="a-nombre" maxlength="50"></label>
+      <label>Rubro<input id="a-rubro" maxlength="60"></label>
+      <label class="full">Instagram<input id="a-ig" maxlength="60" placeholder="@marca"></label>
+      <label>Logo<input id="a-logo" type="file" accept="image/*"></label>
+      <label>Fotos de productos (hasta 4)<input id="a-fotos" type="file" accept="image/*" multiple></label>
+    </div>
+    <div class="brand" id="a-logoprev" hidden><img id="a-logoimg" alt="Logo de la marca"><span>Logo actual</span></div>
+    <div class="fotos" id="a-fotolist"></div>
+    <p class="msg" id="a-msg"></p>
+  </div>
+</div>
+
+<script type="application/json" id="estado">%%ESTADO%%<~~/script>
+<script type="text/plain" id="fuente">%%FUENTE%%<~~/script>
+<script type="importmap">
+{"imports":{
+  "three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+}}
+<~~/script>
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+
+const WA_NUM = '59162792888';
+
+const host = document.getElementById('view');
+const renderer = new THREE.WebGLRenderer({ antialias:true, alpha:true });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 0.95;
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+host.appendChild(renderer.domElement);
+const labelR = new CSS2DRenderer();
+Object.assign(labelR.domElement.style, { position:'absolute', inset:'0', pointerEvents:'none' });
+host.appendChild(labelR.domElement);
+
+const scene = new THREE.Scene();
+scene.environment = new THREE.PMREMGenerator(renderer).fromScene(new RoomEnvironment(), 0.04).texture;
+const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 200);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.maxPolarAngle = Math.PI/2 - 0.04;
+controls.minDistance = 1.2; controls.maxDistance = 32;
+
+scene.add(new THREE.HemisphereLight(0xffffff, 0x9aa39e, 0.6));
+const sun = new THREE.DirectionalLight(0xfff4e2, 1.3);
+sun.position.set(16, 18, 16); sun.target.position.set(6,0,5);
+sun.castShadow = true; sun.shadow.mapSize.set(2048,2048);
+Object.assign(sun.shadow.camera, { left:-10, right:10, top:10, bottom:-10, near:1, far:60 });
+sun.shadow.bias = -0.0005;
+scene.add(sun, sun.target);
+
+const W = (x,y) => new THREE.Vector2(x, 10.2 - y);
+const CENTER = W(6.0, 5.2);
+
+function woodTex(base, dark){
+  const c = document.createElement('canvas'); c.width = 512; c.height = 128; const x = c.getContext('2d');
+  x.fillStyle = base; x.fillRect(0,0,512,128);
+  for (let i=0;i<46;i++){ const y = Math.random()*128, a = 0.05+Math.random()*0.12;
+    x.strokeStyle = `rgba(${dark},${a})`; x.lineWidth = 0.6+Math.random()*2.4; x.beginPath(); x.moveTo(0,y);
+    for (let k=0;k<=512;k+=32) x.lineTo(k, y + Math.sin(k/60+i)*3 + (Math.random()-0.5)*1.5); x.stroke(); }
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 4; return t;
+}
+const M = {
+  wall: new THREE.MeshStandardMaterial({ color:0xF2F1EC, roughness:.95 }),
+  accentWall: new THREE.MeshStandardMaterial({ color:0x3B302C, roughness:.9 }),
+  door: new THREE.MeshStandardMaterial({ map:woodTex('#4A2E22','20,10,5'), roughness:.5 }),
+  pine: new THREE.MeshStandardMaterial({ map:woodTex('#D9A45E','120,70,25'), roughness:.45 }),
+  tube: new THREE.MeshStandardMaterial({ color:0x161817, roughness:.4, metalness:.6 }),
+  glass: new THREE.MeshPhysicalMaterial({ color:0xBFD9E6, transparent:true, opacity:.18, roughness:.05, depthWrite:false }),
+  frame: new THREE.MeshStandardMaterial({ color:0xC9CCCB, roughness:.3, metalness:.9 }),
+  col: new THREE.MeshStandardMaterial({ color:0xEDEDE8, roughness:.9 }),
+  wood: new THREE.MeshStandardMaterial({ map:woodTex('#9A7650','60,35,15'), roughness:.55 }),
+  rope: new THREE.MeshStandardMaterial({ color:0x8C6E48, roughness:.95 }),
+  lamp: new THREE.MeshStandardMaterial({ color:0xffffff, emissive:0xfff6dd, emissiveIntensity:1.2 }),
+  hit: new THREE.MeshBasicMaterial({ visible:false }),
+};
+const S = {
+  libre:   new THREE.MeshStandardMaterial({ color:0x35B060, roughness:.55, emissive:0x0d3a1c, emissiveIntensity:.35 }),
+  premium: new THREE.MeshStandardMaterial({ color:0xE0AC2E, roughness:.45, metalness:.15, emissive:0x3d2a00, emissiveIntensity:.35 }),
+  ocupado: new THREE.MeshStandardMaterial({ color:0x8A8F8C, roughness:.8 }),
+  sel:     new THREE.MeshStandardMaterial({ color:0x3D8BFF, roughness:.4, emissive:0x1d4fb0, emissiveIntensity:.8 }),
+  rojo:    new THREE.MeshStandardMaterial({ color:0xD9443A, roughness:.6, emissive:0x4a0d08, emissiveIntensity:.35 }),
+  rec:     new THREE.MeshStandardMaterial({ color:0x46D474, roughness:.45, emissive:0x2bd160, emissiveIntensity:.6 }),
+  recP:    new THREE.MeshStandardMaterial({ color:0xF0BE3C, roughness:.4, metalness:.15, emissive:0xd99a10, emissiveIntensity:.6 }),
+};
+const prodMats = [0xD94F3D,0xF2B134,0x3E8E7E,0x5470C6,0xE7DCC8,0x9A6FB0,0x2D2D2D,0xE88AA8,0x7FA650,0xC9A27E]
+  .map(c => new THREE.MeshStandardMaterial({ color:c, roughness:.7 }));
+let seed = 11; const rnd = () => (seed = (seed*16807) % 2147483647) / 2147483647;
+const geoCache = new Map();
+function box(w,h,d,mat,x,y,z,parent,shadow=true){
+  const k = w.toFixed(3)+'|'+h.toFixed(3)+'|'+d.toFixed(3);
+  if (!geoCache.has(k)) geoCache.set(k, new THREE.BoxGeometry(w,h,d));
+  const m = new THREE.Mesh(geoCache.get(k), mat);
+  m.position.set(x,y,z); m.castShadow = shadow; m.receiveShadow = true;
+  parent.add(m); return m;
+}
+function products(parent, cx, y, span, depth, maxH, z=0){
+  if (rnd() < 0.2) return;
+  let x = cx - span/2; const n = 2 + Math.floor(rnd()*3);
+  for (let k=0;k<n && x < cx+span/2-0.07;k++){
+    const pw=0.07+rnd()*0.12, ph=Math.min(0.06+rnd()*0.2,maxH), pd=Math.min(0.1+rnd()*0.18,depth-0.04);
+    box(pw,ph,pd,prodMats[Math.floor(rnd()*prodMats.length)],x+pw/2,y+ph/2,z,parent,false);
+    x += pw + 0.03 + rnd()*0.05;
+  }
+}
+
+/* ---------- piso ---------- */
+const PLAN = [[0.744,9.834],[11.194,9.786],[10.99,5.55],[10.90,4.10],[10.66,3.88],[8.24,1.28],[7.94,0.97],[5.635,0.852],[1.195,0.637],[0.963,5.409]];
+const tileCv = document.createElement('canvas'); tileCv.width = tileCv.height = 256;
+const g = tileCv.getContext('2d');
+g.fillStyle = '#D3D5D0'; g.fillRect(0,0,256,256);
+for (let i=0;i<500;i++){ g.fillStyle = `rgba(255,255,255,${rnd()*.1})`; g.fillRect(rnd()*256,rnd()*256,6,6); }
+g.strokeStyle = '#ABAEA8'; g.lineWidth = 4; g.strokeRect(0,0,256,256);
+const tileTex = new THREE.CanvasTexture(tileCv);
+tileTex.wrapS = tileTex.wrapT = THREE.RepeatWrapping; tileTex.repeat.set(1/0.6, 1/0.6);
+tileTex.colorSpace = THREE.SRGBColorSpace;
+const shape = new THREE.Shape(PLAN.map(([x,y]) => { const p = W(x,y); return new THREE.Vector2(p.x, -p.y); }));
+const floor = new THREE.Mesh(new THREE.ShapeGeometry(shape), new THREE.MeshStandardMaterial({ map:tileTex, roughness:.28, metalness:0 }));
+floor.rotation.x = -Math.PI/2; floor.position.y = 0.002; floor.receiveShadow = true; scene.add(floor);
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(40,40), new THREE.MeshStandardMaterial({ color:0x8F9590, roughness:1 }));
+ground.rotation.x = -Math.PI/2; ground.position.set(6,-0.01,5); ground.receiveShadow = true; scene.add(ground);
+
+/* ---------- muros ---------- */
+const H = 3.0, T = 0.15;
+function frameOf(p,q){
+  const a = W(...p), b = W(...q), d = b.clone().sub(a), L = d.length(); d.normalize();
+  let n = new THREE.Vector2(-d.y, d.x);
+  const mid = a.clone().add(b).multiplyScalar(.5);
+  if (n.dot(CENTER.clone().sub(mid)) < 0) n.negate();
+  return { a, b, d, n, L, mid, rot: Math.atan2(-d.y, d.x) };
+}
+function wall(p,q,y0,h,mat,t=T){
+  const f = frameOf(p,q), c = f.mid.clone().addScaledVector(f.n, -t/2);
+  const m = box(f.L,h,t,mat,c.x,y0+h/2,c.y,scene); m.rotation.y = f.rot; return m;
+}
+const lerp = (p,q,t) => [p[0]+(q[0]-p[0])*t, p[1]+(q[1]-p[1])*t];
+function glass(p,q,leaves){
+  wall(p,q,2.6,H-2.6,M.wall);
+  const f = frameOf(p,q), c = f.mid.clone().addScaledVector(f.n,-0.075);
+  const gm = box(f.L,2.6,0.02,M.glass,c.x,1.3,c.y,scene,false); gm.rotation.y = f.rot;
+  for (let i=0;i<=leaves;i++){ const s = W(...lerp(p,q,i/leaves)).addScaledVector(f.n,-0.075); box(0.05,2.6,0.05,M.frame,s.x,1.3,s.y,scene); }
+  const b = box(f.L,0.05,0.05,M.frame,c.x,2.6,c.y,scene); b.rotation.y = f.rot;
+}
+const A=[0.744,9.834], B=[11.194,9.786], C=[10.99,5.55], D=[10.90,4.10], E=[10.66,3.88], F=[8.24,1.28], G=[7.94,0.97], Hh=[5.635,0.852], I=[1.195,0.637];
+const along = (p,q,x) => lerp(p,q,(x-p[0])/(q[0]-p[0]));
+wall(A, along(A,B,4.375), 0, H, M.wall);
+wall(along(A,B,4.375), along(A,B,6.885), 2.1, H-2.1, M.wall);
+wall(along(A,B,5.385), along(A,B,5.885), 0, 2.1, M.wall);
+wall(along(A,B,6.885), B, 0, H, M.wall);
+wall(along(A,B,4.2), along(A,B,7.05), 0, H, M.accentWall, 0.02).position.y = H/2;
+[[4.375,5.385],[5.885,6.885]].forEach(([x1,x2]) => wall(along(A,B,x1), along(A,B,x2), 0, 2.08, M.door, 0.05));
+const rTop = lerp(B,C,(9.786-9.13)/(9.786-5.55));
+wall(B, rTop, 0, H, M.wall); glass(rTop, C, 4); wall(C, D, 0, H, M.wall); wall(D, E, 0, H, M.wall);
+glass(E, F, 4);
+wall(F, G, 0, H, M.wall); wall(G, Hh, 0, H, M.wall);
+const gL = along(Hh, I, 1.65);
+glass(Hh, gL, 4); wall(gL, I, 0, H, M.wall);
+wall(I, A, 0, H, M.wall);
+const colC = W(5.998, 5.253);
+box(0.28, H, 0.48, M.col, colC.x, H/2, colC.y, scene);
+[[3.04,2.88],[3.08,4.71],[3.12,6.51],[3.16,8.31],[8.48,3.26],[8.52,5.09],[8.56,6.89],[8.60,8.69]].forEach(([x,y])=>{
+  const p = W(x,y); const l = new THREE.Mesh(new THREE.CylinderGeometry(0.22,0.22,0.03,24), M.lamp);
+  l.position.set(p.x, H-0.02, p.y); scene.add(l);
+  const pl = new THREE.PointLight(0xfff1dc, 4.5, 7, 1.6); pl.position.set(p.x, H-0.25, p.y); scene.add(pl);
+});
+
+/* ---------- espacios alquilables ---------- */
+const PACK3 = 300, PACKCOL = 450;
+S.dim = new THREE.MeshStandardMaterial({ color:0xC8C3B8, roughness:.9, transparent:true, opacity:.35 });
+const phase2 = new THREE.Group(); scene.add(phase2);
+const labels = [];
+function label(text, p, y, parent=scene){
+  const el = document.createElement('div'); el.className = 'lbl'; el.textContent = text;
+  const o = new CSS2DObject(el); o.position.set(p.x, y, p.y); parent.add(o); labels.push(o);
+}
+const SPACES = [], HITS = [];
+function addSpace(parent, info, boardW, boardD, y, cx, cz, gap){
+  const board = box(boardW, 0.022, boardD, M.pine, cx, y+0.011, cz, parent);
+  const hit = new THREE.Mesh(new THREE.BoxGeometry(boardW, Math.max(gap,0.2), boardD), M.hit);
+  hit.position.set(cx, y + Math.max(gap,0.2)/2, cz); parent.add(hit);
+  const sp = Object.assign({ board, hit, parent, cx, cz, y: y+0.022, bw: boardW, bd: boardD, gap, pgs: [], face: 1 }, info);
+  hit.userData.sp = sp; SPACES.push(sp); HITS.push(hit);
+  return sp;
+}
+const eyePrice = () => 150;
+
+function rack(parent, { id, kind, bays=2, d=0.3, levels=[0.32,0.70,1.08,1.46,1.84], rent=5, eyes=[3,4], premium=false, phase=1, doubleSided=false, where='', family='M' }){
+  /* Repisa colgante: tablas de pino con cuerdas de yute (pared: barra de hierro; centro: cuelga del techo) */
+  if (doubleSided) levels = [0.45,0.85,1.25,1.65];
+  const u = new THREE.Group(), t = 0.03, w = bays*0.60 + (bays+1)*t, top = doubleSided ? H : 2.32, low = levels[0] - 0.1;
+  for (let i=0;i<=bays;i++){
+    const x = -w/2 + t/2 + i*(0.60+t);
+    for (const z of [d/2-0.04, -d/2+0.04]) box(0.012, top-low, 0.012, M.rope, x, low + (top-low)/2, z, u, false);
+  }
+  if (!doubleSided) box(w+0.06, 0.035, 0.035, M.tube, 0, top-0.02, -d/2+0.03, u);
+  levels.forEach((y,li) => {
+    for (let i=0;i<=bays;i++) for (const z of [d/2-0.04, -d/2+0.04]) box(0.026, 0.035, 0.026, M.rope, -w/2+t/2+i*(0.60+t), y-0.018, z, u, false);
+    const gap = li < levels.length-1 ? levels[li+1]-y-0.05 : 0.3;
+    for (let i=0;i<bays;i++){
+      const cx = -w/2 + t + 0.30 + i*(0.60+t), bay = bays>1 ? 'AB'[i] : '';
+      const sides = doubleSided ? [[d/4,'F','frontal'],[-d/4,'P','posterior']] : [[0,'','']];
+      sides.forEach(([cz,sc,sn]) => {
+        const bd = doubleSided ? d/2 : d;
+        let sp = null;
+        if (li < rent){
+          const code = `${id}-N${li+1}${bay||sc ? '-' : ''}${bay}${sc}`;
+          sp = addSpace(u, { code, phase, premium, family, li, levels: rent, col: `${id}|${bay}|${sc}`,
+            price: premium ? 250 : eyePrice(li, eyes),
+            desc: `${kind} · nivel ${li+1}${bay ? ' · espacio '+bay : ''}${sn ? ' · cara '+sn : ''}`, where }, 0.60, bd, y, cx, cz, gap);
+          if (sc === 'P') sp.face = -1;
+        } else box(0.60,0.02,bd,M.pine,cx,y+0.01,cz,u);
+        const pg = new THREE.Group(); pg.position.z = cz; if (sc==='P') pg.rotation.y = Math.PI; u.add(pg);
+        products(pg, sc==='P' ? -cx : cx, y+0.022, 0.54, bd, gap-0.04);
+        if (sp) sp.pgs.push(pg);
+      });
+    }
+  });
+  return u;
+}
+function placeAt(obj, p, rotY, parent){ obj.position.set(p.x,0,p.y); obj.rotation.y = rotY; parent.add(obj); }
+
+let mN = 0;
+function hilera(p, q, s0, n, where, premium=false){
+  const f = frameOf(p,q), rot = Math.atan2(f.n.x, f.n.y), first = mN + 1;
+  for (let k=0;k<n;k++){
+    const s = s0 + 0.645 + k*1.26; mN++;
+    const c = f.a.clone().addScaledVector(f.d, s).addScaledVector(f.n, 0.155);
+    placeAt(rack(scene, { id:'M'+mN, kind:'Estante de pared M'+mN, premium, where }), c, rot, scene);
+  }
+  const mid = f.a.clone().addScaledVector(f.d, s0 + 0.645 + (n-1)*0.63).addScaledVector(f.n, 0.25);
+  label(n>1 ? `M${first}–M${mN}` : `M${first}`, mid, 2.25);
+}
+hilera(A, I, 0.02, 7, 'Pared izquierda');
+hilera(A, B, 0.42, 2, 'Pared del fondo');
+hilera(A, B, 6.21, 3, 'Pared del fondo, junto al depósito');
+hilera(G, Hh, 0.51, 1, 'Muro del frente, junto a la entrada');
+hilera(C, D, 0.08, 1, 'Muro del costado, junto al vidrio');
+
+function gondola(x, y0, n, name){
+  for (let k=0;k<n;k++){
+    const c = W(x, y0 + 0.645 + k*1.26);
+    placeAt(rack(phase2, { id:`${name}T${k+1}`, kind:`Góndola ${name}, tramo ${k+1}`, d:0.4, rent:4, eyes:[2,3], phase:2, doubleSided:true, where:'Centro del local', family:'G' }), c, Math.PI/2, phase2);
+  }
+  label(name, W(x, y0 + 0.645 + (n-1)*0.63), 1.7, phase2);
+}
+gondola(2.75, 6.0, 2, 'G1'); gondola(4.55, 6.0, 2, 'G2');
+
+let meN = 0;
+function mesa(where){
+  const m = new THREE.Group(), t = 0.03, id = 'ME' + (++meN);
+  [[-0.585,-0.435],[0.585,-0.435],[-0.585,0.435],[0.585,0.435]].forEach(([x,z]) => box(t,0.6,t,M.tube,x,0.3,z,m));
+  [[-0.585,-0.135],[0.585,-0.135],[-0.585,0.135],[0.585,0.135]].forEach(([x,z]) => box(t,0.9,t,M.tube,x,0.45,z,m));
+  const info = (lvl, side, lado, extra) => ({ code:`${id}-N${lvl}-${side}${lado}`, phase:2, premium:true, family:'ME', price: lvl===3 ? 300 : 250,
+    desc:`Mesa escalonada ${id} · ${['','base','escalón medio','cima'][lvl]} · espacio ${side}${extra}`, where });
+  const pgAt = (sp, x, y, z) => { const pg = new THREE.Group(); pg.position.z = z; m.add(pg); products(pg, x, y, 0.5, 0.16, 0.18); sp.pgs.push(pg); };
+  ['A','B'].forEach((s,i) => {
+    const cx = i ? 0.3 : -0.3;
+    box(0.6, 0.022, 0.3, M.pine, cx, 0.311, 0, m);
+    const b1 = addSpace(m, info(1,s,'1',' · lado 1'), 0.6, 0.3, 0.30, cx, -0.3, 0.27); b1.face = -1; pgAt(b1, cx, 0.322, -0.39);
+    const b2 = addSpace(m, info(1,s,'2',' · lado 2'), 0.6, 0.3, 0.30, cx, 0.3, 0.27); pgAt(b2, cx, 0.322, 0.39);
+    const a1 = addSpace(m, info(2,s,'1',' · lado 1'), 0.6, 0.3, 0.60, cx, -0.3, 0.27); a1.face = -1; pgAt(a1, cx, 0.622, -0.3);
+    const a2 = addSpace(m, info(2,s,'2',' · lado 2'), 0.6, 0.3, 0.60, cx, 0.3, 0.27); pgAt(a2, cx, 0.622, 0.3);
+    const n3 = addSpace(m, info(3,s,'',''), 0.6, 0.3, 0.90, cx, 0, 0.3); pgAt(n3, cx, 0.922, 0);
+  });
+  return m;
+}
+[[2.75,2.6,'Vitrina del frente'],[2.75,3.85,'Vitrina del frente'],[4.55,2.6,'Vitrina del frente'],[4.55,3.85,'Vitrina del frente'],[8.0,3.0,'Vitrina de la esquina'],[8.0,4.25,'Vitrina de la esquina']]
+  .forEach(([x,y,wh]) => placeAt(mesa(wh), W(x,y), Math.PI/2, phase2));
+label('Mesas ME1–ME4', W(3.65,3.2), 1.15, phase2);
+label('ME5–ME6', W(8.0,3.6), 1.15, phase2);
+
+[[6.338,5.163,Math.PI/2,'C1'],[6.188,5.693,Math.PI,'C2'],[5.658,5.343,-Math.PI/2,'C3'],[5.808,4.813,0,'C4']].forEach(([x,y,r,id]) => {
+  placeAt(rack(phase2, { id, kind:`Columna, cara ${id}`, bays:1, phase:2, where:'Columna central', family:'C' }), W(x,y), r, phase2);
+});
+label('Columna C1–C4', W(6.0,5.25), 2.25, phase2);
+
+const caja = new THREE.Group();
+box(1.4,1.0,0.6,M.wood,0,0.5,0,caja); box(1.5,0.04,0.7,M.tube,0,1.02,0,caja); box(0.35,0.25,0.03,M.tube,0.3,1.17,-0.1,caja);
+placeAt(caja, W(8.0,7.3), 0, scene);
+label('Caja', W(8.0,7.3), 1.55);
+label('Ingreso esquina', W(9.45,2.58), 2.2);
+const BY = new Map(SPACES.map(sp => [sp.code, sp]));
+
+/* ---------- estado (ocupados, marcas, promoción) ---------- */
+function normalize(e){
+  const o = { ocupados:{}, marcas:{}, promo:{ activo:true, texto:'Lanzamiento: tu primer mes con un reel profesional gratis', cupos:10, tomados:0 } };
+  if (e && typeof e === 'object'){
+    if (Array.isArray(e.ocupados)) e.ocupados.forEach(c => o.ocupados[c] = '');
+    else if (e.ocupados && typeof e.ocupados === 'object') Object.assign(o.ocupados, e.ocupados);
+    if (e.marcas && typeof e.marcas === 'object') Object.assign(o.marcas, e.marcas);
+    if (e.promo && typeof e.promo === 'object') Object.assign(o.promo, e.promo);
+    if (e.zona && typeof e.zona === 'object') o.zona = e.zona;
+  }
+  return o;
+}
+let estado = normalize(null);
+try { estado = normalize(JSON.parse(document.getElementById('estado').textContent)); } catch(e) {}
+let draft = JSON.parse(JSON.stringify(estado));
+let adminOn = false, showAvail = true, filtro = 'todos', selected = null, selSet = new Set(), packs = [], packIdx = 0;
+const cur = () => adminOn ? draft : estado;
+const isTaken = sp => Object.prototype.hasOwnProperty.call(cur().ocupados, sp.code);
+const mueble = sp => sp.code.split('-')[0];
+const isOpen = sp => { const z = cur().zona; if (adminOn || !z || !Array.isArray(z.abiertos)) return true;
+  if (!z.abiertos.includes(mueble(sp))) return false;
+  if (Array.isArray(z.niveles) && 'MCG'.includes(sp.family) && sp.family !== 'ME' && !z.niveles.includes(sp.li+1)) return false;
+  return true; };
+const isRec = sp => { const z = cur().zona; return !adminOn && !!z && Array.isArray(z.recomendados) && z.recomendados.includes(sp.code); };
+const brandOf = sp => { const id = cur().ocupados[sp.code]; return id ? cur().marcas[id] : null; };
+
+/* ---------- productos reales (fotos) en la repisa ---------- */
+const texCache = new Map(), loader = new THREE.TextureLoader();
+function tex(url, cb){
+  if (texCache.has(url)) { const t = texCache.get(url); if (t.image) cb(t); else t.userData.cbs.push(cb); return; }
+  const t = loader.load(url, tt => { tt.userData.cbs.forEach(f => f(tt)); }, undefined, () => {});
+  t.colorSpace = THREE.SRGBColorSpace; t.userData.cbs = [cb]; texCache.set(url, t);
+}
+function photoPlane(url, h, parent, x, y, z, rotY){
+  const mat = new THREE.MeshBasicMaterial({ color:0xffffff, transparent:true, alphaTest:0.05, side:THREE.DoubleSide, toneMapped:false });
+  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(1,1), mat);
+  mesh.scale.set(h, h, 1); mesh.position.set(x, y + h/2, z); mesh.rotation.y = rotY; parent.add(mesh);
+  tex(url, t => { mat.map = t; mat.needsUpdate = true; const ar = (t.image.width || 1) / (t.image.height || 1); mesh.scale.set(h*ar, h, 1); });
+  return mesh;
+}
+function applyVisual(sp){
+  if (sp.vis){ sp.parent.remove(sp.vis); sp.vis = null; }
+  const b = isTaken(sp) ? brandOf(sp) : null;
+  const fotos = b && Array.isArray(b.fotos) ? b.fotos.slice(0,3) : [];
+  sp.pgs.forEach(pg => pg.visible = !fotos.length);
+  if (!b) return;
+  const g = new THREE.Group(), rot = sp.face < 0 ? Math.PI : 0;
+  const h = Math.min(0.24, Math.max(0.12, sp.gap - 0.06)), n = fotos.length;
+  fotos.forEach((u, i) => {
+    const x = sp.cx - sp.bw/2 + sp.bw*(i+0.5)/n;
+    photoPlane(u, h * (i === Math.floor(n/2) ? 1 : 0.85), g, x, sp.y, sp.cz, rot);
+  });
+  if (b.logo) photoPlane(b.logo, 0.055, g, sp.cx, sp.y - 0.072, sp.cz + sp.face*(sp.bd/2 + 0.006), rot);
+  sp.parent.add(g); sp.vis = g;
+}
+const applyAll = () => SPACES.forEach(applyVisual);
+
+/* ---------- colores, filtros y conteos ---------- */
+function matchF(sp){
+  const t = isTaken(sp);
+  if (filtro === 'libres') return !t && isOpen(sp);
+  if (filtro === 'premium') return sp.premium && !t && isOpen(sp);
+  if (filtro === 'barato') return !t && isOpen(sp) && sp.price <= 150;
+  if (filtro === 'marcas') return t && !!brandOf(sp);
+  return true;
+}
+let soloDisp = false;
+const cerradoP = sp => !SPACES.some(o => o.parent === sp.parent && isOpen(o));
+function paint(){
+  const cerrados = new Set(SPACES.map(sp => sp.parent));
+  SPACES.filter(isOpen).forEach(sp => cerrados.delete(sp.parent));
+  SPACES.forEach(sp => { sp.parent.visible = !(soloDisp && cerrados.has(sp.parent)); });
+  SPACES.forEach(sp => {
+    sp.board.material = selSet.has(sp) ? S.sel : !showAvail ? M.pine : soloDisp && !isOpen(sp) ? S.dim : !matchF(sp) ? S.dim : isTaken(sp) ? (soloDisp ? S.rojo : S.ocupado) : !isOpen(sp) ? M.pine : isRec(sp) ? (sp.premium ? S.recP : S.rec) : sp.premium ? S.premium : S.libre;
+  });
+  const vis = SPACES.filter(sp => sp.phase === 1 || phase2.visible);
+  document.getElementById('n-libre').textContent = vis.filter(sp => !isTaken(sp) && isOpen(sp)).length;
+  document.getElementById('n-prem').textContent = vis.filter(sp => sp.premium && !isTaken(sp) && isOpen(sp)).length;
+  const np = vis.filter(sp => !isTaken(sp) && !isOpen(sp)).length; document.getElementById('n-pronto').textContent = np; document.getElementById('k-pronto').hidden = !np;
+  renderZona();
+  document.getElementById('n-ocup').textContent = vis.filter(isTaken).length;
+  renderPromo();
+}
+document.querySelectorAll('.filters button').forEach(b => b.addEventListener('click', () => {
+  filtro = b.dataset.f; document.querySelectorAll('.filters button').forEach(x => x.setAttribute('aria-pressed', String(x === b))); paint();
+}));
+
+/* ---------- botón repisas disponibles ---------- */
+{ const bd = document.getElementById('btn-disp');
+  bd.hidden = !(cur().zona && Array.isArray(cur().zona.abiertos));
+  bd.addEventListener('click', () => { soloDisp = !soloDisp; bd.setAttribute('aria-pressed', String(soloDisp));
+    bd.textContent = soloDisp ? 'Ver toda la tienda' : '🟢 Repisas disponibles';
+    if (soloDisp) document.documentElement.style.setProperty('--ocupado', '#D9443A'); else document.documentElement.style.removeProperty('--ocupado');
+    paint(); }); }
+
+/* ---------- zona abierta ---------- */
+function renderZona(){
+  const z = cur().zona, el = document.getElementById('zona');
+  if (adminOn || !z || !Array.isArray(z.abiertos)){ el.hidden = true; return; }
+  const zs = SPACES.filter(isOpen), ok = zs.filter(isTaken).length;
+  document.getElementById('zona-nom').textContent = z.nombre || 'Zona 1';
+  document.getElementById('zona-n').textContent = `${ok} de ${zs.length} espacios ocupados`;
+  document.getElementById('zona-bar').style.width = (zs.length ? Math.round(100*ok/zs.length) : 0) + '%';
+  el.hidden = false;
+}
+
+/* ---------- promoción ---------- */
+function renderPromo(){
+  const p = cur().promo, left = Math.max(0, (+p.cupos||0) - (+p.tomados||0));
+  const el = document.getElementById('promo');
+  el.hidden = !p.activo || !p.texto;
+  document.getElementById('promo-txt').textContent = p.texto || '';
+  document.getElementById('promo-cupos').textContent = (+p.cupos||0) ? (left ? `Quedan ${left} de ${p.cupos} cupos` : 'Cupos agotados') : '';
+  document.getElementById('promo-cupos').hidden = !(+p.cupos||0);
+}
+
+/* ---------- paquetes ---------- */
+function computePacks(sp){
+  const out = [{ key:'1', name:'Solo este espacio', note: sp.premium ? 'Ubicación premium' : '', list:[sp], price: sp.price }];
+  if (sp.premium || !sp.col) return out;
+  const same = SPACES.filter(o => o.col === sp.col).sort((a,b) => a.li - b.li);
+  const free = o => !isTaken(o) && isOpen(o);
+  for (const start of [sp.li-1, sp.li, sp.li-2]){
+    const win = same.filter(o => o.li >= start && o.li < start+3);
+    if (start >= 0 && win.length === 3 && win.every(free)){
+      out.push({ key:'3', name:'Pack 3 repisas juntas', note:`${win.map(o=>'N'+(o.li+1)).join(', ')} · sale a 100 Bs c/u`, list:win, price:PACK3 }); break;
+    }
+  }
+  if ((sp.family === 'M' || sp.family === 'C') && same.length === 5 && same.every(free))
+    out.push({ key:'5', name:'Estante completo, 5 niveles', note:'Columna entera · sale a 90 Bs c/u', list:same, price:PACKCOL });
+  return out;
+}
+
+/* ---------- panel ---------- */
+const $ = id => document.getElementById(id);
+const panel = $('panel');
+let form = { nombre:'', cel:'', rubro:'', ig:'' };
+try { Object.assign(form, JSON.parse(localStorage.getItem('reserva-datos') || '{}')); } catch(e) {}
+['nombre','cel','rubro','ig'].forEach(k => { const el = $('f-'+k); el.value = form[k] || ''; el.addEventListener('input', () => {
+  form[k] = el.value; try { localStorage.setItem('reserva-datos', JSON.stringify(form)); } catch(e) {} updateWa(); }); });
+const igUrl = h => { const s = String(h||'').trim().replace(/^@/,''); return s ? (/^https?:\/\//i.test(s) ? s : 'https://instagram.com/' + encodeURIComponent(s)) : ''; };
+function message(){
+  const p = packs[packIdx]; if (!p) return '';
+  const lines = [ 'Hola, quiero reservar en la tienda de emprendedores:',
+    `• Espacio${p.list.length>1?'s':''}: ${p.list.map(o=>o.code).join(', ')}`,
+    `• Opción: ${p.name} — ${p.price} Bs/mes`,
+    `• Ubicación: ${p.list[0].where}`,
+    `• Nombre: ${form.nombre.trim()}`, `• Vendo: ${form.rubro.trim()}` ];
+  if (form.ig.trim()) lines.push(`• Instagram/TikTok: ${form.ig.trim()}`);
+  if (form.cel.trim()) lines.push(`• Celular: ${form.cel.trim()}`);
+  return lines.join('\n');
+}
+const formOk = () => form.nombre.trim() && form.rubro.trim();
+function updateWa(){
+  const a = $('p-wa'); a.href = `https://wa.me/${WA_NUM}?text=${encodeURIComponent(message())}`;
+  a.setAttribute('aria-disabled', String(!formOk())); if (formOk()) $('f-err').hidden = true;
+}
+$('p-wa').addEventListener('click', e => {
+  if (!formOk()){ e.preventDefault(); $('f-err').hidden = false; ($('f-nombre').value ? $('f-rubro') : $('f-nombre')).focus(); return; }
+  guardarSolicitud();
+});
+function renderPacks(){
+  const fs = $('p-packs'); fs.replaceChildren();
+  packs.forEach((p, i) => {
+    const lab = document.createElement('label'); lab.className = 'pack';
+    const inp = document.createElement('input'); inp.type = 'radio'; inp.name = 'pack'; inp.checked = i === packIdx;
+    inp.addEventListener('change', () => { packIdx = i; selSet = new Set(p.list); paint(); updateWa(); $('p-price').textContent = p.price + ' Bs/mes'; });
+    const pn = document.createElement('span'); pn.className = 'pn'; pn.textContent = p.name;
+    if (p.note){ const sm = document.createElement('small'); sm.textContent = p.note; pn.appendChild(sm); }
+    const pp = document.createElement('span'); pp.className = 'pp'; pp.textContent = p.price + ' Bs';
+    lab.append(inp, pn, pp); fs.appendChild(lab);
+  });
+}
+function openPanel(sp){
+  selected = sp;
+  const taken = isTaken(sp), b = taken ? brandOf(sp) : null;
+  $('p-code').textContent = sp.code; $('p-desc').textContent = sp.desc; $('p-where').textContent = sp.where; $('p-size').textContent = Math.round(sp.bw*100) + ' × ' + Math.round((sp.family==='G' ? 0.2 : sp.bd)*100) + ' cm';
+  const chip = $('p-chip');
+  const pronto = !taken && !isOpen(sp);
+  chip.className = 'chip ' + (taken ? 'ocupado' : pronto ? 'pronto' : sp.premium ? 'premium' : 'libre');
+  chip.textContent = taken ? 'Ocupado' : pronto ? 'Próximamente' : isRec(sp) ? (sp.premium ? 'Premium · recomendado' : 'Recomendado') : sp.premium ? 'Premium · libre' : 'Libre';
+  $('p-pronto').hidden = !pronto;
+  $('p-brand').hidden = !b; $('p-taken').hidden = !(taken && !b) || adminOn;
+  if (b){
+    $('b-name').textContent = b.nombre || 'Marca'; $('b-rubro').textContent = b.rubro || '';
+    const lg = $('b-logo'); lg.hidden = !b.logo; if (b.logo) { lg.src = b.logo; lg.alt = 'Logo de ' + (b.nombre || 'la marca'); }
+    const fl = $('b-fotos'); fl.replaceChildren();
+    (b.fotos||[]).slice(0,4).forEach(u => { const im = document.createElement('img'); im.src = u; im.alt = 'Producto de ' + (b.nombre||'la marca'); im.loading = 'lazy'; fl.appendChild(im); });
+    const ig = igUrl(b.ig); $('b-ig').hidden = !ig; if (ig) { $('b-ig').href = ig; $('b-ig').textContent = 'Ver ' + (b.ig.startsWith('@') ? b.ig : '@'+b.ig.replace(/^https?:\/\/(www\.)?instagram\.com\//,'')) + ' en Instagram'; }
+  }
+  $('p-free').hidden = taken || pronto || adminOn;
+  if (!taken && !pronto && !adminOn){
+    packs = computePacks(sp); packIdx = 0; renderPacks(); selSet = new Set(packs[0].list);
+    $('p-price').textContent = sp.price + ' Bs/mes';
+    const p = cur().promo, left = Math.max(0, (+p.cupos||0) - (+p.tomados||0));
+    $('p-incl').hidden = !(p.activo && p.texto && left > 0);
+    $('p-incl').textContent = `Promoción: ${p.texto}. Quedan ${left} cupos.`;
+    updateWa();
+  } else { selSet = new Set([sp]); $('p-price').textContent = taken ? '—' : sp.price + ' Bs/mes'; }
+  $('p-admin').hidden = !adminOn; if (adminOn) renderAdmin(sp);
+  panel.hidden = false; paint();
+}
+function closePanel(){ panel.hidden = true; selected = null; selSet = new Set(); paint(); }
+$('p-close').addEventListener('click', closePanel);
+$('p-copy').addEventListener('click', async (e) => {
+  const btn = e.currentTarget;
+  try { await navigator.clipboard.writeText('+59162792888'); btn.textContent = 'Copiado'; }
+  catch { const r = document.createRange(); r.selectNodeContents($('p-num')); const s = getSelection(); s.removeAllRanges(); s.addRange(r); btn.textContent = 'Seleccionado'; }
+  setTimeout(() => btn.textContent = 'Copiar', 1800);
+});
+
+/* ---------- toque en el 3D ---------- */
+const ray = new THREE.Raycaster(), ptr = new THREE.Vector2();
+let down = null;
+renderer.domElement.addEventListener('pointerdown', e => { down = { x:e.clientX, y:e.clientY }; });
+renderer.domElement.addEventListener('pointerup', e => {
+  if (!down || Math.hypot(e.clientX-down.x, e.clientY-down.y) > 6) { down = null; return; }
+  down = null;
+  const r = renderer.domElement.getBoundingClientRect();
+  ptr.set(((e.clientX-r.left)/r.width)*2-1, -((e.clientY-r.top)/r.height)*2+1);
+  ray.setFromCamera(ptr, camera);
+  const targets = HITS.filter(h => { const sp = h.userData.sp; return (sp.phase === 1 || phase2.visible) && (!soloDisp || !cerradoP(sp)) && (adminOn || filtro === 'todos' || matchF(sp)); });
+  const hit = ray.intersectObjects(targets, false)[0];
+  if (!hit) { if (!adminOn) closePanel(); return; }
+  openPanel(hit.object.userData.sp);
+});
+
+/* ---------- capacidades: guardar, subir fotos, solicitudes ---------- */
+let art = null, assets = null, db = null, user = null, canEdit = false;
+async function guardarSolicitud(){
+  try {
+    if (!db || !user) return;
+    const uid = await user.id(); if (!uid) return;
+    const p = packs[packIdx];
+    await db.doc('solicitudes/' + uid).set({ nombre: form.nombre.trim().slice(0,60), rubro: form.rubro.trim().slice(0,80), ig: form.ig.trim().slice(0,60),
+      cel: form.cel.trim().slice(0,20), espacios: p.list.map(o => o.code), opcion: p.name, precio: p.price, fecha: new Date().toISOString() });
+  } catch(e) {}
+}
+let solUnsub = null;
+function watchSolicitudes(){
+  if (!db || solUnsub) return;
+  $('solic-wrap').hidden = false;
+  try {
+    solUnsub = db.collection('solicitudes').orderBy('fecha','desc').limit(60).onSnapshot(snap => {
+      const box = $('solic'); box.replaceChildren();
+      if (snap.empty){ const p = document.createElement('p'); p.className = 'msg'; p.textContent = 'Todavía no hay solicitudes guardadas aquí. Las reservas también te llegan por WhatsApp.'; box.appendChild(p); return; }
+      snap.docs.forEach(d => { const v = d.data() || {}; const it = document.createElement('div'); it.className = 'sol';
+        const a = document.createElement('div'); const nb = document.createElement('b'); nb.textContent = String(v.nombre||'Sin nombre'); a.append(nb, document.createTextNode(' · ' + String(v.rubro||'')));
+        const f = document.createElement('small'); f.textContent = v.fecha ? new Date(v.fecha).toLocaleString('es-BO') : '';
+        const c = document.createElement('div'); c.className = 'codes';
+        c.textContent = `${(v.espacios||[]).join(', ')} · ${v.opcion||''} · ${v.precio||''} Bs${v.cel ? ' · ' + v.cel : ''}${v.ig ? ' · ' + v.ig : ''}`;
+        it.append(a, f, c); box.appendChild(it); });
+    }, () => { $('solic-note').textContent = 'No se pudieron cargar las solicitudes en esta vista.'; });
+  } catch(e) {}
+}
+
+/* ---------- modo admin ---------- */
+const adminBtn = $('t-admin'), adminBar = $('admin-bar'), adminTxt = $('admin-txt');
+const dirty = () => JSON.stringify(draft) !== JSON.stringify(estado);
+function updateAdminBar(msg){
+  adminTxt.textContent = msg || (dirty() ? 'Tienes cambios sin guardar.' : 'Modo admin: toca un espacio para marcarlo, asignarle una marca o subir fotos.');
+  $('btn-save').disabled = !dirty();
+  const p = draft.promo;
+  $('ad-promo-txt').value = p.texto || ''; $('ad-promo-cupos').value = p.cupos ?? 0; $('ad-promo-tom').value = p.tomados ?? 0;
+  $('ad-promo-on').setAttribute('aria-pressed', String(!!p.activo)); $('ad-promo-on').textContent = p.activo ? 'Promo visible' : 'Promo oculta';
+}
+const touch = () => { updateAdminBar(); applyAll(); paint(); };
+$('ad-promo-txt').addEventListener('input', e => { draft.promo.texto = e.target.value; adminTxt.textContent = 'Tienes cambios sin guardar.'; $('btn-save').disabled = !dirty(); renderPromo(); });
+$('ad-promo-cupos').addEventListener('input', e => { draft.promo.cupos = Math.max(0, parseInt(e.target.value)||0); $('btn-save').disabled = !dirty(); renderPromo(); });
+$('ad-promo-tom').addEventListener('input', e => { draft.promo.tomados = Math.max(0, parseInt(e.target.value)||0); $('btn-save').disabled = !dirty(); renderPromo(); });
+$('ad-promo-on').addEventListener('click', () => { draft.promo.activo = !draft.promo.activo; touch(); });
+function setAdmin(on){
+  adminOn = on; adminBtn.setAttribute('aria-pressed', String(on)); adminBar.hidden = !on;
+  draft = JSON.parse(JSON.stringify(estado));
+  if (on) watchSolicitudes();
+  closePanel(); touch();
+}
+adminBtn.addEventListener('click', () => setAdmin(!adminOn));
+$('btn-discard').addEventListener('click', () => setAdmin(false));
+
+const newId = () => 'm' + Date.now().toString(36) + Math.floor(Math.random()*1e4).toString(36);
+function renderAdmin(sp){
+  const taken = isTaken(sp), mid = draft.ocupados[sp.code] || '';
+  $('a-libre').setAttribute('aria-pressed', String(!taken)); $('a-ocup').setAttribute('aria-pressed', String(taken));
+  $('a-brandbox').hidden = !taken;
+  const sel = $('a-marca'); sel.replaceChildren();
+  const opt = (v, t) => { const o = document.createElement('option'); o.value = v; o.textContent = t; sel.appendChild(o); };
+  opt('', '— Sin marca —');
+  Object.entries(draft.marcas).sort((a,b) => (a[1].nombre||'').localeCompare(b[1].nombre||'')).forEach(([id, m]) => opt(id, m.nombre || 'Marca sin nombre'));
+  opt('__new', '+ Nueva marca…');
+  sel.value = mid;
+  const m = mid ? draft.marcas[mid] : null;
+  ['nombre','rubro','ig'].forEach(k => { const el = $('a-'+k); el.value = m ? (m[k]||'') : ''; el.disabled = !m; });
+  $('a-logo').disabled = !m || !assets; $('a-fotos').disabled = !m || !assets;
+  $('a-logoprev').hidden = !(m && m.logo); if (m && m.logo) $('a-logoimg').src = m.logo;
+  const fl = $('a-fotolist'); fl.replaceChildren();
+  (m && m.fotos || []).forEach((u, i) => {
+    const d = document.createElement('div'); d.className = 'f';
+    const im = document.createElement('img'); im.src = u; im.alt = 'Foto de producto ' + (i+1);
+    const x = document.createElement('button'); x.textContent = '×'; x.setAttribute('aria-label', 'Quitar foto ' + (i+1));
+    x.addEventListener('click', () => { m.fotos.splice(i,1); touch(); renderAdmin(sp); });
+    d.append(im, x); fl.appendChild(d);
+  });
+  const n = SPACES.filter(o => mid && draft.ocupados[o.code] === mid).length;
+  $('a-msg').textContent = !assets && taken ? 'Para subir fotos abre esta página con tu cuenta de editor.' : (m ? `Esta marca está en ${n} espacio${n===1?'':'s'}.` : (taken ? 'Elige una marca o crea una nueva.' : 'Marca el espacio como ocupado para asignarle una marca.'));
+}
+$('a-libre').addEventListener('click', () => { if (!selected) return; delete draft.ocupados[selected.code]; touch(); openPanel(selected); });
+$('a-ocup').addEventListener('click', () => { if (!selected) return; if (!isTaken(selected)) draft.ocupados[selected.code] = ''; touch(); openPanel(selected); });
+$('a-marca').addEventListener('change', e => {
+  if (!selected) return; let v = e.target.value;
+  if (v === '__new'){ v = newId(); draft.marcas[v] = { nombre:'Nueva marca', rubro:'', ig:'', logo:'', fotos:[] }; }
+  draft.ocupados[selected.code] = v; touch(); renderAdmin(selected);
+  if (e.target.value === '__new') { $('a-nombre').select(); $('a-nombre').focus(); }
+});
+['nombre','rubro','ig'].forEach(k => $('a-'+k).addEventListener('input', e => {
+  const id = selected && draft.ocupados[selected.code]; if (!id) return;
+  draft.marcas[id][k] = e.target.value; updateAdminBar();
+  if (k === 'nombre') { const o = [...$('a-marca').options].find(o => o.value === id); if (o) o.textContent = e.target.value || 'Marca sin nombre'; }
+}));
+async function upload(file){
+  if (file.size > 8*1024*1024) throw new Error('grande');
+  const r = await assets.upload(file); return r.url || ('/_blob/' + r.id);
+}
+$('a-logo').addEventListener('change', async e => {
+  const f = e.target.files[0], id = selected && draft.ocupados[selected.code]; if (!f || !id || !assets) return;
+  $('a-msg').textContent = 'Subiendo logo…';
+  try { draft.marcas[id].logo = await upload(f); touch(); renderAdmin(selected); }
+  catch(err){ $('a-msg').textContent = err.message === 'grande' ? 'La imagen pesa más de 8 MB. Usa una más liviana.' : 'No se pudo subir el logo. Intenta de nuevo.'; }
+  e.target.value = '';
+});
+$('a-fotos').addEventListener('change', async e => {
+  const files = [...e.target.files], id = selected && draft.ocupados[selected.code]; if (!files.length || !id || !assets) return;
+  const m = draft.marcas[id]; m.fotos = m.fotos || [];
+  const room = Math.max(0, 4 - m.fotos.length);
+  $('a-msg').textContent = `Subiendo ${Math.min(room, files.length)} foto(s)…`;
+  try { for (const f of files.slice(0, room)) m.fotos.push(await upload(f)); touch(); renderAdmin(selected); }
+  catch(err){ $('a-msg').textContent = err.message === 'grande' ? 'Una foto pesa más de 8 MB. Usa una más liviana.' : 'No se pudo subir alguna foto. Intenta de nuevo.'; touch(); }
+  if (room === 0) $('a-msg').textContent = 'Ya tiene 4 fotos. Quita una para agregar otra.';
+  e.target.value = '';
+});
+
+/* ---------- guardar (la página se reescribe con el nuevo estado) ---------- */
+const MK_E = '%%' + 'ESTADO' + '%%', MK_F = '%%' + 'FUENTE' + '%%';
+const RESET = ':root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}';
+function buildDoc(state){
+  const END = '<' + '/script', ESC = '<' + '~~' + '/script';
+  const src = document.getElementById('fuente').textContent.split(ESC).join(END);
+  const esc = src.split(END).join(ESC);
+  const json = JSON.stringify(state).replace(/</g, '\\u003c');
+  const body = src.split(MK_F).map(part => part.split(MK_E).join(json)).join(esc);
+  return '<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>' + RESET + '</style></head><body>\n' + body + '\n</body></html>';
 }
 $('btn-save').addEventListener('click', async () => {
   if (!art) return;

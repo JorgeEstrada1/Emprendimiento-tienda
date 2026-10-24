@@ -241,9 +241,9 @@ details summary{cursor:pointer;font-weight:700}
   <section data-view="marcas" hidden>
     <div class="panel" style="margin-top:18px">
       <div class="row" style="justify-content:space-between"><h2>Marcas</h2><div class="row small" id="mTotals"></div></div>
-      <input id="mBuscar" placeholder="Buscar marca, titular o espacio">
+      <div class="row"><input id="mBuscar" placeholder="Buscar marca, nombre, celular, producto o espacio" style="flex:1 1 260px"><select id="mTipo" style="flex:0 1 240px" aria-label="Filtrar por tipo de producto"><option value="">Todos los tipos de producto</option><option value="__falta">⚠ Les faltan datos</option></select><button class="b" id="mCsv">Descargar directorio</button></div>
       <div class="tbl"><table>
-        <thead><tr><th>#</th><th>Marca</th><th>Espacio</th><th class="r">Tarifa</th><th>Saldo 1er mes</th><th>Descontar de ventas</th><th>Contacto</th><th></th></tr></thead>
+        <thead><tr><th>#</th><th>Marca y emprendedor</th><th>Celular</th><th>Espacio</th><th class="r">Tarifa</th><th>Saldo 1er mes</th><th>Descontar de ventas</th><th></th></tr></thead>
         <tbody id="mBody"></tbody>
       </table></div>
     </div>
@@ -273,11 +273,16 @@ details summary{cursor:pointer;font-weight:700}
       <h2 id="mfTitle">Agregar marca</h2>
       <div class="row">
         <label class="f">Marca<input id="mfNombre"></label>
-        <label class="f">Titular<input id="mfTitular"></label>
+        <label class="f">Nombre completo<input id="mfTitular"></label>
         <label class="f">Celular<input id="mfCel" inputmode="tel"></label>
       </div>
       <div class="row">
-        <label class="f">Rubro<input id="mfRubro"></label>
+        <label class="f">Qué vende<input id="mfRubro" placeholder="Ej. Joyas en acero y gafas"></label>
+        <label class="f">Tipo de producto<input id="mfTipo" list="tiposList" placeholder="Elige o escribe"></label>
+        <datalist id="tiposList"><option value="Accesorios y joyería"><option value="Alimentos y postres"><option value="Alimentos y postres (frío)"><option value="Bebidas"><option value="Belleza y cuidado personal"><option value="Ropa, calzado y cuero"><option value="Tejidos y artesanías"><option value="Papelería, stickers y regalos"><option value="Plantas y decoración"><option value="Coleccionables y juguetes"><option value="Importados (perfumes, accesorios, juguetes)"><option value="Por definir"></datalist>
+      </div>
+      <div class="row">
+        <label class="f">Redes<input id="mfRedes" placeholder="IG @... · TikTok ..."></label>
         <label class="f">Espacio<input id="mfEspacio" placeholder="Ej. M7-N4-B"></label>
         <label class="f" style="flex:0 1 120px">Tarifa Bs<input id="mfTarifa" type="number" min="0" step="10"></label>
         <label class="f" style="flex:0 1 120px">Adelanto Bs<input id="mfAdel" type="number" min="0" step="5"></label>
@@ -664,13 +669,25 @@ details summary{cursor:pointer;font-weight:700}
   $("#repCopy").addEventListener("click", () => copiar($("#repText").value, $("#repText")));
 
   // ---------- marcas ----------
+  const waNum = c => { const d = String(c).split("/")[0].replace(/\D/g, ""); return d.length === 8 ? "591" + d : d; };
+  const faltan = m => [!m.titular || /por anotar/i.test(m.titular) ? "nombre" : "", !m.celular || /confirmar/i.test(m.celular) ? "celular" : "", !m.rubro || /por definir|por confirmar/i.test(m.rubro) ? "qué vende" : ""].filter(Boolean);
+  $("#mTipo").addEventListener("change", renderMarcas);
+  $("#mCsv").addEventListener("click", () => {
+    const cols = [["#", m => m.n], ["Marca", m => m.nombre], ["Prefijo", m => m.prefijo], ["Nombre completo", m => m.titular], ["Celular", m => m.celular], ["Qué vende", m => m.rubro], ["Tipo de producto", m => m.tipo], ["Redes", m => m.redes], ["Espacio", m => m.espacio], ["Tarifa", m => m.tarifa], ["Faltan datos", m => faltan(m).join(", ")]];
+    const cell = v => '"' + String(v ?? "").replace(/"/g, '""') + '"';
+    const csv = "\ufeff" + [cols.map(c => cell(c[0])).join(";"), ...marcasOrden().map(m => cols.map(c => cell(c[1](m))).join(";"))].join("\r\n");
+    const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([csv], {type: "text/csv;charset=utf-8"})); a.download = "directorio_el_parralito.csv"; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  });
   function renderMarcas() {
     const q = $("#mBuscar").value.trim().toLowerCase();
     const all = marcasOrden();
-    const ms = all.filter(m => !q || [m.nombre, m.titular, m.espacio, m.rubro, m.prefijo].join(" ").toLowerCase().includes(q));
+    const tf = $("#mTipo").value;
+    const tipos = [...new Set(all.map(m => m.tipo).filter(Boolean))].sort();
+    if ($("#mTipo").options.length !== tipos.length + 2) { $("#mTipo").innerHTML = `<option value="">Todos los tipos de producto</option><option value="__falta">⚠ Les faltan datos</option>` + tipos.map(t => `<option>${esc(t)}</option>`).join(""); $("#mTipo").value = tf; }
+    const ms = all.filter(m => (!q || [m.nombre, m.titular, m.espacio, m.rubro, m.prefijo, m.tipo, m.celular, m.redes].join(" ").toLowerCase().includes(q)) && (!tf || (tf === "__falta" ? faltan(m).length : m.tipo === tf)));
     const pend = all.filter(m => !m.saldo_pagado).reduce((a, m) => a + +m.saldo, 0);
     $("#mTotals").innerHTML = `<span class="chip g">${all.length} marcas</span><span class="chip ok">Tarifas ${bs(all.reduce((a, m) => a + +m.tarifa, 0))}/mes</span><span class="chip ${pend ? "warn" : "ok"}">Saldo por cobrar ${bs(pend)}</span><span class="chip ${all.some(m => !m.pin_hash) ? "warn" : "ok"}">${all.filter(m => m.pin_hash).length}/${all.length} con acceso al portal</span>`;
-    $("#mBody").innerHTML = ms.map(m => `<tr><td class="num muted">${m.n || ""}</td><td>${m.logo ? `<img class="mlogo" src="${esc(IMG(m.logo))}" alt="">` : ""}<b>${esc(m.nombre)}</b> <span class="chip g num">${esc(m.prefijo || "")}</span><div class="small muted">${esc(m.titular || "")}${m.rubro ? " · " + esc(m.rubro) : ""}${m.ig ? " · IG " + esc(m.ig) : ""}${m.tiktok ? " · TikTok " + esc(m.tiktok) : ""}</div></td><td class="small">${esc(m.espacio)}</td><td class="r num">${bs(m.tarifa)}</td><td>${+m.saldo > 0 ? `<button class="b sm" data-saldo="${esc(m.id)}">${m.saldo_pagado ? `<span class="chip ok">Pagado</span>` : `<span class="chip warn">Debe ${bs(m.saldo)}</span>`}</button>` : `<span class="chip ok">Mes pagado</span>`}</td><td><label class="row small" style="flex-wrap:nowrap"><input type="checkbox" data-desc="${esc(m.id)}" ${m.descuenta ? "checked" : ""} style="width:auto"> Sí</label></td><td class="num small">${esc(m.celular || "—")}</td><td><button class="b sm" data-portal="${esc(m.id)}">${m.pin_hash ? "Acceso" : "Crear acceso"}</button> <button class="b sm" data-edit="${esc(m.id)}">Editar</button></td></tr>`).join("") || `<tr><td colspan="8" class="muted">Ninguna marca coincide con la búsqueda.</td></tr>`;
+    $("#mBody").innerHTML = ms.map(m => `<tr><td class="num muted">${m.n || ""}</td><td>${m.logo ? `<img class="mlogo" src="${esc(IMG(m.logo))}" alt="">` : ""}<b>${esc(m.nombre)}</b> <span class="chip g num">${esc(m.prefijo || "")}</span>${m.tipo ? ` <span class="chip ok">${esc(m.tipo)}</span>` : ""}<div class="small">${m.titular ? esc(m.titular) : `<span class="chip warn">Falta nombre</span>`}</div><div class="small muted">${esc(m.rubro || "")}${m.redes ? " · " + esc(m.redes) : ""}</div></td><td class="num small">${m.celular ? `<a href="https://wa.me/${waNum(m.celular)}" target="_blank" rel="noopener">${esc(m.celular)}</a>` : `<span class="chip warn">Falta celular</span>`}</td><td class="small">${esc(m.espacio)}</td><td class="r num">${bs(m.tarifa)}</td><td>${+m.saldo > 0 ? `<button class="b sm" data-saldo="${esc(m.id)}">${m.saldo_pagado ? `<span class="chip ok">Pagado</span>` : `<span class="chip warn">Debe ${bs(m.saldo)}</span>`}</button>` : `<span class="chip ok">Mes pagado</span>`}</td><td><label class="row small" style="flex-wrap:nowrap"><input type="checkbox" data-desc="${esc(m.id)}" ${m.descuenta ? "checked" : ""} style="width:auto"> Sí</label></td><td><button class="b sm" data-portal="${esc(m.id)}">${m.pin_hash ? "Acceso" : "Crear acceso"}</button> <button class="b sm" data-edit="${esc(m.id)}">Editar</button></td></tr>`).join("") || `<tr><td colspan="8" class="muted">Ninguna marca coincide con la búsqueda.</td></tr>`;
   }
   $("#mBuscar").addEventListener("input", renderMarcas);
   $("#mBody").addEventListener("click", async e => {
@@ -678,7 +695,7 @@ details summary{cursor:pointer;font-weight:700}
     try {
       if (s) { const m = S.marcas[s.dataset.saldo]; chk(await sb.from("marcas").update({saldo_pagado: !m.saldo_pagado}).eq("id", m.id)); toast(m.saldo_pagado ? "Saldo marcado como pendiente" : "Saldo de " + m.nombre + " cobrado"); refresh("marcas"); }
       if (po) showAcceso(po.dataset.portal);
-      if (ed) { const m = S.marcas[ed.dataset.edit]; S.editMarca = m.id; $("#mfTitle").textContent = "Editar " + m.nombre; $("#mfNombre").value = m.nombre; $("#mfTitular").value = m.titular || ""; $("#mfCel").value = m.celular || ""; $("#mfRubro").value = m.rubro || ""; $("#mfEspacio").value = m.espacio || ""; $("#mfTarifa").value = m.tarifa || ""; $("#mfAdel").value = m.adelanto || ""; $("#mfCancel").hidden = false; $("#mfNombre").scrollIntoView({block: "center"}); $("#mfNombre").focus(); }
+      if (ed) { const m = S.marcas[ed.dataset.edit]; S.editMarca = m.id; $("#mfTitle").textContent = "Editar " + m.nombre; $("#mfNombre").value = m.nombre; $("#mfTitular").value = m.titular || ""; $("#mfCel").value = m.celular || ""; $("#mfRubro").value = m.rubro || ""; $("#mfTipo").value = m.tipo || ""; $("#mfRedes").value = m.redes || ""; $("#mfEspacio").value = m.espacio || ""; $("#mfTarifa").value = m.tarifa || ""; $("#mfAdel").value = m.adelanto || ""; $("#mfCancel").hidden = false; $("#mfNombre").scrollIntoView({block: "center"}); $("#mfNombre").focus(); }
     } catch (er) { fail(er); }
   });
   $("#mBody").addEventListener("change", async e => { const c = e.target.closest("[data-desc]"); if (c) { try { chk(await sb.from("marcas").update({descuenta: c.checked}).eq("id", c.dataset.desc)); refresh("marcas"); } catch (er) { fail(er); } } });
@@ -698,12 +715,12 @@ details summary{cursor:pointer;font-weight:700}
   $("#acCopyLink").addEventListener("click", () => copiar($("#acLink").value, $("#acLink")));
   $("#acCopyMsg").addEventListener("click", () => copiar($("#acMsg").value, $("#acMsg")));
   $("#acClose").addEventListener("click", () => $("#acPanel").hidden = true);
-  const resetForm = () => { S.editMarca = null; $("#mfTitle").textContent = "Agregar marca"; ["#mfNombre", "#mfTitular", "#mfCel", "#mfRubro", "#mfEspacio", "#mfTarifa", "#mfAdel"].forEach(s => $(s).value = ""); $("#mfCancel").hidden = true; };
+  const resetForm = () => { S.editMarca = null; $("#mfTitle").textContent = "Agregar marca"; ["#mfNombre", "#mfTitular", "#mfCel", "#mfRubro", "#mfTipo", "#mfRedes", "#mfEspacio", "#mfTarifa", "#mfAdel"].forEach(s => $(s).value = ""); $("#mfCancel").hidden = true; };
   $("#mfCancel").addEventListener("click", resetForm);
   $("#mfSave").addEventListener("click", async () => {
     const nombre = $("#mfNombre").value.trim(), tarifa = parseFloat($("#mfTarifa").value) || 0, adelanto = parseFloat($("#mfAdel").value) || 0;
     if (!nombre) return toast("Escribe el nombre de la marca.");
-    const data = {nombre, titular: $("#mfTitular").value.trim(), celular: $("#mfCel").value.trim(), rubro: $("#mfRubro").value.trim(), espacio: $("#mfEspacio").value.trim(), tarifa, adelanto, saldo: Math.max(0, tarifa - adelanto)};
+    const data = {nombre, titular: $("#mfTitular").value.trim(), celular: $("#mfCel").value.trim(), rubro: $("#mfRubro").value.trim(), tipo: $("#mfTipo").value.trim(), redes: $("#mfRedes").value.trim(), espacio: $("#mfEspacio").value.trim(), tarifa, adelanto, saldo: Math.max(0, tarifa - adelanto)};
     try {
       if (S.editMarca) { chk(await sb.from("marcas").update(data).eq("id", S.editMarca)); toast("Marca actualizada"); }
       else {

@@ -9,7 +9,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Atkinson+Hyperlegible:wght@400;700&family=JetBrains+Mono:wght@500;700&display=swap">
 <style>
 [hidden]{display:none!important}
-form.panel label.f{flex:none}
+form.panel label.f{flex:none}.panel>label.f{flex:none}td.num b{white-space:nowrap}
 /* Layout: mostrador — barra fija arriba con el resumen del día, pestañas grandes para el dedo, una columna en el celular y dos en pantalla ancha */
 :root{
   --bg:#f4f6f1; --panel:#ffffff; --ink:#1e2a22; --muted:#5f6b62; --line:#dde3da;
@@ -152,7 +152,11 @@ details summary{cursor:pointer;font-weight:700}
     <div class="grid">
       <div class="panel">
         <h2>Nueva venta</h2>
-        <label class="f">Marca
+        <form id="codForm" class="row" autocomplete="off" style="margin-bottom:6px">
+          <label class="f">Código del producto<input id="codIn" placeholder="Ej. PRB-001 y Enter" style="text-transform:uppercase" autocapitalize="characters"></label>
+          <button class="b pri" type="submit">Agregar</button>
+        </form>
+        <label class="f">O busca por marca
           <input id="cajaMarca" list="dlMarcas" placeholder="Escribe la marca o el espacio (ej. Ticuva, M13)" autocomplete="off">
         </label>
         <datalist id="dlMarcas"></datalist>
@@ -186,7 +190,8 @@ details summary{cursor:pointer;font-weight:700}
 
   <!-- STOCK -->
   <section data-view="stock" hidden>
-    <div class="panel" style="margin-top:18px" id="pendPanel"></div>
+    <div class="panel" style="margin-top:18px" id="regPanel"></div>
+    <div class="panel" style="margin-top:16px" id="pendPanel"></div>
     <div class="panel" style="margin-top:16px" id="lowPanel"></div>
     <div class="grid">
       <div class="panel">
@@ -195,12 +200,13 @@ details summary{cursor:pointer;font-weight:700}
         <div id="stockList"></div>
       </div>
       <div class="panel">
-        <h2>Ficha de ingreso de mercadería</h2>
-        <p class="small muted" style="margin:0">Para cuando la marca trae productos sin haberlos cargado en su portal. El stock se suma solo; si el producto es nuevo, se crea.</p>
+        <h2 id="fichaTitle">Registrar productos</h2>
+        <p class="small muted" style="margin:0">Escribe cada producto que trae la marca. Si es nuevo, recibe su código solo (ej. PRB-001). Si ya existe, pon su código o su nombre y se suma al stock. Enter en el precio pasa a la siguiente línea.</p>
         <div id="fichaRows"></div>
         <button class="b" id="fichaAdd">+ Otra línea</button>
         <label class="f">Nota (opcional)<input id="fichaNota" placeholder="Ej. Entregó Marco el sábado 24"></label>
-        <button class="b pri big" id="fichaSave">Guardar ingreso</button>
+        <button class="b pri big" id="fichaSave">Guardar productos</button>
+        <div id="fichaRes"></div>
         <h3>Ingresos anteriores</h3>
         <div id="fichaHist" class="small"></div>
       </div>
@@ -399,7 +405,7 @@ details summary{cursor:pointer;font-weight:700}
   function marcaFromInput(v) {
     v = (v || "").trim().toLowerCase(); if (!v) return null;
     const list = marcasOrden();
-    return list.find(m => (m.nombre + " · " + m.espacio).toLowerCase() === v) || list.find(m => m.nombre.toLowerCase() === v) || list.find(m => m.nombre.toLowerCase().includes(v) || (m.espacio || "").toLowerCase().includes(v)) || null;
+    return list.find(m => (m.nombre + " · " + m.espacio).toLowerCase() === v) || list.find(m => m.nombre.toLowerCase() === v) || list.find(m => (m.prefijo || "").toLowerCase() === v) || list.find(m => m.nombre.toLowerCase().includes(v) || (m.espacio || "").toLowerCase().includes(v)) || null;
   }
   $("#cajaMarca").addEventListener("input", e => { const m = marcaFromInput(e.target.value); S.marcaCaja = m ? m.id : null; renderCaja(); });
   function renderCaja() {
@@ -408,10 +414,10 @@ details summary{cursor:pointer;font-weight:700}
     if (!S.marcaCaja) box.innerHTML = `<div class="empty">Elige una marca para ver sus productos. Si todavía no los registraron, usa «Producto sin registrar».</div>`;
     else {
       const ps = prodsDe(S.marcaCaja);
-      box.innerHTML = ps.length ? `<div class="prods">${ps.map(p => `<button class="prod" data-add="${esc(p.id)}" ${p.stock <= 0 ? "disabled" : ""}>${p.foto ? `<img src="${esc(IMG(p.foto))}" alt="" loading="lazy">` : ""}<span>${esc(p.nombre)}</span><span class="p">${bs(p.precio)}</span><span class="s">Stock: ${p.stock}</span></button>`).join("")}</div>`
+      box.innerHTML = ps.length ? `<div class="prods">${ps.map(p => `<button class="prod" data-add="${esc(p.id)}" ${p.stock <= 0 ? "disabled" : ""}>${p.foto ? `<img src="${esc(IMG(p.foto))}" alt="" loading="lazy">` : ""}<span class="small muted num">${esc(p.codigo || "")}</span><span>${esc(p.nombre)}</span><span class="p">${bs(p.precio)}</span><span class="s">Stock: ${p.stock}</span></button>`).join("")}</div>`
         : `<div class="empty">${esc(S.marcas[S.marcaCaja].nombre)} no tiene productos registrados. Regístralos en Stock con la ficha de ingreso, o vende con «Producto sin registrar».</div>`;
     }
-    $("#cart").innerHTML = S.cart.length ? S.cart.map((l, i) => `<li><span style="min-width:0"><b>${esc(l.nombre)}</b><br><span class="small muted">${esc(S.marcas[l.marca]?.nombre || "")}</span></span><span class="row" style="flex-wrap:nowrap"><button class="b sm" data-dec="${i}" aria-label="Quitar uno">−</button><span class="num">${l.cant}</span><button class="b sm" data-inc="${i}" aria-label="Agregar uno">+</button><span class="num" style="min-width:76px;text-align:right">${bs(l.cant * l.precio)}</span></span></li>`).join("")
+    $("#cart").innerHTML = S.cart.length ? S.cart.map((l, i) => `<li><span style="min-width:0"><b>${esc(l.nombre)}</b><br><span class="small muted">${l.codigo ? esc(l.codigo) + " · " : ""}${esc(S.marcas[l.marca]?.nombre || "")}</span></span><span class="row" style="flex-wrap:nowrap"><button class="b sm" data-dec="${i}" aria-label="Quitar uno">−</button><span class="num">${l.cant}</span><button class="b sm" data-inc="${i}" aria-label="Agregar uno">+</button><span class="num" style="min-width:76px;text-align:right">${bs(l.cant * l.precio)}</span></span></li>`).join("")
       : `<li class="muted small">Toca un producto para agregarlo a la cuenta.</li>`;
     $("#cartTot").textContent = bs(S.cart.reduce((a, l) => a + l.cant * l.precio, 0));
     $("#cobrar").disabled = !S.cart.length;
@@ -426,8 +432,23 @@ details summary{cursor:pointer;font-weight:700}
     const p = S.productos[b.dataset.add]; if (!p) return;
     const l = S.cart.find(x => x.producto === p.id);
     if ((l ? l.cant : 0) + 1 > p.stock) return toast("No hay más stock de " + p.nombre);
-    if (l) l.cant++; else S.cart.push({producto: p.id, marca: p.marca, nombre: p.nombre, precio: +p.precio, cant: 1});
+    if (l) l.cant++; else S.cart.push({producto: p.id, marca: p.marca, nombre: p.nombre, codigo: p.codigo, precio: +p.precio, cant: 1});
     renderCaja();
+  });
+  const addProd = p => {
+    const l = S.cart.find(x => x.producto === p.id);
+    if ((l ? l.cant : 0) + 1 > p.stock) { toast("No hay más stock de " + p.nombre); return false; }
+    if (l) l.cant++; else S.cart.push({producto: p.id, marca: p.marca, nombre: p.nombre, codigo: p.codigo, precio: +p.precio, cant: 1});
+    return true;
+  };
+  $("#codForm").addEventListener("submit", e => {
+    e.preventDefault();
+    const v = $("#codIn").value.trim().toUpperCase().replace(/\s+/g, ""); if (!v) return;
+    const norm = c => c.replace("-", "");
+    const p = Object.values(S.productos).find(x => (x.codigo || "") === v || norm(x.codigo || "") === norm(v));
+    if (!p) return toast("No existe el código " + v);
+    if (addProd(p)) { toast("Agregado: " + p.codigo + " · " + p.nombre); $("#codIn").value = ""; S.marcaCaja = p.marca; $("#cajaMarca").value = S.marcas[p.marca].nombre + " · " + S.marcas[p.marca].espacio; }
+    renderCaja(); $("#codIn").focus();
   });
   $("#libreAdd").addEventListener("click", () => {
     const nom = $("#libreNom").value.trim(), pre = parseFloat($("#librePre").value);
@@ -477,17 +498,19 @@ details summary{cursor:pointer;font-weight:700}
       (S.pend.length ? S.pend.map(i => `<div class="liqcard" data-ing="${esc(i.id)}"><div style="grid-column:1/-1"><b>${esc(S.marcas[i.marca]?.nombre || i.marca)}</b> <span class="small muted">· declarado ${fechaCorta(i.fecha)}${i.nota ? " · " + esc(i.nota) : ""}</span></div><div style="grid-column:1/-1" class="tbl"><table><thead><tr><th>Producto</th><th class="r">Precio</th><th class="r">Declaró</th><th class="r">Recibido</th></tr></thead><tbody>${i.items.map((x, k) => `<tr><td>${x.foto ? `<img class="mlogo" src="${esc(IMG(x.foto))}" alt="">` : ""}${esc(x.nombre)}${prodsDe(i.marca).some(p => p.nombre.toLowerCase() === x.nombre.toLowerCase()) ? "" : ` <span class="chip g">nuevo</span>`}</td><td class="r num">${bs(x.precio)}</td><td class="r num">${x.cant}</td><td class="r"><input type="number" min="0" step="1" value="${x.cant}" data-rc="${k}" style="width:76px" aria-label="Cantidad recibida"></td></tr>`).join("")}</tbody></table></div><div class="acts"><button class="b sm pri" data-recibir="${esc(i.id)}">Recibir y sumar al stock</button><span><button class="b sm danger" data-rechazar="${esc(i.id)}">No llegó</button></span></div></div>`).join("")
         : `<p class="small muted" style="margin:0">Cuando una marca cargue sus productos desde su portal, aparecen aquí. Al recibirlos, cuenta lo que trajo, corrige la cantidad si hace falta y se suma al stock.</p>`);
     const ps = prodsDe(mid);
-    $("#stockList").innerHTML = ps.length ? `<div class="tbl"><table><thead><tr><th>Producto</th><th class="r">Precio</th><th class="r">Stock</th><th class="r">Mínimo</th><th></th></tr></thead><tbody>${ps.map(p => `<tr><td><input data-pf="nombre" data-id="${esc(p.id)}" value="${esc(p.nombre)}" aria-label="Nombre"></td><td class="r"><input data-pf="precio" data-id="${esc(p.id)}" type="number" min="0" step="0.5" value="${p.precio}" style="width:90px" aria-label="Precio"></td><td class="r"><input data-pf="stock" data-id="${esc(p.id)}" type="number" min="0" step="1" value="${p.stock}" style="width:76px" aria-label="Stock"></td><td class="r"><input data-pf="minimo" data-id="${esc(p.id)}" type="number" min="0" step="1" value="${p.minimo}" style="width:70px" aria-label="Mínimo"></td><td><span class="chip ${p.stock <= 0 ? "bad" : p.stock <= p.minimo ? "warn" : "ok"}">${p.stock <= 0 ? "Agotado" : p.stock <= p.minimo ? "Reponer" : "OK"}</span></td></tr>`).join("")}</tbody></table></div><p class="small muted" style="margin:0">Corrige precio o stock directamente; se guarda al salir del campo.</p>`
+    $("#stockList").innerHTML = ps.length ? `<div class="tbl"><table><thead><tr><th>Código</th><th>Producto</th><th class="r">Precio</th><th class="r">Stock</th><th class="r">Mínimo</th><th></th></tr></thead><tbody>${ps.map(p => `<tr><td class="num"><b>${esc(p.codigo || "")}</b></td><td><input data-pf="nombre" data-id="${esc(p.id)}" value="${esc(p.nombre)}" aria-label="Nombre"></td><td class="r"><input data-pf="precio" data-id="${esc(p.id)}" type="number" min="0" step="0.5" value="${p.precio}" style="width:90px" aria-label="Precio"></td><td class="r"><input data-pf="stock" data-id="${esc(p.id)}" type="number" min="0" step="1" value="${p.stock}" style="width:76px" aria-label="Stock"></td><td class="r"><input data-pf="minimo" data-id="${esc(p.id)}" type="number" min="0" step="1" value="${p.minimo}" style="width:70px" aria-label="Mínimo"></td><td><span class="chip ${p.stock <= 0 ? "bad" : p.stock <= p.minimo ? "warn" : "ok"}">${p.stock <= 0 ? "Agotado" : p.stock <= p.minimo ? "Reponer" : "OK"}</span></td></tr>`).join("")}</tbody></table></div><p class="small muted" style="margin:0">Corrige precio o stock directamente; se guarda al salir del campo.</p>`
       : `<div class="empty">Esta marca todavía no tiene productos. Regístralos con la ficha de ingreso el día que traiga su mercadería.</div>`;
-    if (!S.ficha.length) S.ficha = [{nombre: "", cant: 1, precio: ""}];
-    if (!$("#fichaRows").contains(document.activeElement)) $("#fichaRows").innerHTML = S.ficha.map((r, i) => `<div class="row"><label class="f">Producto<input list="dlProds" data-fr="nombre" data-i="${i}" value="${esc(r.nombre)}" placeholder="Nombre del producto"></label><label class="f" style="flex:0 1 80px">Cant.<input data-fr="cant" data-i="${i}" type="number" min="1" step="1" value="${r.cant}"></label><label class="f" style="flex:0 1 100px">Precio Bs<input data-fr="precio" data-i="${i}" type="number" min="0" step="0.5" value="${r.precio}"></label></div>`).join("") + `<datalist id="dlProds">${ps.map(p => `<option value="${esc(p.nombre)}"></option>`).join("")}</datalist>`;
+    if (!S.ficha.length) S.ficha = [{codigo: "", nombre: "", cant: 1, precio: ""}];
+    if (!$("#fichaRows").contains(document.activeElement)) $("#fichaRows").innerHTML = S.ficha.map((r, i) => `<div class="row"><label class="f" style="flex:0 1 110px">Código<input list="dlCods" data-fr="codigo" data-i="${i}" value="${esc(r.codigo || "")}" placeholder="nuevo" style="text-transform:uppercase"></label><label class="f">Producto<input list="dlProds" data-fr="nombre" data-i="${i}" value="${esc(r.nombre)}" placeholder="Nombre del producto"></label><label class="f" style="flex:0 1 80px">Cant.<input data-fr="cant" data-i="${i}" type="number" min="1" step="1" value="${r.cant}"></label><label class="f" style="flex:0 1 100px">Precio Bs<input data-fr="precio" data-i="${i}" type="number" min="0" step="0.5" value="${r.precio}"></label></div>`).join("") + `<datalist id="dlProds">${ps.map(p => `<option value="${esc(p.nombre)}"></option>`).join("")}</datalist><datalist id="dlCods">${ps.map(p => `<option value="${esc(p.codigo)}">${esc(p.nombre)}</option>`).join("")}</datalist>`;
+    const m = S.marcas[mid]; if (m) $("#fichaTitle").textContent = "Registrar productos · " + m.nombre + " (" + (m.prefijo || "") + ")";
+    renderReg();
     renderHist(mid);
   }
   let histFor = null;
   async function renderHist(mid) {
     if (!mid || histFor === mid) return; histFor = mid;
     const {data} = await sb.from("ingresos").select("*").eq("marca", mid).order("fecha", {ascending: false}).limit(8);
-    $("#fichaHist").innerHTML = data?.length ? data.map(r => `<div style="padding:6px 0;border-bottom:1px solid var(--line)"><b class="num">${fechaCorta(r.fecha)}</b> · ${r.items.map(i => esc(i.nombre) + " ×" + i.cant).join(", ")}${r.nota ? ` <span class="muted">(${esc(r.nota)})</span>` : ""}</div>`).join("") : `<span class="muted">Sin ingresos registrados para esta marca.</span>`;
+    $("#fichaHist").innerHTML = data?.length ? data.map(r => `<div style="padding:6px 0;border-bottom:1px solid var(--line)"><b class="num">${fechaCorta(r.fecha)}</b> · ${r.items.map(i => (i.codigo ? esc(i.codigo) + " " : "") + esc(i.nombre) + " ×" + i.cant).join(", ")}${r.nota ? ` <span class="muted">(${esc(r.nota)})</span>` : ""}</div>`).join("") : `<span class="muted">Sin ingresos registrados para esta marca.</span>`;
   }
   $("#stockMarca").addEventListener("change", () => { S.ficha = []; histFor = null; $("#fichaRows").innerHTML = ""; renderStock(); });
   $("#stockList").addEventListener("change", async e => {
@@ -501,17 +524,38 @@ details summary{cursor:pointer;font-weight:700}
   $("#fichaRows").addEventListener("input", e => {
     const i = e.target.closest("[data-fr]"); if (!i) return;
     const r = S.ficha[i.dataset.i]; r[i.dataset.fr] = i.value;
-    if (i.dataset.fr === "nombre") { const p = prodsDe($("#stockMarca").value).find(p => p.nombre.toLowerCase() === i.value.trim().toLowerCase()); if (p && !r.precio) { r.precio = p.precio; const pi = $(`[data-fr="precio"][data-i="${i.dataset.i}"]`); if (pi) pi.value = p.precio; } }
+    const set = (f, v) => { r[f] = v; const el = $(`[data-fr="${f}"][data-i="${i.dataset.i}"]`); if (el) el.value = v; };
+    if (i.dataset.fr === "nombre") { const p = prodsDe($("#stockMarca").value).find(p => p.nombre.toLowerCase() === i.value.trim().toLowerCase()); if (p) { if (!r.precio) set("precio", p.precio); if (!r.codigo) set("codigo", p.codigo); } }
+    if (i.dataset.fr === "codigo") { const p = prodsDe($("#stockMarca").value).find(p => p.codigo === i.value.trim().toUpperCase()); if (p) { set("nombre", p.nombre); if (!r.precio) set("precio", p.precio); } }
   });
-  $("#fichaAdd").addEventListener("click", () => { S.ficha.push({nombre: "", cant: 1, precio: ""}); $("#fichaRows").innerHTML = ""; renderStock(); });
+  $("#fichaRows").addEventListener("keydown", e => {
+    const i = e.target.closest('[data-fr="precio"]'); if (!i || e.key !== "Enter") return;
+    e.preventDefault(); const n = +i.dataset.i;
+    if (n === S.ficha.length - 1) { S.ficha.push({codigo: "", nombre: "", cant: 1, precio: ""}); $("#fichaRows").innerHTML = ""; renderStock(); }
+    const nx = $(`[data-fr="nombre"][data-i="${n + 1}"]`); nx && nx.focus();
+  });
+  function renderReg() {
+    const ms = marcasOrden(), con = new Set(Object.values(S.productos).map(p => p.marca));
+    const sin = ms.filter(m => !con.has(m.id)), cur = $("#stockMarca").value;
+    $("#regPanel").innerHTML = `<div class="row" style="justify-content:space-between"><h2>Registro de productos de las marcas</h2><span class="chip ${sin.length ? "warn" : "ok"}">${ms.length - sin.length} de ${ms.length} marcas con productos</span></div>` +
+      `<div class="bar" style="height:8px;background:var(--line);border-radius:6px;overflow:hidden;margin:6px 0 10px"><div style="height:100%;width:${ms.length ? Math.round((ms.length - sin.length) / ms.length * 100) : 0}%;background:var(--pri,#2F7D4F)"></div></div>` +
+      (sin.length ? `<p class="small muted" style="margin:0 0 6px">Faltan (toca una para registrar sus productos):</p><div class="row" style="gap:6px">${sin.map(m => `<button class="b sm${m.id === cur ? " pri" : ""}" data-reg="${esc(m.id)}">${esc(m.nombre)} <span class="muted">${esc(m.prefijo || "")}</span></button>`).join("")}</div>` : `<p class="small" style="margin:0">Todas las marcas tienen productos registrados.</p>`);
+  }
+  $("#regPanel").addEventListener("click", e => {
+    const b = e.target.closest("[data-reg]"); if (!b) return;
+    $("#stockMarca").value = b.dataset.reg; S.ficha = []; histFor = null; $("#fichaRows").innerHTML = ""; $("#fichaRes").innerHTML = ""; renderStock();
+    $("#fichaTitle").scrollIntoView({behavior: "smooth", block: "start"}); setTimeout(() => { const n = $('[data-fr="nombre"][data-i="0"]'); n && n.focus(); }, 300);
+  });
+  $("#fichaAdd").addEventListener("click", () => { S.ficha.push({codigo: "", nombre: "", cant: 1, precio: ""}); $("#fichaRows").innerHTML = ""; renderStock(); });
   $("#fichaSave").addEventListener("click", async () => {
     const mid = $("#stockMarca").value; if (!mid) return;
-    const items = S.ficha.map(r => ({nombre: r.nombre.trim(), cant: parseInt(r.cant, 10), precio: parseFloat(r.precio)})).filter(r => r.nombre);
+    const items = S.ficha.map(r => ({codigo: (r.codigo || "").trim().toUpperCase(), nombre: r.nombre.trim(), cant: parseInt(r.cant, 10), precio: parseFloat(r.precio)})).filter(r => r.nombre || r.codigo);
     if (!items.length) return toast("Escribe al menos un producto.");
     if (items.some(r => !(r.cant > 0) || !(r.precio >= 0))) return toast("Revisa cantidades y precios.");
     const btn = $("#fichaSave"); btn.disabled = true;
     try {
-      chk(await sb.rpc("registrar_ingreso", {p_marca: mid, p_items: items, p_nota: $("#fichaNota").value.trim()}));
+      const res = chk(await sb.rpc("registrar_ingreso", {p_marca: mid, p_items: items, p_nota: $("#fichaNota").value.trim()})) || [];
+      $("#fichaRes").innerHTML = `<h3>Recién registrado · ${esc(S.marcas[mid]?.nombre || "")}</h3><div class="tbl"><table><thead><tr><th>Código</th><th>Producto</th><th class="r">Cant.</th><th class="r">Precio</th></tr></thead><tbody>${res.map(x => `<tr><td class="num"><b>${esc(x.codigo)}</b></td><td>${esc(x.nombre)}</td><td class="r num">${x.cant}</td><td class="r num">${bs(x.precio)}</td></tr>`).join("")}</tbody></table></div><p class="small muted">Escribe cada código en la etiqueta del producto.</p>`;
       S.ficha = []; $("#fichaNota").value = ""; $("#fichaRows").innerHTML = ""; histFor = null;
       toast("Ingreso guardado: " + items.reduce((a, r) => a + r.cant, 0) + " unidades"); refresh("productos");
     } catch (e) { fail(e); }
@@ -623,10 +667,10 @@ details summary{cursor:pointer;font-weight:700}
   function renderMarcas() {
     const q = $("#mBuscar").value.trim().toLowerCase();
     const all = marcasOrden();
-    const ms = all.filter(m => !q || [m.nombre, m.titular, m.espacio, m.rubro].join(" ").toLowerCase().includes(q));
+    const ms = all.filter(m => !q || [m.nombre, m.titular, m.espacio, m.rubro, m.prefijo].join(" ").toLowerCase().includes(q));
     const pend = all.filter(m => !m.saldo_pagado).reduce((a, m) => a + +m.saldo, 0);
     $("#mTotals").innerHTML = `<span class="chip g">${all.length} marcas</span><span class="chip ok">Tarifas ${bs(all.reduce((a, m) => a + +m.tarifa, 0))}/mes</span><span class="chip ${pend ? "warn" : "ok"}">Saldo por cobrar ${bs(pend)}</span><span class="chip ${all.some(m => !m.pin_hash) ? "warn" : "ok"}">${all.filter(m => m.pin_hash).length}/${all.length} con acceso al portal</span>`;
-    $("#mBody").innerHTML = ms.map(m => `<tr><td class="num muted">${m.n || ""}</td><td>${m.logo ? `<img class="mlogo" src="${esc(IMG(m.logo))}" alt="">` : ""}<b>${esc(m.nombre)}</b><div class="small muted">${esc(m.titular || "")}${m.rubro ? " · " + esc(m.rubro) : ""}${m.ig ? " · IG " + esc(m.ig) : ""}${m.tiktok ? " · TikTok " + esc(m.tiktok) : ""}</div></td><td class="small">${esc(m.espacio)}</td><td class="r num">${bs(m.tarifa)}</td><td>${+m.saldo > 0 ? `<button class="b sm" data-saldo="${esc(m.id)}">${m.saldo_pagado ? `<span class="chip ok">Pagado</span>` : `<span class="chip warn">Debe ${bs(m.saldo)}</span>`}</button>` : `<span class="chip ok">Mes pagado</span>`}</td><td><label class="row small" style="flex-wrap:nowrap"><input type="checkbox" data-desc="${esc(m.id)}" ${m.descuenta ? "checked" : ""} style="width:auto"> Sí</label></td><td class="num small">${esc(m.celular || "—")}</td><td><button class="b sm" data-portal="${esc(m.id)}">${m.pin_hash ? "Acceso" : "Crear acceso"}</button> <button class="b sm" data-edit="${esc(m.id)}">Editar</button></td></tr>`).join("") || `<tr><td colspan="8" class="muted">Ninguna marca coincide con la búsqueda.</td></tr>`;
+    $("#mBody").innerHTML = ms.map(m => `<tr><td class="num muted">${m.n || ""}</td><td>${m.logo ? `<img class="mlogo" src="${esc(IMG(m.logo))}" alt="">` : ""}<b>${esc(m.nombre)}</b> <span class="chip g num">${esc(m.prefijo || "")}</span><div class="small muted">${esc(m.titular || "")}${m.rubro ? " · " + esc(m.rubro) : ""}${m.ig ? " · IG " + esc(m.ig) : ""}${m.tiktok ? " · TikTok " + esc(m.tiktok) : ""}</div></td><td class="small">${esc(m.espacio)}</td><td class="r num">${bs(m.tarifa)}</td><td>${+m.saldo > 0 ? `<button class="b sm" data-saldo="${esc(m.id)}">${m.saldo_pagado ? `<span class="chip ok">Pagado</span>` : `<span class="chip warn">Debe ${bs(m.saldo)}</span>`}</button>` : `<span class="chip ok">Mes pagado</span>`}</td><td><label class="row small" style="flex-wrap:nowrap"><input type="checkbox" data-desc="${esc(m.id)}" ${m.descuenta ? "checked" : ""} style="width:auto"> Sí</label></td><td class="num small">${esc(m.celular || "—")}</td><td><button class="b sm" data-portal="${esc(m.id)}">${m.pin_hash ? "Acceso" : "Crear acceso"}</button> <button class="b sm" data-edit="${esc(m.id)}">Editar</button></td></tr>`).join("") || `<tr><td colspan="8" class="muted">Ninguna marca coincide con la búsqueda.</td></tr>`;
   }
   $("#mBuscar").addEventListener("input", renderMarcas);
   $("#mBody").addEventListener("click", async e => {

@@ -1,0 +1,16 @@
+name: fetch
+on:
+  push:
+    branches: [tmp-audio]
+    paths: [urls.txt]
+permissions:
+  contents: write
+jobs:
+  f:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          while read n u; do curl -sSfL -o "$n" "$u"; done < urls.txt
+          git config user.name bot; git config user.email bot@users.noreply.github.com
+          git add *.mp3 && git commit -m "audio" && git push

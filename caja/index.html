@@ -153,7 +153,7 @@ details summary{cursor:pointer;font-weight:700}
       <div class="panel">
         <h2>Nueva venta</h2>
         <form id="codForm" class="row" autocomplete="off" style="margin-bottom:6px">
-          <label class="f">Código del producto<input id="codIn" placeholder="Ej. PRB-001 y Enter" style="text-transform:uppercase" autocapitalize="characters"></label>
+          <label class="f">Código del producto<input id="codIn" placeholder="Ej. GDA.GC.15bs y Enter" autocapitalize="characters"></label>
           <button class="b pri" type="submit">Agregar</button>
         </form>
         <label class="f">O busca por marca
@@ -448,9 +448,10 @@ details summary{cursor:pointer;font-weight:700}
   };
   $("#codForm").addEventListener("submit", e => {
     e.preventDefault();
-    const v = $("#codIn").value.trim().toUpperCase().replace(/\s+/g, ""); if (!v) return;
-    const norm = c => c.replace("-", "");
-    const p = Object.values(S.productos).find(x => (x.codigo || "") === v || norm(x.codigo || "") === norm(v));
+    const v = $("#codIn").value.trim().replace(/\s+/g, ""); if (!v) return;
+    const norm = c => String(c || "").toLowerCase().replace(/[-.,]/g, "");
+    const p = Object.values(S.productos).find(x => norm(x.codigo) === norm(v)) || Object.values(S.productos).find(x => (x.codigos_previos || []).some(c => norm(c) === norm(v)));
+    if (p && norm(p.codigo) !== norm(v)) toast("Código antiguo: este producto ahora es " + p.codigo + ". Cambia su cinta.");
     if (!p) return toast("No existe el código " + v);
     if (addProd(p)) { toast("Agregado: " + p.codigo + " · " + p.nombre); $("#codIn").value = ""; S.marcaCaja = p.marca; $("#cajaMarca").value = S.marcas[p.marca].nombre + " · " + S.marcas[p.marca].espacio; }
     renderCaja(); $("#codIn").focus();
@@ -500,13 +501,13 @@ details summary{cursor:pointer;font-weight:700}
     $("#lowPanel").innerHTML = `<div class="row" style="justify-content:space-between"><h2>Avisar para reponer</h2><span class="chip ${low.length ? "warn" : "ok"}">${low.length ? low.length + " productos" : "Todo con stock"}</span></div>` +
       (low.length ? `<div class="tbl"><table><thead><tr><th>Marca</th><th>Producto</th><th class="r">Quedan</th><th>Contacto</th></tr></thead><tbody>${low.map(p => { const m = S.marcas[p.marca] || {}; return `<tr><td>${esc(m.nombre)}</td><td>${esc(p.nombre)}</td><td class="r num"><span class="chip ${p.stock <= 0 ? "bad" : "warn"}">${p.stock}</span></td><td class="num small">${esc(m.celular || "—")}</td></tr>`; }).join("")}</tbody></table></div>` : `<p class="small muted" style="margin:0">Cuando a un producto le quede su stock mínimo o menos, aparece aquí con el celular de la marca.</p>`);
     $("#pendPanel").innerHTML = `<div class="row" style="justify-content:space-between"><h2>Mercadería por recibir</h2><span class="chip ${S.pend.length ? "warn" : "ok"}">${S.pend.length ? S.pend.length + " cargas" : "Nada pendiente"}</span></div>` +
-      (S.pend.length ? S.pend.map(i => `<div class="liqcard" data-ing="${esc(i.id)}"><div style="grid-column:1/-1"><b>${esc(S.marcas[i.marca]?.nombre || i.marca)}</b> <span class="small muted">· declarado ${fechaCorta(i.fecha)}${i.nota ? " · " + esc(i.nota) : ""}</span></div><div style="grid-column:1/-1" class="tbl"><table><thead><tr><th>Producto</th><th class="r">Precio</th><th class="r">Declaró</th><th class="r">Recibido</th></tr></thead><tbody>${i.items.map((x, k) => `<tr><td>${x.foto ? `<img class="mlogo" src="${esc(IMG(x.foto))}" alt="">` : ""}${esc(x.nombre)}${prodsDe(i.marca).some(p => p.nombre.toLowerCase() === x.nombre.toLowerCase()) ? "" : ` <span class="chip g">nuevo</span>`}</td><td class="r num">${bs(x.precio)}</td><td class="r num">${x.cant}</td><td class="r"><input type="number" min="0" step="1" value="${x.cant}" data-rc="${k}" style="width:76px" aria-label="Cantidad recibida"></td></tr>`).join("")}</tbody></table></div><div class="acts"><button class="b sm pri" data-recibir="${esc(i.id)}">Recibir y sumar al stock</button><span><button class="b sm danger" data-rechazar="${esc(i.id)}">No llegó</button></span></div></div>`).join("")
+      (S.pend.length ? S.pend.map(i => `<div class="liqcard" data-ing="${esc(i.id)}"><div style="grid-column:1/-1"><b>${esc(S.marcas[i.marca]?.nombre || i.marca)}</b> <span class="small muted">· declarado ${fechaCorta(i.fecha)}${i.nota ? " · " + esc(i.nota) : ""}</span></div><div style="grid-column:1/-1" class="tbl"><table><thead><tr><th>Código (cinta)</th><th>Producto</th><th class="r">Precio</th><th class="r">Declaró</th><th class="r">Recibido</th></tr></thead><tbody>${i.items.map((x, k) => `<tr><td class="num"><b>${esc(x.codigo || "—")}</b></td><td>${x.foto ? `<img class="mlogo" src="${esc(IMG(x.foto))}" alt="">` : ""}${esc(x.nombre)}${prodsDe(i.marca).some(p => p.nombre.toLowerCase() === x.nombre.toLowerCase()) ? "" : ` <span class="chip g">nuevo</span>`}</td><td class="r num">${bs(x.precio)}</td><td class="r num">${x.cant}</td><td class="r"><input type="number" min="0" step="1" value="${x.cant}" data-rc="${k}" style="width:76px" aria-label="Cantidad recibida"></td></tr>`).join("")}</tbody></table></div><div class="acts"><button class="b sm pri" data-recibir="${esc(i.id)}">Recibir y sumar al stock</button><span><button class="b sm danger" data-rechazar="${esc(i.id)}">No llegó</button></span></div></div>`).join("")
         : `<p class="small muted" style="margin:0">Cuando una marca cargue sus productos desde su portal, aparecen aquí. Al recibirlos, cuenta lo que trajo, corrige la cantidad si hace falta y se suma al stock.</p>`);
     const ps = prodsDe(mid);
     $("#stockList").innerHTML = ps.length ? `<div class="tbl"><table><thead><tr><th>Código</th><th>Producto</th><th class="r">Precio</th><th class="r">Stock</th><th class="r">Mínimo</th><th></th></tr></thead><tbody>${ps.map(p => `<tr><td class="num"><b>${esc(p.codigo || "")}</b></td><td><input data-pf="nombre" data-id="${esc(p.id)}" value="${esc(p.nombre)}" aria-label="Nombre"></td><td class="r"><input data-pf="precio" data-id="${esc(p.id)}" type="number" min="0" step="0.5" value="${p.precio}" style="width:90px" aria-label="Precio"></td><td class="r"><input data-pf="stock" data-id="${esc(p.id)}" type="number" min="0" step="1" value="${p.stock}" style="width:76px" aria-label="Stock"></td><td class="r"><input data-pf="minimo" data-id="${esc(p.id)}" type="number" min="0" step="1" value="${p.minimo}" style="width:70px" aria-label="Mínimo"></td><td><span class="chip ${p.stock <= 0 ? "bad" : p.stock <= p.minimo ? "warn" : "ok"}">${p.stock <= 0 ? "Agotado" : p.stock <= p.minimo ? "Reponer" : "OK"}</span></td></tr>`).join("")}</tbody></table></div><p class="small muted" style="margin:0">Corrige precio o stock directamente; se guarda al salir del campo.</p>`
       : `<div class="empty">Esta marca todavía no tiene productos. Regístralos con la ficha de ingreso el día que traiga su mercadería.</div>`;
     if (!S.ficha.length) S.ficha = [{codigo: "", nombre: "", cant: 1, precio: ""}];
-    if (!$("#fichaRows").contains(document.activeElement)) $("#fichaRows").innerHTML = S.ficha.map((r, i) => `<div class="row"><label class="f" style="flex:0 1 110px">Código<input list="dlCods" data-fr="codigo" data-i="${i}" value="${esc(r.codigo || "")}" placeholder="nuevo" style="text-transform:uppercase"></label><label class="f">Producto<input list="dlProds" data-fr="nombre" data-i="${i}" value="${esc(r.nombre)}" placeholder="Nombre del producto"></label><label class="f" style="flex:0 1 80px">Cant.<input data-fr="cant" data-i="${i}" type="number" min="1" step="1" value="${r.cant}"></label><label class="f" style="flex:0 1 100px">Precio Bs<input data-fr="precio" data-i="${i}" type="number" min="0" step="0.5" value="${r.precio}"></label></div>`).join("") + `<datalist id="dlProds">${ps.map(p => `<option value="${esc(p.nombre)}"></option>`).join("")}</datalist><datalist id="dlCods">${ps.map(p => `<option value="${esc(p.codigo)}">${esc(p.nombre)}</option>`).join("")}</datalist>`;
+    if (!$("#fichaRows").contains(document.activeElement)) $("#fichaRows").innerHTML = S.ficha.map((r, i) => `<div class="row"><label class="f" style="flex:0 1 110px">Código<input list="dlCods" data-fr="codigo" data-i="${i}" value="${esc(r.codigo || "")}" placeholder="nuevo" ></label><label class="f">Producto<input list="dlProds" data-fr="nombre" data-i="${i}" value="${esc(r.nombre)}" placeholder="Nombre del producto"></label><label class="f" style="flex:0 1 80px">Cant.<input data-fr="cant" data-i="${i}" type="number" min="1" step="1" value="${r.cant}"></label><label class="f" style="flex:0 1 100px">Precio Bs<input data-fr="precio" data-i="${i}" type="number" min="0" step="0.5" value="${r.precio}"></label></div>`).join("") + `<datalist id="dlProds">${ps.map(p => `<option value="${esc(p.nombre)}"></option>`).join("")}</datalist><datalist id="dlCods">${ps.map(p => `<option value="${esc(p.codigo)}">${esc(p.nombre)}</option>`).join("")}</datalist>`;
     const m = S.marcas[mid]; if (m) $("#fichaTitle").textContent = "Registrar productos · " + m.nombre + " (" + (m.prefijo || "") + ")";
     renderReg();
     renderHist(mid);
@@ -524,14 +525,14 @@ details summary{cursor:pointer;font-weight:700}
     if (f !== "nombre" && !(v >= 0)) return toast("Escribe un número válido.");
     if (f === "nombre" && !v) return toast("El nombre no puede quedar vacío.");
     if (f === "stock" || f === "minimo") v = Math.round(v);
-    try { chk(await sb.from("productos").update({[f]: v}).eq("id", i.dataset.id)); toast("Guardado"); refresh("productos"); } catch (er) { fail(er); }
+    try { const antes = S.productos[i.dataset.id]?.codigo; const r = chk(await sb.from("productos").update({[f]: v}).eq("id", i.dataset.id).select("codigo")); const nuevo = r?.[0]?.codigo; toast(nuevo && antes && nuevo !== antes ? "Guardado · código nuevo: " + nuevo + " (cambia la cinta del producto)" : "Guardado"); refresh("productos"); } catch (er) { fail(er); }
   });
   $("#fichaRows").addEventListener("input", e => {
     const i = e.target.closest("[data-fr]"); if (!i) return;
     const r = S.ficha[i.dataset.i]; r[i.dataset.fr] = i.value;
     const set = (f, v) => { r[f] = v; const el = $(`[data-fr="${f}"][data-i="${i.dataset.i}"]`); if (el) el.value = v; };
     if (i.dataset.fr === "nombre") { const p = prodsDe($("#stockMarca").value).find(p => p.nombre.toLowerCase() === i.value.trim().toLowerCase()); if (p) { if (!r.precio) set("precio", p.precio); if (!r.codigo) set("codigo", p.codigo); } }
-    if (i.dataset.fr === "codigo") { const p = prodsDe($("#stockMarca").value).find(p => p.codigo === i.value.trim().toUpperCase()); if (p) { set("nombre", p.nombre); if (!r.precio) set("precio", p.precio); } }
+    if (i.dataset.fr === "codigo") { const p = prodsDe($("#stockMarca").value).find(p => (p.codigo || "").toLowerCase() === i.value.trim().toLowerCase()); if (p) { set("nombre", p.nombre); if (!r.precio) set("precio", p.precio); } }
   });
   $("#fichaRows").addEventListener("keydown", e => {
     const i = e.target.closest('[data-fr="precio"]'); if (!i || e.key !== "Enter") return;
@@ -554,13 +555,13 @@ details summary{cursor:pointer;font-weight:700}
   $("#fichaAdd").addEventListener("click", () => { S.ficha.push({codigo: "", nombre: "", cant: 1, precio: ""}); $("#fichaRows").innerHTML = ""; renderStock(); });
   $("#fichaSave").addEventListener("click", async () => {
     const mid = $("#stockMarca").value; if (!mid) return;
-    const items = S.ficha.map(r => ({codigo: (r.codigo || "").trim().toUpperCase(), nombre: r.nombre.trim(), cant: parseInt(r.cant, 10), precio: parseFloat(r.precio)})).filter(r => r.nombre || r.codigo);
+    const items = S.ficha.map(r => ({codigo: (r.codigo || "").trim(), nombre: r.nombre.trim(), cant: parseInt(r.cant, 10), precio: parseFloat(r.precio)})).filter(r => r.nombre || r.codigo);
     if (!items.length) return toast("Escribe al menos un producto.");
     if (items.some(r => !(r.cant > 0) || !(r.precio >= 0))) return toast("Revisa cantidades y precios.");
     const btn = $("#fichaSave"); btn.disabled = true;
     try {
       const res = chk(await sb.rpc("registrar_ingreso", {p_marca: mid, p_items: items, p_nota: $("#fichaNota").value.trim()})) || [];
-      $("#fichaRes").innerHTML = `<h3>Recién registrado · ${esc(S.marcas[mid]?.nombre || "")}</h3><div class="tbl"><table><thead><tr><th>Código</th><th>Producto</th><th class="r">Cant.</th><th class="r">Precio</th></tr></thead><tbody>${res.map(x => `<tr><td class="num"><b>${esc(x.codigo)}</b></td><td>${esc(x.nombre)}</td><td class="r num">${x.cant}</td><td class="r num">${bs(x.precio)}</td></tr>`).join("")}</tbody></table></div><p class="small muted">Escribe cada código en la etiqueta del producto.</p>`;
+      $("#fichaRes").innerHTML = `<h3>Recién registrado · ${esc(S.marcas[mid]?.nombre || "")}</h3><div class="tbl"><table><thead><tr><th>Código</th><th>Producto</th><th class="r">Cant.</th><th class="r">Precio</th></tr></thead><tbody>${res.map(x => `<tr><td class="num"><b>${esc(x.codigo)}</b></td><td>${esc(x.nombre)}</td><td class="r num">${x.cant}</td><td class="r num">${bs(x.precio)}</td></tr>`).join("")}</tbody></table></div><p class="small muted">Escribe cada código en la cinta del producto (ya incluye el precio).</p>`;
       S.ficha = []; $("#fichaNota").value = ""; $("#fichaRows").innerHTML = ""; histFor = null;
       toast("Ingreso guardado: " + items.reduce((a, r) => a + r.cant, 0) + " unidades"); refresh("productos");
     } catch (e) { fail(e); }
@@ -572,7 +573,7 @@ details summary{cursor:pointer;font-weight:700}
     try {
       if (r) {
         const card = r.closest("[data-ing]"); const ing = S.pend.find(i => i.id === r.dataset.recibir);
-        const items = ing.items.map((it, k) => ({nombre: it.nombre, precio: it.precio, foto: it.foto || "", cant: parseInt(card.querySelector(`[data-rc="${k}"]`).value, 10) || 0}));
+        const items = ing.items.map((it, k) => ({nombre: it.nombre, codigo: it.codigo || "", precio: it.precio, foto: it.foto || "", cant: parseInt(card.querySelector(`[data-rc="${k}"]`).value, 10) || 0}));
         r.disabled = true; chk(await sb.rpc("recibir_ingreso", {p_id: ing.id, p_items: items}));
         toast("Recibido: " + items.reduce((a, i) => a + i.cant, 0) + " unidades sumadas al stock"); refresh("ingresos", "productos");
       }

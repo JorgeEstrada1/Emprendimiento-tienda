@@ -281,7 +281,7 @@ label.f{display:flex;flex-direction:column;gap:6px;font-weight:700;font-size:1re
     const first = !D; D = data;
     try { localStorage.setItem(KEY, pin); } catch {}
     $("#vLogin").hidden = true;
-    if (first) { const h = location.hash.slice(1); go(["vendi","productos","traer","pagar","marca"].includes(h) ? h : (lista.length ? "traer" : "inicio")); if (lista.length) { pintarLista(); $("#tOk").className = "okm"; $("#tOk").textContent = "Recuperamos tu lista: tienes " + lista.length + " productos sin enviar. Sigue agregando o toca «Listo, avisar a la tienda»."; } }
+    if (first) { const h = location.hash.slice(1); go(["vendi","productos","traer","pagar","marca"].includes(h) ? h : (lista.length || $("#tNombre").value || fotoT ? "traer" : "inicio")); if (lista.length) { pintarLista(); $("#tOk").className = "okm"; $("#tOk").textContent = "Recuperamos tu lista: tienes " + lista.length + " productos sin enviar. Sigue agregando o toca «Listo, avisar a la tienda»."; } }
     render();
   }
   setInterval(() => { if (D && !document.hidden && !document.activeElement?.closest("form")) cargar(); }, 90000);
@@ -333,7 +333,7 @@ label.f{display:flex;flex-direction:column;gap:6px;font-weight:700;font-size:1re
   $("#tFotoBtn").addEventListener("click", () => { $("#tFoto").value = ""; $("#tFoto").click(); });
   $("#tFoto").addEventListener("change", async e => {
     const f = e.target.files[0]; if (!f) return; const btn = $("#tFotoBtn"); btn.innerHTML = "<span>Subiendo foto…</span>";
-    try { fotoT = await subir(f, "producto"); btn.innerHTML = `<img src="${esc(IMG(fotoT))}" alt="Foto del producto">`; }
+    try { fotoT = await subir(f, "producto"); btn.innerHTML = `<img src="${esc(IMG(fotoT))}" alt="Foto del producto">`; guardarLista(); }
     catch (er) { fotoT = ""; btn.innerHTML = `<span class="ic">📷</span><span>${esc(er.message)}</span>`; }
   });
   $("#tMas").addEventListener("click", () => { $("#tCant").value = Math.min(9999, (parseInt($("#tCant").value, 10) || 0) + 1); });
@@ -351,9 +351,12 @@ label.f{display:flex;flex-direction:column;gap:6px;font-weight:700;font-size:1re
     $("#tOk").textContent = ""; pintarLista(); $("#tListaCard").scrollIntoView({block: "nearest"});
   });
   const LK = KEY + "_lista";
-  function guardarLista() { try { lista.length ? localStorage.setItem(LK, JSON.stringify({l: lista, n: $("#tNota").value})) : localStorage.removeItem(LK); } catch (e) {} }
-  try { const g = JSON.parse(localStorage.getItem(LK) || "null"); if (g && Array.isArray(g.l)) { lista = g.l; if (g.n) $("#tNota").value = g.n; } } catch (e) {}
-  $("#tNota").addEventListener("input", guardarLista);
+  let restaurado = false;
+  function guardarLista() { if (!restaurado) return; try { const f = {nombre: $("#tNombre").value, cant: $("#tCant").value, precio: $("#tPrecio").value, foto: fotoT}; const hayForm = f.nombre || f.precio || f.foto; (lista.length || hayForm) ? localStorage.setItem(LK, JSON.stringify({l: lista, n: $("#tNota").value, f})) : localStorage.removeItem(LK); } catch (e) {} }
+  try { const g = JSON.parse(localStorage.getItem(LK) || "null"); if (g && Array.isArray(g.l)) { lista = g.l; if (g.n) $("#tNota").value = g.n; if (g.f) { $("#tNombre").value = g.f.nombre || ""; if (g.f.cant) $("#tCant").value = g.f.cant; $("#tPrecio").value = g.f.precio || ""; if (g.f.foto) { fotoT = g.f.foto; setTimeout(() => { $("#tFotoBtn").innerHTML = `<img src="${esc(IMG(fotoT))}" alt="Foto del producto">`; }, 0); } } } } catch (e) {}
+  restaurado = true;
+  ["#tNota", "#tNombre", "#tCant", "#tPrecio"].forEach(s => $(s).addEventListener("input", guardarLista));
+  window.addEventListener("pagehide", guardarLista); document.addEventListener("visibilitychange", guardarLista);
   function pintarLista() {
     guardarLista();
     $("#tListaCard").hidden = !lista.length;
@@ -361,11 +364,24 @@ label.f{display:flex;flex-direction:column;gap:6px;font-weight:700;font-size:1re
   }
   $("#tLista").addEventListener("click", e => { const q = e.target.closest("[data-quitar]"); if (q) { lista.splice(+q.dataset.quitar, 1); pintarLista(); } });
   $("#tEnviar").addEventListener("click", async () => {
-    if (!lista.length) return; const b = $("#tEnviar"); b.disabled = true; b.textContent = "Enviando…";
-    const {data, error} = await sb.rpc("portal_cargar", {p_token: token, p_pin: pin, p_items: lista.map(x => ({nombre: x.nombre, cant: String(x.cant), precio: String(Math.round(x.precio * 100) / 100), foto: x.foto || ""})), p_nota: $("#tNota").value.trim()});
+    if (!lista.length) return; const b = $("#tEnviar"); b.disabled = true;
+    const E = {nombre: "falta el nombre o es muy largo (máximo 80 letras)", cant: "la cantidad tiene que ser un número entero desde 1", precio: "el precio tiene que ser un número (ej. 25 o 25.5)", ruta: "hubo un problema con la foto; quítala y vuelve a ponerla", demasiados: "son demasiados productos", muchos_pendientes: "tienes demasiadas cargas sin recibir; espera a que la tienda reciba las anteriores", pin: "tu PIN no es correcto; vuelve a entrar", bloqueado: "demasiados intentos; espera 15 minutos"};
+    const LOTE = 20, total = lista.length; let enviados = 0, fallo = null;
+    while (lista.length) {
+      const lote = lista.slice(0, LOTE);
+      b.textContent = `Enviando… ${enviados} de ${total}`;
+      let res = null;
+      for (let intento = 0; intento < 3; intento++) {
+        res = await sb.rpc("portal_cargar", {p_token: token, p_pin: pin, p_items: lote.map(x => ({nombre: x.nombre, cant: String(x.cant), precio: String(Math.round(x.precio * 100) / 100), foto: x.foto || ""})), p_nota: $("#tNota").value.trim()});
+        if (!res.error) break;
+        await new Promise(r => setTimeout(r, 1500 * (intento + 1)));
+      }
+      if (res.error || res.data?.error) { fallo = res.error ? "No hay internet. Tus productos siguen guardados aquí: toca otra vez cuando tengas señal." : "No se pudo enviar: " + (E[res.data.error] || "pide ayuda con el botón verde") + (res.data?.fila && lote[res.data.fila - 1] ? " (producto: «" + lote[res.data.fila - 1].nombre + "»)" : "") + ". Corrígelo o quítalo y vuelve a tocar el botón."; break; }
+      lista.splice(0, lote.length); enviados += lote.length; pintarLista();
+    }
     b.disabled = false; b.textContent = "✅ Listo, avisar a la tienda";
-    if (error || data?.error) { $("#tOk").className = "err"; const E = {nombre: "falta el nombre o es muy largo (máximo 80 letras)", cant: "la cantidad tiene que ser un número entero desde 1", precio: "el precio tiene que ser un número (ej. 25 o 25.5)", ruta: "hubo un problema con la foto; quítala y vuelve a ponerla", demasiados: "son más de 200 productos; envíalos en dos partes", muchos_pendientes: "tienes demasiadas cargas sin recibir; espera a que la tienda reciba las anteriores", pin: "tu PIN no es correcto; vuelve a entrar", bloqueado: "demasiados intentos; espera 15 minutos"}; const nom = data?.fila && lista[data.fila - 1] ? " (producto: «" + lista[data.fila - 1].nombre + "»)" : ""; $("#tOk").textContent = error ? "No hay internet. Inténtalo otra vez." : "No se pudo enviar: " + (E[data.error] || "pide ayuda con el botón verde") + nom + "."; return; }
-    lista = []; $("#tNota").value = ""; pintarLista(); $("#tOk").className = "okm"; $("#tOk").textContent = "¡Listo! Ahora ponle a cada producto una cinta con su código y su precio 👇";
+    if (fallo) { $("#tOk").className = "err"; $("#tOk").textContent = (enviados ? `Ya enviamos ${enviados} de ${total} productos. ` : "") + fallo; if (enviados) cargar(); return; }
+    $("#tNota").value = ""; pintarLista(); $("#tOk").className = "okm"; $("#tOk").textContent = `¡Listo! Enviaste ${total} productos. Ahora ponle a cada uno una cinta con su código 👇`;
     await cargar(); $("#tPend").scrollIntoView({behavior: "smooth", block: "start"});
   });
 

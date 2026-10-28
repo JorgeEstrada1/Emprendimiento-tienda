@@ -281,7 +281,7 @@ label.f{display:flex;flex-direction:column;gap:6px;font-weight:700;font-size:1re
     const first = !D; D = data;
     try { localStorage.setItem(KEY, pin); } catch {}
     $("#vLogin").hidden = true;
-    if (first) { const h = location.hash.slice(1); go(["vendi","productos","traer","pagar","marca"].includes(h) ? h : "inicio"); }
+    if (first) { const h = location.hash.slice(1); go(["vendi","productos","traer","pagar","marca"].includes(h) ? h : (lista.length ? "traer" : "inicio")); if (lista.length) { pintarLista(); $("#tOk").className = "okm"; $("#tOk").textContent = "Recuperamos tu lista: tienes " + lista.length + " productos sin enviar. Sigue agregando o toca «Listo, avisar a la tienda»."; } }
     render();
   }
   setInterval(() => { if (D && !document.hidden && !document.activeElement?.closest("form")) cargar(); }, 90000);
@@ -350,7 +350,12 @@ label.f{display:flex;flex-direction:column;gap:6px;font-weight:700;font-size:1re
     $("#tFotoBtn").innerHTML = `<span class="ic" aria-hidden="true">📷</span><span>Tomar foto del producto</span><span class="small">(opcional)</span>`;
     $("#tOk").textContent = ""; pintarLista(); $("#tListaCard").scrollIntoView({block: "nearest"});
   });
+  const LK = KEY + "_lista";
+  function guardarLista() { try { lista.length ? localStorage.setItem(LK, JSON.stringify({l: lista, n: $("#tNota").value})) : localStorage.removeItem(LK); } catch (e) {} }
+  try { const g = JSON.parse(localStorage.getItem(LK) || "null"); if (g && Array.isArray(g.l)) { lista = g.l; if (g.n) $("#tNota").value = g.n; } } catch (e) {}
+  $("#tNota").addEventListener("input", guardarLista);
   function pintarLista() {
+    guardarLista();
     $("#tListaCard").hidden = !lista.length;
     $("#tLista").innerHTML = lista.map((x, i) => `<div class="lista-item">${x.foto ? `<img src="${esc(IMG(x.foto))}" alt="">` : `<span class="sinfoto"></span>`}<div style="flex:1;min-width:0"><b>${esc(x.nombre)}</b><div class="small muted">${x.cant} unidades · ${bs(x.precio)} c/u</div></div><button class="sec sm" data-quitar="${i}" aria-label="Quitar">Quitar</button></div>`).join("");
   }

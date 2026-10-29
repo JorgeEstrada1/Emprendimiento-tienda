@@ -89,6 +89,14 @@ tr.void td{text-decoration:line-through;color:var(--muted)}
 .mlogo{width:34px;height:34px;border-radius:8px;object-fit:cover;vertical-align:middle;margin-right:6px}
 .comp{width:110px;height:110px;object-fit:cover;border-radius:10px;border:1px solid var(--line)}
 .liq{display:flex;flex-direction:column;gap:8px}
+.invg{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px}
+.invc{border:1px solid var(--line);border-radius:12px;padding:8px;display:flex;flex-direction:column;gap:3px;background:var(--bg)}
+.invc img,.invc .nf{width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:8px;background:var(--line);display:flex;align-items:center;justify-content:center;font-size:1.6rem}
+.invc .cod{font-family:var(--f-num);font-size:.78rem;color:var(--muted)}
+.invsum{display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 12px}
+.invm{border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:10px}
+.invm>summary{cursor:pointer;display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;list-style:none}
+@media print{header,nav.tabs,#invPrint,.row label.f{display:none!important}section[data-view]:not([data-view="inv"]){display:none!important}.invm{break-inside:avoid}details.invm>*{display:block}.invc{break-inside:avoid}}
 .grupo{border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:10px}
 .grupo>summary{cursor:pointer;display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;list-style:none}
 .grupo>summary::before{content:"▸";font-size:.9rem}
@@ -143,6 +151,7 @@ details summary{cursor:pointer;font-weight:700}
     <nav class="tabs" role="tablist">
       <button role="tab" data-tab="caja" aria-selected="true">Caja</button>
       <button role="tab" data-tab="stock" aria-selected="false">Stock</button>
+      <button role="tab" data-tab="inv" aria-selected="false">Inventario</button>
       <button role="tab" data-tab="liq" aria-selected="false">Liquidación</button>
       <button role="tab" data-tab="marcas" aria-selected="false">Marcas</button>
     </nav>
@@ -219,6 +228,19 @@ details summary{cursor:pointer;font-weight:700}
   </section>
 
   <!-- LIQUIDACIÓN -->
+  <!-- INVENTARIO -->
+  <section data-view="inv" hidden>
+    <div class="panel" style="margin-top:18px">
+      <div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px"><h2>Inventario por emprendedor</h2><button class="b sm" id="invPrint">🖨️ Imprimir</button></div>
+      <div class="row" style="gap:10px;flex-wrap:wrap;align-items:flex-end">
+        <label class="f" style="flex:1 1 260px">Marca<select id="invMarca"></select></label>
+        <label class="f" style="flex:1 1 220px">Buscar producto o código<input id="invQ" type="search" placeholder="Ej. collar, NIC.T…"></label>
+        <label class="f" style="flex:0 1 180px">Mostrar<select id="invFiltro"><option value="todos">Todos</option><option value="stock">Con stock</option><option value="reponer">Por reponer</option><option value="agotado">Agotados</option><option value="vendidos">Con ventas</option></select></label>
+      </div>
+      <div id="invRes" style="margin-top:12px"></div>
+    </div>
+  </section>
+
   <section data-view="liq" hidden>
     <div class="panel" style="margin-top:18px">
       <div class="row" style="justify-content:space-between">
@@ -636,6 +658,45 @@ details summary{cursor:pointer;font-weight:700}
     } catch (er) { fail(er); }
   });
 
+  // ---------- inventario ----------
+  S.invAb = new Set();
+  function renderInv() {
+    const sel = $("#invMarca"), cur = sel.value;
+    sel.innerHTML = `<option value="">Todas las marcas</option>` + marcasOrden().map(m => `<option value="${esc(m.id)}">${esc(m.nombre)} · ${esc(m.espacio || "")} (${prodsDe(m.id).length})</option>`).join("");
+    if (cur && S.marcas[cur]) sel.value = cur;
+    pintarInv();
+  }
+  function pintarInv() {
+    const mid = $("#invMarca").value, q = $("#invQ").value.trim().toLowerCase(), f = $("#invFiltro").value;
+    const vend = {}; ventasPer(PER_ACT()).forEach(v => { if (v.producto) vend[v.producto] = (vend[v.producto] || 0) + (+v.cant || 0); });
+    const ok = p => (!q || p.nombre.toLowerCase().includes(q) || (p.codigo || "").toLowerCase().includes(q)) &&
+      (f === "todos" || (f === "stock" && p.stock > 0) || (f === "reponer" && p.stock > 0 && p.stock <= p.minimo) || (f === "agotado" && p.stock <= 0) || (f === "vendidos" && vend[p.id]));
+    const card = p => `<div class="invc">${p.foto ? `<img src="${esc(IMG(p.foto))}" alt="" loading="lazy">` : `<span class="nf" aria-hidden="true">📦</span>`}<span class="cod">${esc(p.codigo || "")}</span><b style="line-height:1.2">${esc(p.nombre)}</b><span class="small">${bs(p.precio)}</span><span class="row" style="gap:6px;flex-wrap:wrap"><span class="chip ${p.stock <= 0 ? "bad" : p.stock <= p.minimo ? "warn" : "ok"}">${p.stock <= 0 ? "Agotado" : "Quedan " + p.stock}</span>${vend[p.id] ? `<span class="chip g">Vendió ${vend[p.id]}</span>` : ""}</span></div>`;
+    const resumen = ps => { const u = ps.reduce((a, p) => a + Math.max(0, +p.stock || 0), 0), v = ps.reduce((a, p) => a + Math.max(0, +p.stock || 0) * (+p.precio || 0), 0), vn = ps.reduce((a, p) => a + (vend[p.id] || 0), 0), ag = ps.filter(p => p.stock <= 0).length, rp = ps.filter(p => p.stock > 0 && p.stock <= p.minimo).length;
+      return `<span class="chip ok">${ps.length} productos</span><span class="chip ok">${u} unidades</span><span class="chip ok">${bs(v)} en tienda</span>${vn ? `<span class="chip g">${vn} vendidos este periodo</span>` : ""}${rp ? `<span class="chip warn">${rp} por reponer</span>` : ""}${ag ? `<span class="chip bad">${ag} agotados</span>` : ""}`; };
+    const pendDe = id => S.pend.filter(i => i.marca === id).reduce((a, i) => a + i.items.length, 0);
+    if (mid) {
+      const m = S.marcas[mid], all = prodsDe(mid), ps = all.filter(ok), pe = pendDe(mid);
+      $("#invRes").innerHTML = `<div class="row" style="gap:8px;flex-wrap:wrap;align-items:baseline"><h3 style="margin:0">${esc(m.nombre)}</h3><span class="small muted">${esc(m.espacio || "")}${m.titular ? " · " + esc(m.titular) : ""}${m.celular ? " · " + esc(m.celular) : ""}</span></div><div class="invsum">${resumen(all)}${pe ? `<span class="chip g">${pe} productos por recibir</span>` : ""}</div>` +
+        (ps.length ? `<div class="invg">${ps.map(card).join("")}</div>` : `<div class="empty">${all.length ? "Ningún producto coincide con la búsqueda o el filtro." : "Esta marca todavía no tiene productos recibidos en la tienda." + (pe ? " Tiene " + pe + " productos por recibir en Stock." : "")}</div>`);
+      return;
+    }
+    const ms = marcasOrden(), conProd = ms.map(m => ({m, all: prodsDe(m.id)})).filter(x => x.all.length);
+    const todos = conProd.flatMap(x => x.all);
+    const bloques = conProd.map(x => ({...x, ps: x.all.filter(ok)})).filter(x => x.ps.length || (!q && f === "todos"));
+    const abrir = !!q || f !== "todos";
+    const sin = ms.filter(m => !prodsDe(m.id).length);
+    $("#invRes").innerHTML = `<div class="invsum">${resumen(todos)}<span class="chip">${conProd.length} marcas con productos</span></div>` +
+      (bloques.length ? bloques.map(x => `<details class="invm" data-invm="${esc(x.m.id)}"${abrir || S.invAb.has(x.m.id) ? " open" : ""}><summary><b>${esc(x.m.nombre)}</b> <span class="small muted">${esc(x.m.espacio || "")}</span> ${resumen(x.all)} <button class="b sm" data-invver="${esc(x.m.id)}" type="button">Ver solo esta</button></summary><div class="invg" style="margin-top:10px">${x.ps.map(card).join("")}</div></details>`).join("") : `<div class="empty">Ningún producto coincide con la búsqueda o el filtro.</div>`) +
+      (sin.length && !q && f === "todos" ? `<p class="small muted" style="margin:10px 0 0"><b>Sin productos en la tienda (${sin.length}):</b> ${sin.map(m => esc(m.nombre) + (pendDe(m.id) ? " (por recibir)" : "")).join(" · ")}</p>` : "");
+  }
+  $("#invMarca").addEventListener("change", pintarInv);
+  $("#invFiltro").addEventListener("change", pintarInv);
+  $("#invQ").addEventListener("input", pintarInv);
+  $("#invRes").addEventListener("click", e => { const b = e.target.closest("[data-invver]"); if (!b) return; e.preventDefault(); $("#invMarca").value = b.dataset.invver; pintarInv(); window.scrollTo({top: 0, behavior: "smooth"}); });
+  $("#invRes").addEventListener("toggle", e => { const d = e.target; if (!d.matches?.("details.invm")) return; d.open ? S.invAb.add(d.dataset.invm) : S.invAb.delete(d.dataset.invm); }, true);
+  $("#invPrint").addEventListener("click", () => { $$("#invRes details.invm").forEach(d => d.open = true); window.print(); });
+
   // ---------- liquidación ----------
   function calcLiq(m) {
     const vs = ventasPer(S.liqPer).filter(v => v.marca === m.id);
@@ -791,6 +852,7 @@ details summary{cursor:pointer;font-weight:700}
     renderTop();
     if (S.tab === "caja") renderCaja();
     if (S.tab === "stock") renderStock();
+    if (S.tab === "inv") renderInv();
     if (S.tab === "liq") renderLiq();
     if (S.tab === "marcas") { renderMarcas(); const q = $("#qrImg"); if (S.aj.qr) { q.src = IMG(S.aj.qr); q.hidden = false; } else q.hidden = true; }
   }

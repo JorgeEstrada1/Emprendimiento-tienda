@@ -93,9 +93,9 @@ tr.void td{text-decoration:line-through;color:var(--muted)}
 .invc{border:1px solid var(--line);border-radius:12px;padding:8px;display:flex;flex-direction:column;gap:3px;background:var(--bg)}
 .invc img,.invc .nf{width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:8px;background:var(--line);display:flex;align-items:center;justify-content:center;font-size:1.6rem}
 .invc .cod{font-family:var(--f-num);font-size:.78rem;color:var(--muted)}
-.invc.rv-ok{border-color:var(--ok,#2e7d32);background:#eaf5ea}
-.invc.rv-dif{border-color:#c77700;background:#fff4e0}
-.invc.rv-falta{border-color:var(--bad,#b03a2e);background:#fbedea}
+.invc.rv-ok{border-color:var(--ok);background:var(--ok-soft)}
+.invc.rv-dif{border-color:var(--warn);background:var(--warn-soft)}
+.invc.rv-falta{border-color:var(--bad);background:var(--bad-soft)}
 .rvbar{display:flex;gap:4px;margin-top:4px}
 .rvbar button{flex:1;padding:8px 2px;font-size:.85rem}
 .rvbar button.on{outline:2px solid currentColor;font-weight:700}
@@ -104,7 +104,18 @@ tr.void td{text-decoration:line-through;color:var(--muted)}
 .invsum{display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 12px}
 .invm{border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:10px}
 .invm>summary{cursor:pointer;display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;list-style:none}
-@media print{header,nav.tabs,#invPrint,.row label.f{display:none!important}section[data-view]:not([data-view="inv"]){display:none!important}.invm{break-inside:avoid}details.invm>*{display:block}.invc{break-inside:avoid}}
+.cig{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin:12px 0}
+.cik{border:1px solid var(--line);border-radius:12px;padding:12px;background:var(--bg)}
+.cik .l{font-size:.8rem;color:var(--muted);font-weight:700;letter-spacing:.02em}
+.cik .v{font-family:var(--f-num);font-size:1.5rem;font-weight:700;margin-top:2px}
+.cik .s{font-size:.78rem;color:var(--muted)}
+.cik.ef{border-color:var(--ok);background:var(--ok-soft)} .cik.qr{border-color:var(--grape);background:var(--grape-soft)} .cik.tot{border-width:2px;border-color:var(--ink,currentColor)}
+.ciarq{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px;align-items:end}
+.ciline{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-bottom:1px dashed var(--line);font-size:.95rem}
+.ciline b{font-family:var(--f-num)}
+.cifirmas{display:none}
+@media print{body.pci header,body.pci nav.tabs,body.pci .noprint,body.pci #toast{display:none!important}body.pci section[data-view]:not([data-view="cierre"]){display:none!important}body.pci section[data-view="cierre"]{display:block!important}body.pci .cifirmas{display:grid!important;grid-template-columns:1fr 1fr;gap:40px;margin-top:50px}body.pci .tbl{overflow:visible}body.pci .cisec{break-inside:avoid}}
+@media print{body:not(.pci) header,body:not(.pci) nav.tabs,#invPrint,body:not(.pci) .row label.f{display:none!important}body:not(.pci) section[data-view]:not([data-view="inv"]){display:none!important}.invm{break-inside:avoid}details.invm>*{display:block}.invc{break-inside:avoid}}
 .grupo{border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:10px}
 .grupo>summary{cursor:pointer;display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;list-style:none}
 .grupo>summary::before{content:"▸";font-size:.9rem}
@@ -158,6 +169,7 @@ details summary{cursor:pointer;font-weight:700}
     </div>
     <nav class="tabs" role="tablist">
       <button role="tab" data-tab="caja" aria-selected="true">Caja</button>
+      <button role="tab" data-tab="cierre" aria-selected="false">Cierre de caja</button>
       <button role="tab" data-tab="stock" aria-selected="false">Stock</button>
       <button role="tab" data-tab="inv" aria-selected="false">Inventario</button>
       <button role="tab" data-tab="liq" aria-selected="false">Liquidación</button>
@@ -206,6 +218,21 @@ details summary{cursor:pointer;font-weight:700}
     <div class="panel" style="margin-top:16px">
       <div class="row" style="justify-content:space-between"><h2>Ventas de hoy</h2><span class="small muted" id="hoyFecha"></span></div>
       <div id="hoyList"></div>
+    </div>
+  </section>
+
+  <!-- CIERRE -->
+  <section data-view="cierre" hidden>
+    <div class="panel" style="margin-top:18px">
+      <div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px;align-items:flex-end">
+        <div><h2 style="margin:0">Cierre de caja diario</h2><div class="small muted" id="ciSub"></div></div>
+        <div class="row noprint" style="gap:8px;flex-wrap:wrap;align-items:flex-end">
+          <label class="f" style="margin:0">Día<input id="ciDia" type="date"></label>
+          <button class="b sm" id="ciHoy" type="button">Hoy</button>
+          <button class="b sm" id="ciPrint" type="button">🖨️ Imprimir / PDF</button>
+        </div>
+      </div>
+      <div id="ciRes"></div>
     </div>
   </section>
 
@@ -667,6 +694,99 @@ details summary{cursor:pointer;font-weight:700}
     } catch (er) { fail(er); }
   });
 
+  // ---------- cierre de caja ----------
+  S.ciDia = HOY(); S.ciCache = {}; S.ciForm = null;
+  const MET = {efectivo: "Efectivo", qr: "QR", tarjeta: "Tarjeta"};
+  async function ventasDelDia(dia) {
+    const per = perKey(new Date(dia + "T12:00:00"));
+    if (dia === HOY() || [PER_ACT(), S.liqPer].includes(per)) return Object.values(S.ventas).filter(v => v.dia === dia);
+    if (!S.ciCache[dia]) S.ciCache[dia] = chk(await sb.from("ventas").select("*").eq("dia", dia).order("fecha").limit(5000));
+    return S.ciCache[dia];
+  }
+  const ciNum = id => { const v = $("#" + id)?.value; return v === "" || v == null ? null : +v; };
+  async function renderCierre() {
+    const dia = S.ciDia; $("#ciDia").value = dia;
+    if ($("#ciFondo") && S.ciForm && S.ciForm.dia === dia) { const f0 = S.ciForm; f0.fondo = $("#ciFondo").value; f0.contado = $("#ciContado").value; f0.qrBanco = $("#ciQrBanco").value; f0.porNom = $("#ciPor").value; f0.obs = $("#ciObs").value; }
+    const foco = document.activeElement?.id, caret = (() => { try { return document.activeElement?.selectionStart; } catch { return null; } })();
+    const fd = new Date(dia + "T12:00:00");
+    $("#ciSub").textContent = fd.toLocaleDateString("es-BO", {weekday: "long", day: "numeric", month: "long", year: "numeric"}) + " · El Parralito";
+    let vs; try { vs = await ventasDelDia(dia); } catch (e) { $("#ciRes").innerHTML = `<div class="empty">No se pudieron cargar las ventas de ese día.</div>`; return; }
+    if (S.ciDia !== dia) return;
+    vs = vs.slice().sort((a, b) => a.fecha.localeCompare(b.fecha));
+    const ok = vs.filter(v => !v.anulada), an = vs.filter(v => v.anulada);
+    const sum = a => a.reduce((x, v) => x + (+v.total || 0), 0);
+    const por = m => ok.filter(v => (v.metodo || "efectivo") === m);
+    const ef = por("efectivo"), qr = por("qr"), tj = por("tarjeta");
+    const tEf = sum(ef), tQr = sum(qr), tTj = sum(tj), tot = tEf + tQr + tTj;
+    const uds = ok.reduce((x, v) => x + (+v.cant || 0), 0);
+    let saved = null; try { saved = S.aj["cierre:" + dia] ? JSON.parse(S.aj["cierre:" + dia]) : null; } catch {}
+    const f = S.ciForm && S.ciForm.dia === dia ? S.ciForm : {dia, fondo: saved?.fondo ?? "", contado: saved?.contado ?? "", qrBanco: saved?.qrBanco ?? "", obs: saved?.obs ?? "", porNom: saved?.porNom ?? (localStorage.getItem("ciPor") || "")};
+    S.ciForm = f;
+    const cambio = saved && (Math.abs(saved.total - tot) > 0.001 || saved.n !== ok.length);
+    const fila = v => `<tr><td class="num">${hora(v.fecha)}</td><td>${esc(S.marcas[v.marca]?.nombre || v.marca)}</td><td>${esc(v.nombre)}</td><td class="r num">${v.cant}</td><td class="r num">${bs(v.total)}</td><td class="noprint"><button class="b sm" type="button" data-cimet="${esc(v.id)}" data-to="${(v.metodo || "efectivo") === "qr" ? "efectivo" : "qr"}" title="Corregir forma de pago">⇄ ${(v.metodo || "efectivo") === "qr" ? "Pasar a efectivo" : "Pasar a QR"}</button></td></tr>`;
+    const tabla = (tit, arr, t, cls) => `<div class="cisec" style="margin-top:16px"><div class="row" style="justify-content:space-between;align-items:baseline"><h3 style="margin:0">${tit} <span class="chip ${cls}">${arr.length} ${arr.length === 1 ? "venta" : "ventas"}</span></h3><b class="num">${bs(t)}</b></div>` +
+      (arr.length ? `<div class="tbl" style="margin-top:6px"><table><thead><tr><th>Hora</th><th>Emprendimiento</th><th>Producto</th><th class="r">Cant.</th><th class="r">Total</th><th class="noprint"></th></tr></thead><tbody>${arr.map(fila).join("")}</tbody><tfoot><tr><td colspan="4"><b>Subtotal ${tit === "QR" ? "QR" : tit.toLowerCase()}</b></td><td class="r num"><b>${bs(t)}</b></td><td class="noprint"></td></tr></tfoot></table></div>` : `<p class="small muted" style="margin:6px 0 0">Sin ventas ${tit === "Efectivo" ? "en efectivo" : "por " + tit}.</p>`) + `</div>`;
+    const pm = {}; ok.forEach(v => { const k = v.marca; pm[k] = pm[k] || {ef: 0, qr: 0, tj: 0, n: 0}; pm[k][(v.metodo || "efectivo") === "qr" ? "qr" : v.metodo === "tarjeta" ? "tj" : "ef"] += +v.total || 0; pm[k].n += +v.cant || 0; });
+    const pmRows = Object.entries(pm).sort((a, b) => (b[1].ef + b[1].qr + b[1].tj) - (a[1].ef + a[1].qr + a[1].tj));
+    const esperado = (+f.fondo || 0) + tEf;
+    const difEf = f.contado === "" ? null : (+f.contado) - esperado, difQr = f.qrBanco === "" ? null : (+f.qrBanco) - tQr;
+    const difChip = d => d === null ? `<span class="small muted">— sin contar</span>` : Math.abs(d) < 0.005 ? `<span class="chip ok">Cuadra ✔</span>` : `<span class="chip ${d > 0 ? "warn" : "bad"}">${d > 0 ? "Sobra " : "Falta "}${bs(Math.abs(d))}</span>`;
+    $("#ciRes").innerHTML =
+      (saved ? `<div class="banner noprint" style="margin-top:10px;${cambio ? "" : "background:var(--ok-soft);color:var(--ok)"}">${cambio ? "⚠ Hubo ventas o cambios después de guardar el cierre. Revisa y vuelve a guardarlo." : "✔ Cierre guardado"} por ${esc(saved.porNom || "socio")} el ${new Date(saved.at).toLocaleString("es-BO", {day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", timeZone: "America/La_Paz"})}</div>` : "") +
+      `<div class="cig"><div class="cik ef"><div class="l">💵 EFECTIVO</div><div class="v">${bs(tEf)}</div><div class="s">${ef.length} ${ef.length === 1 ? "venta" : "ventas"}</div></div><div class="cik qr"><div class="l">📱 QR</div><div class="v">${bs(tQr)}</div><div class="s">${qr.length} ${qr.length === 1 ? "venta" : "ventas"}</div></div>${tj.length ? `<div class="cik"><div class="l">💳 TARJETA</div><div class="v">${bs(tTj)}</div><div class="s">${tj.length} ventas</div></div>` : ""}<div class="cik tot"><div class="l">TOTAL VENDIDO</div><div class="v">${bs(tot)}</div><div class="s">${ok.length} ventas · ${uds} unidades${an.length ? " · " + an.length + " anuladas" : ""}</div></div></div>` +
+      `<div class="cisec panel" style="background:var(--bg);margin-top:4px"><h3 style="margin:0 0 8px">Arqueo</h3>
+        <div class="ciarq">
+          <label class="f">Fondo de cambio al abrir (Bs)<input id="ciFondo" type="number" inputmode="decimal" min="0" step="0.5" value="${esc(f.fondo)}" placeholder="0"></label>
+          <label class="f">Efectivo contado al cerrar (Bs)<input id="ciContado" type="number" inputmode="decimal" min="0" step="0.5" value="${esc(f.contado)}" placeholder="Contar billetes y monedas"></label>
+          <label class="f">QR recibido según el banco (Bs)<input id="ciQrBanco" type="number" inputmode="decimal" min="0" step="0.5" value="${esc(f.qrBanco)}" placeholder="Revisar en la app del banco"></label>
+        </div>
+        <div style="margin-top:10px">
+          <div class="ciline"><span>Fondo de cambio</span><b>${bs(+f.fondo || 0)}</b></div>
+          <div class="ciline"><span>+ Ventas en efectivo</span><b>${bs(tEf)}</b></div>
+          <div class="ciline"><span><b>= Efectivo que debe haber en caja</b></span><b>${bs(esperado)}</b></div>
+          <div class="ciline"><span>Efectivo contado</span><span>${f.contado === "" ? "—" : `<b>${bs(+f.contado)}</b>`} ${difChip(difEf)}</span></div>
+          <div class="ciline"><span>Efectivo a entregar (sin el fondo)</span><b>${bs(f.contado === "" ? tEf : (+f.contado) - (+f.fondo || 0))}</b></div>
+          <div class="ciline"><span>QR según el sistema</span><b>${bs(tQr)}</b></div>
+          <div class="ciline"><span>QR según el banco</span><span>${f.qrBanco === "" ? "—" : `<b>${bs(+f.qrBanco)}</b>`} ${difChip(difQr)}</span></div>
+        </div>
+        <div class="ciarq" style="margin-top:10px">
+          <label class="f">Cerrado por<input id="ciPor" type="text" value="${esc(f.porNom)}" placeholder="Nombre de quien cierra"></label>
+          <label class="f" style="grid-column:span 2">Observaciones<input id="ciObs" type="text" value="${esc(f.obs)}" placeholder="Ej. se pagó 20 Bs de bolsas con la caja"></label>
+        </div>
+        <div class="row noprint" style="margin-top:10px;gap:8px"><button class="b pri" id="ciGuardar" type="button">${saved ? "Actualizar cierre" : "Guardar cierre del día"}</button></div>
+      </div>` +
+      tabla("Efectivo", ef, tEf, "ok") + tabla("QR", qr, tQr, "g") + (tj.length ? tabla("Tarjeta", tj, tTj, "") : "") +
+      (pmRows.length ? `<div class="cisec" style="margin-top:18px"><h3 style="margin:0 0 6px">Por emprendimiento</h3><div class="tbl"><table><thead><tr><th>Emprendimiento</th><th class="r">Unid.</th><th class="r">Efectivo</th><th class="r">QR</th>${tj.length ? `<th class="r">Tarjeta</th>` : ""}<th class="r">Total</th></tr></thead><tbody>${pmRows.map(([k, x]) => `<tr><td>${esc(S.marcas[k]?.nombre || k)}</td><td class="r num">${x.n}</td><td class="r num">${x.ef ? bs(x.ef) : "—"}</td><td class="r num">${x.qr ? bs(x.qr) : "—"}</td>${tj.length ? `<td class="r num">${x.tj ? bs(x.tj) : "—"}</td>` : ""}<td class="r num"><b>${bs(x.ef + x.qr + x.tj)}</b></td></tr>`).join("")}</tbody><tfoot><tr><td><b>Total</b></td><td class="r num"><b>${uds}</b></td><td class="r num"><b>${bs(tEf)}</b></td><td class="r num"><b>${bs(tQr)}</b></td>${tj.length ? `<td class="r num"><b>${bs(tTj)}</b></td>` : ""}<td class="r num"><b>${bs(tot)}</b></td></tr></tfoot></table></div></div>` : "") +
+      (an.length ? `<div class="cisec" style="margin-top:16px"><h3 style="margin:0 0 6px">Anuladas <span class="chip bad">${an.length}</span></h3><p class="small muted" style="margin:0">No cuentan en el cierre: ${an.map(v => esc(v.nombre) + " (" + bs(v.total) + ", " + hora(v.fecha) + ")").join(" · ")}</p></div>` : "") +
+      (!vs.length ? `<div class="empty" style="margin-top:12px">No hay ventas registradas este día.</div>` : "") +
+      `<div class="cifirmas"><div style="border-top:1px solid #000;padding-top:6px;text-align:center">Entregado por: ${esc(f.porNom || "")}</div><div style="border-top:1px solid #000;padding-top:6px;text-align:center">Recibido por:</div></div>`;
+    S.ciTot = {efectivo: tEf, qr: tQr, tarjeta: tTj, total: tot, n: ok.length};
+    if (foco && foco.startsWith("ci") && $("#" + foco) && $("#" + foco).closest("#ciRes")) { const el = $("#" + foco); el.focus(); try { if (caret != null) el.setSelectionRange(caret, caret); } catch {} }
+  }
+  $("#ciDia").addEventListener("change", e => { if (e.target.value) { S.ciDia = e.target.value; S.ciForm = null; renderCierre(); } });
+  $("#ciHoy").addEventListener("click", () => { S.ciDia = HOY(); S.ciForm = null; renderCierre(); });
+  $("#ciPrint").addEventListener("click", () => { document.body.classList.add("pci"); window.print(); setTimeout(() => document.body.classList.remove("pci"), 500); });
+  window.addEventListener("afterprint", () => document.body.classList.remove("pci"));
+  $("#ciRes").addEventListener("change", e => {
+    if (!e.target.matches("#ciFondo,#ciContado,#ciQrBanco,#ciPor,#ciObs")) return;
+    const f = S.ciForm; f.fondo = $("#ciFondo").value; f.contado = $("#ciContado").value; f.qrBanco = $("#ciQrBanco").value; f.porNom = $("#ciPor").value; f.obs = $("#ciObs").value;
+    try { localStorage.setItem("ciPor", f.porNom); } catch {}
+    if (e.target.type === "number") renderCierre();
+  });
+  $("#ciRes").addEventListener("click", async e => {
+    const m = e.target.closest("[data-cimet]"), g = e.target.closest("#ciGuardar");
+    try {
+      if (m) { m.disabled = true; chk(await sb.rpc("cambiar_metodo_venta", {p_id: m.dataset.cimet, p_metodo: m.dataset.to})); const v = S.ventas[m.dataset.cimet] || (S.ciCache[S.ciDia] || []).find(x => x.id === m.dataset.cimet); if (v) v.metodo = m.dataset.to; toast("Venta pasada a " + MET[m.dataset.to]); renderCierre(); refresh("ventas"); }
+      if (g) {
+        const f = S.ciForm; f.fondo = $("#ciFondo").value; f.contado = $("#ciContado").value; f.qrBanco = $("#ciQrBanco").value; f.porNom = $("#ciPor").value.trim(); f.obs = $("#ciObs").value.trim();
+        if (!f.porNom) { toast("Escribe quién hace el cierre"); $("#ciPor").focus(); return; }
+        const val = {dia: S.ciDia, fondo: f.fondo === "" ? "" : +f.fondo, contado: f.contado === "" ? "" : +f.contado, qrBanco: f.qrBanco === "" ? "" : +f.qrBanco, obs: f.obs, porNom: f.porNom, at: new Date().toISOString(), uid: S.uid, ...S.ciTot};
+        chk(await sb.from("ajustes").upsert({clave: "cierre:" + S.ciDia, valor: JSON.stringify(val)}));
+        S.aj["cierre:" + S.ciDia] = JSON.stringify(val); toast("Cierre guardado"); renderCierre();
+      }
+    } catch (er) { fail(er); }
+  });
+
   // ---------- inventario ----------
   S.invAb = new Set();
   S.rev = false;
@@ -890,6 +1010,7 @@ details summary{cursor:pointer;font-weight:700}
     if ($("#appView").hidden) return;
     renderTop();
     if (S.tab === "caja") renderCaja();
+    if (S.tab === "cierre") renderCierre();
     if (S.tab === "stock") renderStock();
     if (S.tab === "inv") renderInv();
     if (S.tab === "liq") renderLiq();

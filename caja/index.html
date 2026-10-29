@@ -93,6 +93,14 @@ tr.void td{text-decoration:line-through;color:var(--muted)}
 .invc{border:1px solid var(--line);border-radius:12px;padding:8px;display:flex;flex-direction:column;gap:3px;background:var(--bg)}
 .invc img,.invc .nf{width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:8px;background:var(--line);display:flex;align-items:center;justify-content:center;font-size:1.6rem}
 .invc .cod{font-family:var(--f-num);font-size:.78rem;color:var(--muted)}
+.invc.rv-ok{border-color:var(--ok,#2e7d32);background:#eaf5ea}
+.invc.rv-dif{border-color:#c77700;background:#fff4e0}
+.invc.rv-falta{border-color:var(--bad,#b03a2e);background:#fbedea}
+.rvbar{display:flex;gap:4px;margin-top:4px}
+.rvbar button{flex:1;padding:8px 2px;font-size:.85rem}
+.rvbar button.on{outline:2px solid currentColor;font-weight:700}
+.rvn{display:flex;flex-wrap:wrap;gap:4px;align-items:center;margin-top:4px;font-size:.8rem}
+.rvn input{flex:0 0 70px;width:70px;padding:6px;font-size:.95rem}
 .invsum{display:flex;flex-wrap:wrap;gap:8px;margin:4px 0 12px}
 .invm{border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:10px}
 .invm>summary{cursor:pointer;display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;list-style:none}
@@ -231,11 +239,12 @@ details summary{cursor:pointer;font-weight:700}
   <!-- INVENTARIO -->
   <section data-view="inv" hidden>
     <div class="panel" style="margin-top:18px">
-      <div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px"><h2>Inventario por emprendedor</h2><button class="b sm" id="invPrint">🖨️ Imprimir</button></div>
+      <div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px"><h2>Inventario por emprendedor</h2><span class="row" style="gap:6px;flex-wrap:wrap"><button class="b sm" id="invRev" aria-pressed="false">☑️ Revisar estantes</button><button class="b sm" id="invPrint">🖨️ Imprimir</button></span></div>
+      <div id="invRevBar" hidden style="margin-top:10px"></div>
       <div class="row" style="gap:10px;flex-wrap:wrap;align-items:flex-end">
         <label class="f" style="flex:1 1 260px">Marca<select id="invMarca"></select></label>
         <label class="f" style="flex:1 1 220px">Buscar emprendimiento, celular, producto o código<input id="invQ" type="search" placeholder="Ej. Valentina, 70226507, collar, NIC.T…"></label>
-        <label class="f" style="flex:0 1 180px">Mostrar<select id="invFiltro"><option value="todos">Todos</option><option value="stock">Con stock</option><option value="reponer">Por reponer</option><option value="agotado">Agotados</option><option value="vendidos">Con ventas</option></select></label>
+        <label class="f" style="flex:0 1 180px">Mostrar<select id="invFiltro"><option value="todos">Todos</option><option value="stock">Con stock</option><option value="reponer">Por reponer</option><option value="agotado">Agotados</option><option value="vendidos">Con ventas</option><option value="sinrev">Sin revisar</option><option value="dif">Faltan o no cuadran</option></select></label>
       </div>
       <div id="invRes" style="margin-top:12px"></div>
     </div>
@@ -660,6 +669,17 @@ details summary{cursor:pointer;font-weight:700}
 
   // ---------- inventario ----------
   S.invAb = new Set();
+  S.rev = false;
+  let REV = {}; try { REV = JSON.parse(localStorage.getItem("revInv") || "{}"); } catch (e) { REV = {}; }
+  const guardaRev = () => { try { localStorage.setItem("revInv", JSON.stringify(REV)); } catch (e) {} };
+  const revEst = p => { const r = REV[p.id]; if (!r) return ""; if (r.s === "falta") return "falta"; if (r.n != null && r.n !== "" && +r.n !== Math.max(0, +p.stock || 0)) return "dif"; return "ok"; };
+  function pintaRevBar() {
+    const bar = $("#invRevBar"); bar.hidden = !S.rev; if (!S.rev) return;
+    const mid = $("#invMarca").value, ps = mid ? prodsDe(mid) : marcasOrden().flatMap(m => prodsDe(m.id));
+    const n = ps.length, ok = ps.filter(p => revEst(p) === "ok").length, dif = ps.filter(p => revEst(p) === "dif").length, fa = ps.filter(p => revEst(p) === "falta").length, hechos = ok + dif + fa;
+    const ts = Object.values(REV).map(r => r.t).filter(Boolean).sort()[0];
+    bar.innerHTML = `<div class="panel" style="padding:10px 12px;background:var(--bg)"><div class="row" style="gap:8px;flex-wrap:wrap;align-items:center"><b>Revisión ${mid ? "de " + esc(S.marcas[mid]?.nombre || "") : "general"}:</b><span class="chip">${hechos} de ${n} revisados</span><span class="chip ok">✔ ${ok} están</span>${dif ? `<span class="chip warn">≠ ${dif} no cuadran</span>` : ""}${fa ? `<span class="chip bad">✖ ${fa} faltan</span>` : ""}<span style="flex:1"></span><button class="b sm" data-rvver="dif" type="button">Ver solo faltantes</button><button class="b sm" data-rvver="sinrev" type="button">Ver sin revisar</button><button class="b sm danger" data-rvreset="1" type="button">Empezar de nuevo</button></div><div style="height:8px;border-radius:4px;background:var(--line);margin-top:8px;overflow:hidden"><div style="height:100%;width:${n ? Math.round(hechos / n * 100) : 0}%;background:#2e7d32"></div></div><p class="small muted" style="margin:6px 0 0">Toca <b>✔ Está</b> si el producto está en el estante con las unidades del sistema. Si hay otra cantidad, escríbela en “Contados”. <b>✖ Falta</b> si no está. ${ts ? "Revisión iniciada " + new Date(ts).toLocaleString("es-BO", {day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit"}) + " · se guarda en este dispositivo." : "Se guarda en este dispositivo."}</p></div>`;
+  }
   function renderInv() {
     const sel = $("#invMarca"), cur = sel.value;
     sel.innerHTML = `<option value="">Todas las marcas</option>` + marcasOrden().map(m => `<option value="${esc(m.id)}">${esc(m.nombre)} · ${esc(m.espacio || "")} (${prodsDe(m.id).length})</option>`).join("");
@@ -667,11 +687,13 @@ details summary{cursor:pointer;font-weight:700}
     pintarInv();
   }
   function pintarInv() {
+    pintaRevBar();
     const mid = $("#invMarca").value, q = $("#invQ").value.trim().toLowerCase(), f = $("#invFiltro").value;
     const vend = {}; ventasPer(PER_ACT()).forEach(v => { if (v.producto) vend[v.producto] = (vend[v.producto] || 0) + (+v.cant || 0); });
     const ok = p => (!q || p.nombre.toLowerCase().includes(q) || (p.codigo || "").toLowerCase().includes(q)) &&
-      (f === "todos" || (f === "stock" && p.stock > 0) || (f === "reponer" && p.stock > 0 && p.stock <= p.minimo) || (f === "agotado" && p.stock <= 0) || (f === "vendidos" && vend[p.id]));
-    const card = p => `<div class="invc">${p.foto ? `<img src="${esc(IMG(p.foto))}" alt="" loading="lazy">` : `<span class="nf" aria-hidden="true">📦</span>`}<span class="cod">${esc(p.codigo || "")}</span><b style="line-height:1.2">${esc(p.nombre)}</b><span class="small">${bs(p.precio)}</span><span class="row" style="gap:6px;flex-wrap:wrap"><span class="chip ${p.stock <= 0 ? "bad" : p.stock <= p.minimo ? "warn" : "ok"}">${p.stock <= 0 ? "Agotado" : "Quedan " + p.stock}</span>${vend[p.id] ? `<span class="chip g">Vendió ${vend[p.id]}</span>` : ""}</span></div>`;
+      (f === "todos" || (f === "sinrev" && !revEst(p)) || (f === "dif" && (revEst(p) === "dif" || revEst(p) === "falta")) || (f === "stock" && p.stock > 0) || (f === "reponer" && p.stock > 0 && p.stock <= p.minimo) || (f === "agotado" && p.stock <= 0) || (f === "vendidos" && vend[p.id]));
+    const rvUI = p => { if (!S.rev) return ""; const r = REV[p.id] || {}, e = revEst(p); return `<div class="rvbar"><button type="button" class="b sm${e === "ok" ? " on" : ""}" data-rv="ok" data-pid="${esc(p.id)}">✔ Está</button><button type="button" class="b sm danger${e === "falta" ? " on" : ""}" data-rv="falta" data-pid="${esc(p.id)}">✖ Falta</button></div><label class="rvn">Contados <input type="number" inputmode="numeric" min="0" data-rvn="${esc(p.id)}" value="${r.n ?? ""}" placeholder="${Math.max(0, +p.stock || 0)}">${e === "dif" ? `<span class="chip warn">sistema ${Math.max(0, +p.stock || 0)}</span>` : ""}</label>`; };
+    const card = p => `<div class="invc${S.rev && revEst(p) ? " rv-" + revEst(p) : ""}" data-card="${esc(p.id)}">${p.foto ? `<img src="${esc(IMG(p.foto))}" alt="" loading="lazy">` : `<span class="nf" aria-hidden="true">📦</span>`}<span class="cod">${esc(p.codigo || "")}</span><b style="line-height:1.2">${esc(p.nombre)}</b><span class="small">${bs(p.precio)}</span><span class="row" style="gap:6px;flex-wrap:wrap"><span class="chip ${p.stock <= 0 ? "bad" : p.stock <= p.minimo ? "warn" : "ok"}">${p.stock <= 0 ? "Agotado" : "Quedan " + p.stock}</span>${vend[p.id] ? `<span class="chip g">Vendió ${vend[p.id]}</span>` : ""}</span>${rvUI(p)}</div>`;
     const resumen = ps => { const u = ps.reduce((a, p) => a + Math.max(0, +p.stock || 0), 0), v = ps.reduce((a, p) => a + Math.max(0, +p.stock || 0) * (+p.precio || 0), 0), vn = ps.reduce((a, p) => a + (vend[p.id] || 0), 0), ag = ps.filter(p => p.stock <= 0).length, rp = ps.filter(p => p.stock > 0 && p.stock <= p.minimo).length;
       return `<span class="chip ok">${ps.length} productos</span><span class="chip ok">${u} unidades</span><span class="chip ok">${bs(v)} en tienda</span>${vn ? `<span class="chip g">${vn} vendidos este periodo</span>` : ""}${rp ? `<span class="chip warn">${rp} por reponer</span>` : ""}${ag ? `<span class="chip bad">${ag} agotados</span>` : ""}`; };
     const pendDe = id => S.pend.filter(i => i.marca === id).reduce((a, i) => a + i.items.length, 0);
@@ -686,13 +708,13 @@ details summary{cursor:pointer;font-weight:700}
     const nq = s => (s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
     const qd = q.replace(/\D/g, "");
     const marcaHit = m => q && ([m.nombre, m.titular, m.espacio, m.prefijo, m.rubro].some(t => nq(t).includes(nq(q))) || (qd.length >= 3 && qd.length >= q.replace(/[\s+()-]/g, "").length && (m.celular || "").replace(/\D/g, "").includes(qd)));
-    const okF = p => f === "todos" || (f === "stock" && p.stock > 0) || (f === "reponer" && p.stock > 0 && p.stock <= p.minimo) || (f === "agotado" && p.stock <= 0) || (f === "vendidos" && vend[p.id]);
+    const okF = p => f === "todos" || (f === "sinrev" && !revEst(p)) || (f === "dif" && (revEst(p) === "dif" || revEst(p) === "falta")) || (f === "stock" && p.stock > 0) || (f === "reponer" && p.stock > 0 && p.stock <= p.minimo) || (f === "agotado" && p.stock <= 0) || (f === "vendidos" && vend[p.id]);
     const bloques = conProd.map(x => ({...x, ps: marcaHit(x.m) ? x.all.filter(okF) : x.all.filter(ok)})).filter(x => x.ps.length || (!q && f === "todos"));
     if (q && bloques.length === 1 && marcaHit(bloques[0].m)) S.invAb.add(bloques[0].m.id);
     const abrir = !!q || f !== "todos";
     const sin = ms.filter(m => !prodsDe(m.id).length);
     $("#invRes").innerHTML = `<div class="invsum">${resumen(todos)}<span class="chip">${conProd.length} marcas con productos</span></div>` +
-      (bloques.length ? bloques.map(x => `<details class="invm" data-invm="${esc(x.m.id)}"${abrir || S.invAb.has(x.m.id) ? " open" : ""}><summary><b>${esc(x.m.nombre)}</b> <span class="small muted">${esc(x.m.espacio || "")}</span> ${resumen(x.all)} <button class="b sm" data-invver="${esc(x.m.id)}" type="button">Ver solo esta</button></summary><div class="invg" style="margin-top:10px">${x.ps.map(card).join("")}</div></details>`).join("") : `<div class="empty">Ningún producto coincide con la búsqueda o el filtro.</div>`) +
+      (bloques.length ? bloques.map(x => `<details class="invm" data-invm="${esc(x.m.id)}"${abrir || S.invAb.has(x.m.id) ? " open" : ""}><summary><b>${esc(x.m.nombre)}</b> <span class="small muted">${esc(x.m.espacio || "")}</span> ${S.rev ? (() => { const h = x.all.filter(revEst).length, d = x.all.filter(p => ["dif", "falta"].includes(revEst(p))).length; return `<span class="chip ${h === x.all.length ? (d ? "warn" : "ok") : ""}">☑ ${h}/${x.all.length}${d ? " · " + d + " con problema" : ""}</span>`; })() : ""} ${resumen(x.all)} <button class="b sm" data-invver="${esc(x.m.id)}" type="button">Ver solo esta</button></summary><div class="invg" style="margin-top:10px">${x.ps.map(card).join("")}</div></details>`).join("") : `<div class="empty">Ningún producto coincide con la búsqueda o el filtro.</div>`) +
       ((q ? sin.filter(marcaHit) : sin).length && f === "todos" ? `<p class="small muted" style="margin:10px 0 0"><b>Sin productos en la tienda (${(q ? sin.filter(marcaHit) : sin).length}):</b> ${(q ? sin.filter(marcaHit) : sin).map(m => esc(m.nombre) + (pendDe(m.id) ? " (por recibir)" : "")).join(" · ")}</p>` : "");
   }
   $("#invMarca").addEventListener("change", pintarInv);
@@ -700,6 +722,18 @@ details summary{cursor:pointer;font-weight:700}
   $("#invQ").addEventListener("input", pintarInv);
   $("#invRes").addEventListener("click", e => { const b = e.target.closest("[data-invver]"); if (!b) return; e.preventDefault(); $("#invMarca").value = b.dataset.invver; pintarInv(); window.scrollTo({top: 0, behavior: "smooth"}); });
   $("#invRes").addEventListener("toggle", e => { const d = e.target; if (!d.matches?.("details.invm")) return; d.open ? S.invAb.add(d.dataset.invm) : S.invAb.delete(d.dataset.invm); }, true);
+  $("#invRev").addEventListener("click", () => { S.rev = !S.rev; $("#invRev").setAttribute("aria-pressed", S.rev); $("#invRev").classList.toggle("pri", S.rev); $("#invRev").textContent = S.rev ? "✅ Terminar revisión" : "☑️ Revisar estantes"; if (!S.rev && ["sinrev", "dif"].includes($("#invFiltro").value)) $("#invFiltro").value = "todos"; pintarInv(); });
+  const repintaCard = id => { const y = window.scrollY; pintarInv(); window.scrollTo(0, y); };
+  $("#invRes").addEventListener("click", e => { const b = e.target.closest("[data-rv]"); if (!b) return; e.preventDefault(); const id = b.dataset.pid, r = REV[id];
+    if (r && r.s === b.dataset.rv && (r.n == null || r.n === "")) delete REV[id]; else REV[id] = {s: b.dataset.rv, n: b.dataset.rv === "falta" ? null : (r?.n ?? null), t: new Date().toISOString()};
+    guardaRev(); repintaCard(id); });
+  $("#invRes").addEventListener("change", e => { const i = e.target.closest("[data-rvn]"); if (!i) return; const id = i.dataset.rvn, v = i.value.trim();
+    if (v === "") { if (REV[id]) REV[id].n = null; } else REV[id] = {s: +v === 0 ? "falta" : "ok", n: +v, t: new Date().toISOString()};
+    guardaRev(); repintaCard(id); });
+  $("#invRevBar").addEventListener("click", e => { const v = e.target.closest("[data-rvver]"), r = e.target.closest("[data-rvreset]");
+    if (v) { $("#invFiltro").value = v.dataset.rvver; pintarInv(); }
+    if (r) { if (r.dataset.rvreset === "1") { r.dataset.rvreset = "2"; r.textContent = $("#invMarca").value ? "¿Borrar la revisión de esta marca? Toca de nuevo" : "¿Borrar TODA la revisión? Toca de nuevo"; return; } const mid = $("#invMarca").value; if (mid) prodsDe(mid).forEach(p => delete REV[p.id]); else REV = {}; guardaRev(); toast("Revisión reiniciada"); pintarInv(); }
+  });
   $("#invPrint").addEventListener("click", () => { $$("#invRes details.invm").forEach(d => d.open = true); window.print(); });
 
   // ---------- liquidación ----------

@@ -89,6 +89,10 @@ tr.void td{text-decoration:line-through;color:var(--muted)}
 .mlogo{width:34px;height:34px;border-radius:8px;object-fit:cover;vertical-align:middle;margin-right:6px}
 .comp{width:110px;height:110px;object-fit:cover;border-radius:10px;border:1px solid var(--line)}
 .liq{display:flex;flex-direction:column;gap:8px}
+.grupo{border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:10px}
+.grupo>summary{cursor:pointer;display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;list-style:none}
+.grupo>summary::before{content:"▸";font-size:.9rem}
+.grupo[open]>summary::before{content:"▾"}
 .liqcard{border:1px solid var(--line);border-radius:10px;padding:12px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 12px;align-items:center}
 .liqcard .amt{font-family:var(--f-num);font-weight:700;font-size:1.1rem;text-align:right}
 .liqcard .meta{font-size:.82rem;color:var(--muted)}
@@ -192,6 +196,7 @@ details summary{cursor:pointer;font-weight:700}
   <section data-view="stock" hidden>
     <div class="panel" style="margin-top:18px" id="regPanel"></div>
     <div class="panel" style="margin-top:16px" id="pendPanel"></div>
+    <div class="panel" style="margin-top:16px" id="invPanel"></div>
     <div class="panel" style="margin-top:16px" id="lowPanel"></div>
     <div class="grid">
       <div class="panel">
@@ -335,6 +340,7 @@ details summary{cursor:pointer;font-weight:700}
     const d = chk(await sb.from("ventas").select("*").in("periodo", pers).order("fecha", {ascending: false}).limit(5000));
     S.ventas = {}; d.forEach(v => S.ventas[v.id] = v);
   }
+  S.abiertos = new Set(); try { S.agrupar = localStorage.getItem("agrupar") !== "0"; } catch { S.agrupar = true; }
   async function loadIngresos() { const d = chk(await sb.from("ingresos").select("*").eq("estado", "pendiente").order("fecha")); S.pend = d; }
   async function loadPagos() { const d = chk(await sb.from("pagos").select("*").eq("estado", "por_verificar").order("fecha")); S.pagos = d; }
   async function loadAjustes() { const d = chk(await sb.from("ajustes").select("*")); S.aj = {}; d.forEach(a => S.aj[a.clave] = a.valor); }
@@ -500,11 +506,23 @@ details summary{cursor:pointer;font-weight:700}
     const low = Object.values(S.productos).filter(p => p.stock <= p.minimo).sort((a, b) => a.stock - b.stock);
     $("#lowPanel").innerHTML = `<div class="row" style="justify-content:space-between"><h2>Avisar para reponer</h2><span class="chip ${low.length ? "warn" : "ok"}">${low.length ? low.length + " productos" : "Todo con stock"}</span></div>` +
       (low.length ? `<div class="tbl"><table><thead><tr><th>Marca</th><th>Producto</th><th class="r">Quedan</th><th>Contacto</th></tr></thead><tbody>${low.map(p => { const m = S.marcas[p.marca] || {}; return `<tr><td>${esc(m.nombre)}</td><td>${esc(p.nombre)}</td><td class="r num"><span class="chip ${p.stock <= 0 ? "bad" : "warn"}">${p.stock}</span></td><td class="num small">${esc(m.celular || "—")}</td></tr>`; }).join("")}</tbody></table></div>` : `<p class="small muted" style="margin:0">Cuando a un producto le quede su stock mínimo o menos, aparece aquí con el celular de la marca.</p>`);
-    if (!$("#pendPanel").contains(document.activeElement) || !document.activeElement.matches("input")) $("#pendPanel").innerHTML = `<div class="row" style="justify-content:space-between"><h2>Mercadería por recibir</h2><span class="chip ${S.pend.length ? "warn" : "ok"}">${S.pend.length ? S.pend.length + " cargas" : "Nada pendiente"}</span></div>` +
-      (S.pend.length ? S.pend.map(i => `<div class="liqcard" data-ing="${esc(i.id)}"><div style="grid-column:1/-1"><b>${esc(S.marcas[i.marca]?.nombre || i.marca)}</b> <span class="small muted">· declarado ${fechaCorta(i.fecha)}${i.nota ? " · " + esc(i.nota) : ""}</span></div><div style="grid-column:1/-1" class="tbl"><table><thead><tr><th>Código (cinta)</th><th>Producto</th><th class="r">Precio</th><th class="r">Declaró</th><th class="r">Recibido</th></tr></thead><tbody>${i.items.map((x, k) => `<tr><td class="num"><b>${esc(x.codigo || "—")}</b></td><td>${x.foto ? `<img class="mlogo" src="${esc(IMG(x.foto))}" alt="">` : ""}${esc(x.nombre)}${prodsDe(i.marca).some(p => p.nombre.toLowerCase() === x.nombre.toLowerCase()) ? "" : ` <span class="chip g">nuevo</span>`}</td><td class="r"><input type="number" min="0" step="0.5" value="${x.precio}" data-rp="${k}" style="width:84px" aria-label="Precio Bs"></td><td class="r num">${x.cant}</td><td class="r"><input type="number" min="0" step="1" value="${x.cant}" data-rc="${k}" style="width:76px" aria-label="Cantidad recibida"></td></tr>`).join("")}</tbody></table></div><p class="small muted" style="grid-column:1/-1;margin:0">Si la marca se equivocó, corrige el precio o la cantidad aquí antes de recibir. Si cambias un precio, el producto recibe un código nuevo para su cinta.</p><div class="acts"><button class="b sm pri" data-recibir="${esc(i.id)}">Recibir y sumar al stock</button><button class="b sm" data-swap="${esc(i.id)}" title="Para cuando cargaron el precio en la cantidad y la cantidad en el precio">⇄ Intercambiar precio y cantidad</button><span><button class="b sm danger" data-rechazar="${esc(i.id)}">No llegó</button></span></div></div>`).join("")
+    const ingCard = i => `<div class="liqcard" data-ing="${esc(i.id)}"><div style="grid-column:1/-1"><b>${esc(S.marcas[i.marca]?.nombre || i.marca)}</b> <span class="small muted">· declarado ${fechaCorta(i.fecha)}${i.nota ? " · " + esc(i.nota) : ""}</span></div><div style="grid-column:1/-1" class="tbl"><table><thead><tr><th>Código (cinta)</th><th>Producto</th><th class="r">Precio</th><th class="r">Declaró</th><th class="r">Recibido</th></tr></thead><tbody>${i.items.map((x, k) => `<tr><td class="num"><b>${esc(x.codigo || "—")}</b></td><td>${x.foto ? `<img class="mlogo" src="${esc(IMG(x.foto))}" alt="">` : ""}${esc(x.nombre)}${prodsDe(i.marca).some(p => p.nombre.toLowerCase() === x.nombre.toLowerCase()) ? "" : ` <span class="chip g">nuevo</span>`}</td><td class="r"><input type="number" min="0" step="0.5" value="${x.precio}" data-rp="${k}" style="width:84px" aria-label="Precio Bs"></td><td class="r num">${x.cant}</td><td class="r"><input type="number" min="0" step="1" value="${x.cant}" data-rc="${k}" style="width:76px" aria-label="Cantidad recibida"></td></tr>`).join("")}</tbody></table></div><p class="small muted" style="grid-column:1/-1;margin:0">Si la marca se equivocó, corrige el precio o la cantidad aquí antes de recibir. Si cambias un precio, el producto recibe un código nuevo para su cinta.</p><div class="acts"><button class="b sm pri" data-recibir="${esc(i.id)}">Recibir y sumar al stock</button><button class="b sm" data-swap="${esc(i.id)}" title="Para cuando cargaron el precio en la cantidad y la cantidad en el precio">⇄ Intercambiar precio y cantidad</button><span><button class="b sm danger" data-rechazar="${esc(i.id)}">No llegó</button></span></div></div>`;
+    const nomM = id => S.marcas[id]?.nombre || id;
+    const grupos = () => { const by = {}; S.pend.forEach(i => (by[i.marca] ||= []).push(i));
+      return Object.entries(by).sort((a, b) => nomM(a[0]).localeCompare(nomM(b[0]), "es")).map(([mid, list]) => {
+        const n = list.reduce((a, i) => a + i.items.length, 0), u = list.reduce((a, i) => a + i.items.reduce((s, x) => s + (+x.cant || 0), 0), 0), tot = list.reduce((a, i) => a + i.items.reduce((s, x) => s + (+x.cant || 0) * (+x.precio || 0), 0), 0);
+        return `<details class="grupo" data-grupo="${esc(mid)}" data-nom="${esc(nomM(mid).toLowerCase())}"${S.abiertos.has(mid) ? " open" : ""}><summary><b>${esc(nomM(mid))}</b> <span class="small muted">${esc(S.marcas[mid]?.espacio || "")}</span> <span class="chip warn">${list.length} ${list.length === 1 ? "carga" : "cargas"} · ${n} productos · ${u} unidades · ${bs(tot)}</span></summary><div class="acts" style="margin:8px 0"><button class="b sm pri" data-recibirtodo="${esc(mid)}">Recibir todo de ${esc(nomM(mid))} (${list.length})</button><span class="small muted">Revisa precios y cantidades de cada carga; con este botón se reciben todas juntas.</span></div><div class="stack" style="display:flex;flex-direction:column;gap:10px">${list.map(ingCard).join("")}</div></details>`;
+      }).join(""); };
+    const marcasPend = new Set(S.pend.map(i => i.marca)).size;
+    if (!$("#pendPanel").contains(document.activeElement) || !document.activeElement.matches("input")) $("#pendPanel").innerHTML = `<div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px"><h2>Mercadería por recibir</h2><span class="chip ${S.pend.length ? "warn" : "ok"}">${S.pend.length ? S.pend.length + " cargas · " + marcasPend + " marcas" : "Nada pendiente"}</span></div>` +
+      (S.pend.length ? `<div class="row" style="gap:8px;flex-wrap:wrap;margin:8px 0 12px"><button class="b sm${S.agrupar ? " pri" : ""}" data-agrupar="1" aria-pressed="${S.agrupar}">${S.agrupar ? "✓ Agrupado por marca" : "Agrupar por marca"}</button>${S.agrupar ? `<button class="b sm" data-abrirtodo="1">Abrir todas</button><button class="b sm" data-cerrartodo="1">Cerrar todas</button><label class="f" style="flex:1 1 200px;margin:0"><input id="pendQ" type="search" placeholder="Buscar marca…" aria-label="Buscar marca"></label>` : ""}</div>` + (S.agrupar ? grupos() : S.pend.map(ingCard).join(""))
         : `<p class="small muted" style="margin:0">Cuando una marca cargue sus productos desde su portal, aparecen aquí. Al recibirlos, cuenta lo que trajo, corrige la cantidad si hace falta y se suma al stock.</p>`);
+    { const ms = marcasOrden().map(m => { const ps2 = prodsDe(m.id); return {m, n: ps2.length, u: ps2.reduce((a, p) => a + (+p.stock || 0), 0), v: ps2.reduce((a, p) => a + (+p.stock || 0) * (+p.precio || 0), 0), low: ps2.filter(p => p.stock <= p.minimo).length, pend: S.pend.filter(i => i.marca === m.id).length}; });
+      const con = ms.filter(x => x.n), sin = ms.filter(x => !x.n);
+      $("#invPanel").innerHTML = `<div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px"><h2>Inventario por marca</h2><span class="row" style="gap:8px"><span class="chip ok">${con.length} marcas con stock · ${con.reduce((a, x) => a + x.u, 0)} unidades · ${bs(con.reduce((a, x) => a + x.v, 0))}</span><button class="b sm${S.verInv ? " pri" : ""}" data-verinv="1">${S.verInv ? "Ocultar" : "Ver agrupado"}</button></span></div>` +
+        (S.verInv ? `<div class="tbl"><table><thead><tr><th>Marca</th><th>Espacio</th><th class="r">Productos</th><th class="r">Unidades</th><th class="r">Valor</th><th>Estado</th><th></th></tr></thead><tbody>${con.map(x => `<tr><td><b>${esc(x.m.nombre)}</b></td><td class="small">${esc(x.m.espacio || "")}</td><td class="r num">${x.n}</td><td class="r num">${x.u}</td><td class="r num">${bs(x.v)}</td><td>${x.low ? `<span class="chip warn">${x.low} por reponer</span>` : `<span class="chip ok">OK</span>`}${x.pend ? ` <span class="chip g">${x.pend} por recibir</span>` : ""}</td><td><button class="b sm" data-vermarca="${esc(x.m.id)}">Revisar</button></td></tr>`).join("")}</tbody></table></div>` + (sin.length ? `<p class="small muted" style="margin:8px 0 0"><b>Sin productos en la tienda (${sin.length}):</b> ${sin.map(x => esc(x.m.nombre) + (x.pend ? " (por recibir)" : "")).join(" · ")}</p>` : "") : `<p class="small muted" style="margin:0">Toca «Ver agrupado» para ver cuántos productos y unidades tiene cada marca y revisarla con un toque.</p>`); }
     const ps = prodsDe(mid);
-    $("#stockList").innerHTML = ps.length ? `<div class="tbl"><table><thead><tr><th>Código</th><th>Producto</th><th class="r">Precio</th><th class="r">Stock</th><th class="r">Mínimo</th><th></th></tr></thead><tbody>${ps.map(p => `<tr><td class="num"><b>${esc(p.codigo || "")}</b></td><td><input data-pf="nombre" data-id="${esc(p.id)}" value="${esc(p.nombre)}" aria-label="Nombre"></td><td class="r"><input data-pf="precio" data-id="${esc(p.id)}" type="number" min="0" step="0.5" value="${p.precio}" style="width:90px" aria-label="Precio"></td><td class="r"><input data-pf="stock" data-id="${esc(p.id)}" type="number" min="0" step="1" value="${p.stock}" style="width:76px" aria-label="Stock"></td><td class="r"><input data-pf="minimo" data-id="${esc(p.id)}" type="number" min="0" step="1" value="${p.minimo}" style="width:70px" aria-label="Mínimo"></td><td><span class="chip ${p.stock <= 0 ? "bad" : p.stock <= p.minimo ? "warn" : "ok"}">${p.stock <= 0 ? "Agotado" : p.stock <= p.minimo ? "Reponer" : "OK"}</span></td></tr>`).join("")}</tbody></table></div><p class="small muted" style="margin:0">Corrige precio o stock directamente; se guarda al salir del campo.</p>`
+    $("#stockList").innerHTML = ps.length ? `<div class="tbl"><table><thead><tr><th>Código</th><th>Producto</th><th class="r">Precio</th><th class="r">Stock</th><th class="r">Mínimo</th><th></th></tr></thead><tbody>${ps.map(p => `<tr><td class="num">${p.foto ? `<img class="mlogo" src="${esc(IMG(p.foto))}" alt="" loading="lazy">` : ""}<b>${esc(p.codigo || "")}</b></td><td><input data-pf="nombre" data-id="${esc(p.id)}" value="${esc(p.nombre)}" aria-label="Nombre"></td><td class="r"><input data-pf="precio" data-id="${esc(p.id)}" type="number" min="0" step="0.5" value="${p.precio}" style="width:90px" aria-label="Precio"></td><td class="r"><input data-pf="stock" data-id="${esc(p.id)}" type="number" min="0" step="1" value="${p.stock}" style="width:76px" aria-label="Stock"></td><td class="r"><input data-pf="minimo" data-id="${esc(p.id)}" type="number" min="0" step="1" value="${p.minimo}" style="width:70px" aria-label="Mínimo"></td><td><span class="chip ${p.stock <= 0 ? "bad" : p.stock <= p.minimo ? "warn" : "ok"}">${p.stock <= 0 ? "Agotado" : p.stock <= p.minimo ? "Reponer" : "OK"}</span></td></tr>`).join("")}</tbody></table></div><p class="small muted" style="margin:0">Corrige precio o stock directamente; se guarda al salir del campo.</p>`
       : `<div class="empty">Esta marca todavía no tiene productos. Regístralos con la ficha de ingreso el día que traiga su mercadería.</div>`;
     if (!S.ficha.length) S.ficha = [{codigo: "", nombre: "", cant: 1, precio: ""}];
     if (!$("#fichaRows").contains(document.activeElement)) $("#fichaRows").innerHTML = S.ficha.map((r, i) => `<div class="row"><label class="f" style="flex:0 1 110px">Código<input list="dlCods" data-fr="codigo" data-i="${i}" value="${esc(r.codigo || "")}" placeholder="nuevo" ></label><label class="f">Producto<input list="dlProds" data-fr="nombre" data-i="${i}" value="${esc(r.nombre)}" placeholder="Nombre del producto"></label><label class="f" style="flex:0 1 80px">Cant.<input data-fr="cant" data-i="${i}" type="number" min="1" step="1" value="${r.cant}"></label><label class="f" style="flex:0 1 100px">Precio Bs<input data-fr="precio" data-i="${i}" type="number" min="0" step="0.5" value="${r.precio}"></label></div>`).join("") + `<datalist id="dlProds">${ps.map(p => `<option value="${esc(p.nombre)}"></option>`).join("")}</datalist><datalist id="dlCods">${ps.map(p => `<option value="${esc(p.codigo)}">${esc(p.nombre)}</option>`).join("")}</datalist>`;
@@ -568,17 +586,44 @@ details summary{cursor:pointer;font-weight:700}
     btn.disabled = false; renderStock();
   });
 
+  function itemsDe(card, ing) {
+    return ing.items.map((it, k) => { const pr = Math.round(parseFloat(card.querySelector(`[data-rp="${k}"]`).value) * 100) / 100; return {nombre: it.nombre, codigo: pr === +it.precio ? (it.codigo || "") : "", precio: pr, foto: it.foto || "", cant: parseInt(card.querySelector(`[data-rc="${k}"]`).value, 10) || 0}; });
+  }
+  $("#invPanel").addEventListener("click", e => {
+    if (e.target.closest("[data-verinv]")) { S.verInv = !S.verInv; renderStock(); return; }
+    const b = e.target.closest("[data-vermarca]"); if (!b) return;
+    $("#stockMarca").value = b.dataset.vermarca; S.ficha = []; histFor = null; $("#fichaRows").innerHTML = ""; renderStock();
+    $("#stockMarca").closest(".panel").scrollIntoView({behavior: "smooth", block: "start"});
+  });
+  $("#pendPanel").addEventListener("toggle", e => { const d = e.target; if (!d.matches?.("details.grupo")) return; d.open ? S.abiertos.add(d.dataset.grupo) : S.abiertos.delete(d.dataset.grupo); }, true);
+  $("#pendPanel").addEventListener("input", e => { if (e.target.id !== "pendQ") return; const q = e.target.value.trim().toLowerCase(); $("#pendPanel").querySelectorAll("details.grupo").forEach(d => { const hit = !q || d.dataset.nom.includes(q); d.style.display = hit ? "" : "none"; if (q && hit) d.open = true; }); });
   $("#pendPanel").addEventListener("click", async e => {
     const r = e.target.closest("[data-recibir]"), x = e.target.closest("[data-rechazar]"), y = e.target.closest("[data-yesrech]"), n = e.target.closest("[data-norech]");
     try {
       if (r) {
         const card = r.closest("[data-ing]"); const ing = S.pend.find(i => i.id === r.dataset.recibir);
-        const items = ing.items.map((it, k) => { const pr = Math.round(parseFloat(card.querySelector(`[data-rp="${k}"]`).value) * 100) / 100; return {nombre: it.nombre, codigo: pr === +it.precio ? (it.codigo || "") : "", precio: pr, foto: it.foto || "", cant: parseInt(card.querySelector(`[data-rc="${k}"]`).value, 10) || 0}; });
+        const items = itemsDe(card, ing);
         if (items.some(i => !(i.precio >= 0))) return toast("Revisa los precios: hay uno vacío o inválido.");
         const cambiados = items.filter((i, k) => i.precio !== +ing.items[k].precio).length;
         r.disabled = true; chk(await sb.rpc("recibir_ingreso", {p_id: ing.id, p_items: items}));
         toast("Recibido: " + items.reduce((a, i) => a + i.cant, 0) + " unidades sumadas al stock" + (cambiados ? " · " + cambiados + " con precio corregido (código nuevo: avisa a la marca)" : "")); refresh("ingresos", "productos");
       }
+      const rt = e.target.closest("[data-recibirtodo]");
+      if (rt) {
+        const g = rt.closest("[data-grupo]"), cards = [...g.querySelectorAll("[data-ing]")];
+        const lotes = cards.map(c => { const ing = S.pend.find(i => i.id === c.dataset.ing); return ing && {ing, items: itemsDe(c, ing)}; }).filter(Boolean);
+        if (lotes.some(l => l.items.some(i => !(i.precio >= 0)))) return toast("Revisa los precios: hay uno vacío o inválido.");
+        rt.disabled = true; rt.textContent = "Recibiendo…";
+        let uds = 0, cambiados = 0, ok = 0;
+        try {
+          for (const l of lotes) { chk(await sb.rpc("recibir_ingreso", {p_id: l.ing.id, p_items: l.items})); ok++; uds += l.items.reduce((a, i) => a + i.cant, 0); cambiados += l.items.filter((i, k) => i.precio !== +l.ing.items[k].precio).length; }
+          toast("Recibido todo: " + uds + " unidades de " + ok + " cargas sumadas al stock" + (cambiados ? " · " + cambiados + " con precio corregido (código nuevo: avisa a la marca)" : ""));
+        } catch (er) { toast("Se recibieron " + ok + " de " + lotes.length + " cargas. " + (er?.message || "Revisa la conexión y vuelve a tocar el botón.")); }
+        S.abiertos.delete(g.dataset.grupo); refresh("ingresos", "productos");
+      }
+      if (e.target.closest("[data-agrupar]")) { S.agrupar = !S.agrupar; try { localStorage.setItem("agrupar", S.agrupar ? "1" : "0"); } catch {} renderStock(); }
+      if (e.target.closest("[data-abrirtodo]")) { S.pend.forEach(i => S.abiertos.add(i.marca)); $("#pendPanel").querySelectorAll("details.grupo").forEach(d => d.open = true); }
+      if (e.target.closest("[data-cerrartodo]")) { S.abiertos.clear(); $("#pendPanel").querySelectorAll("details.grupo").forEach(d => d.open = false); }
       const sw = e.target.closest("[data-swap]");
       if (sw) {
         const card = sw.closest("[data-ing]");

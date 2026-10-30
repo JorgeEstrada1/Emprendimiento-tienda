@@ -155,8 +155,15 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-off
   <div class="promo" id="promo" hidden><b id="promo-txt"></b><span class="cupos" id="promo-cupos"></span></div>
   <div class="zona" id="zona" hidden><span>Zona abierta: <b id="zona-nom"></b></span><span class="bar"><i id="zona-bar"></i></span><span id="zona-n"></span></div>
 
+  <form id="login-box" hidden style="display:flex;flex-wrap:wrap;gap:8px;align-items:flex-end;background:var(--surface);border:1px dashed var(--accent);border-radius:8px;padding:10px 14px;font-size:14px;margin-bottom:10px">
+    <b style="flex-basis:100%">Entrar como socio para editar el plano</b>
+    <label style="display:flex;flex-direction:column;gap:2px;flex:1 1 180px">Correo<input id="lg-email" type="email" autocomplete="username" required></label>
+    <label style="display:flex;flex-direction:column;gap:2px;flex:1 1 140px">Contraseña<input id="lg-pass" type="password" autocomplete="current-password" required></label>
+    <button id="lg-go" type="submit">Entrar</button><button id="lg-x" type="button">Cancelar</button>
+    <span id="lg-msg" style="flex-basis:100%;color:#b3261e"></span>
+  </form>
   <div id="admin-bar" hidden>
-    <span id="admin-txt">Modo admin: toca un espacio para marcarlo, asignarle una marca o subir fotos.</span>
+    <span id="admin-txt">Editando el plano: toca un espacio para cambiarlo.</span>
     <div class="acts"><button id="btn-discard">Descartar</button><button id="btn-save">Guardar cambios</button></div>
     <div class="admin-promo">
       <label class="grow">Texto de la promoción<input id="ad-promo-txt" maxlength="120"></label>
@@ -205,7 +212,8 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-off
       <button id="p-all" aria-pressed="true">Local completo</button>
       <button id="t-lbl" aria-pressed="true">Etiquetas</button>
       <button id="t-avail" aria-pressed="true">Disponibilidad</button>
-      <button id="t-admin" aria-pressed="false" hidden>Modo admin</button>
+      <button id="t-admin" aria-pressed="false" hidden>✏️ Editar plano</button>
+      <button id="t-socios" aria-pressed="false" style="opacity:.55">🔒 Socios</button>
     </div>
   </div>
 
@@ -258,13 +266,14 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-off
   <div class="sec" id="p-admin" hidden>
     <h3>Estado</h3>
     <div class="seg"><button id="a-libre" aria-pressed="false">Libre</button><button id="a-ocup" aria-pressed="false">Ocupado</button></div>
+    <button id="a-mover" style="margin-top:8px;width:100%">↔ Mover o intercambiar esta marca a otro espacio</button>
     <div class="form" id="a-brandbox">
       <label class="full">Marca en este espacio<select id="a-marca"></select></label>
       <label>Nombre de la marca<input id="a-nombre" maxlength="50"></label>
       <label>Rubro<input id="a-rubro" maxlength="60"></label>
       <label class="full">Instagram<input id="a-ig" maxlength="60" placeholder="@marca"></label>
-      <label>Logo<input id="a-logo" type="file" accept="image/*"></label>
-      <label>Fotos de productos (hasta 4)<input id="a-fotos" type="file" accept="image/*" multiple></label>
+      <label id="a-logo-l">Logo<input id="a-logo" type="file" accept="image/*"></label>
+      <label id="a-fotos-l">Fotos de productos (hasta 4)<input id="a-fotos" type="file" accept="image/*" multiple></label>
     </div>
     <div class="brand" id="a-logoprev" hidden><img id="a-logoimg" alt="Logo de la marca"><span>Logo actual</span></div>
     <div class="fotos" id="a-fotolist"></div>
@@ -1247,6 +1256,7 @@ renderer.setAnimationLoop(() => {
 });
 <~~/script>
 </script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script type="importmap">
 {"imports":{
   "three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
@@ -1538,6 +1548,7 @@ function normalize(e){
 let estado = normalize(null);
 try { estado = normalize(JSON.parse(document.getElementById('estado').textContent)); } catch(e) {}
 let draft = JSON.parse(JSON.stringify(estado));
+let moveFrom = null;
 let adminOn = false, showAvail = true, filtro = 'todos', selected = null, selSet = new Set(), packs = [], packIdx = 0;
 const cur = () => adminOn ? draft : estado;
 const isTaken = sp => Object.prototype.hasOwnProperty.call(cur().ocupados, sp.code);
@@ -1749,6 +1760,7 @@ renderer.domElement.addEventListener('pointerup', e => {
   const targets = HITS.filter(h => { const sp = h.userData.sp; return (sp.phase === 1 || phase2.visible) && (!soloDisp || !cerradoP(sp)) && (adminOn || filtro === 'todos' || matchF(sp)); });
   const hit = ray.intersectObjects(targets, false)[0];
   if (!hit) { if (!adminOn) closePanel(); return; }
+  if (adminOn && moveFrom) { hacerMovida(hit.object.userData.sp); return; }
   openPanel(hit.object.userData.sp);
 });
 
@@ -1785,7 +1797,7 @@ function watchSolicitudes(){
 const adminBtn = $('t-admin'), adminBar = $('admin-bar'), adminTxt = $('admin-txt');
 const dirty = () => JSON.stringify(draft) !== JSON.stringify(estado);
 function updateAdminBar(msg){
-  adminTxt.textContent = msg || (dirty() ? 'Tienes cambios sin guardar.' : 'Modo admin: toca un espacio para marcarlo, asignarle una marca o subir fotos.');
+  adminTxt.textContent = msg || (moveFrom ? '↔ Toca el espacio de destino.' : dirty() ? 'Tienes cambios sin guardar. Toca «Guardar cambios» para que todos los vean.' : 'Editando el plano: toca un espacio para cambiarlo, o usa «Mover» para llevar una marca a otro lugar.');
   $('btn-save').disabled = !dirty();
   const p = draft.promo;
   $('ad-promo-txt').value = p.texto || ''; $('ad-promo-cupos').value = p.cupos ?? 0; $('ad-promo-tom').value = p.tomados ?? 0;
@@ -1803,12 +1815,14 @@ function setAdmin(on){
   closePanel(); touch();
 }
 adminBtn.addEventListener('click', () => setAdmin(!adminOn));
-$('btn-discard').addEventListener('click', () => setAdmin(false));
+$('btn-discard').addEventListener('click', () => { moveFrom = null; setAdmin(false); });
 
 const newId = () => 'm' + Date.now().toString(36) + Math.floor(Math.random()*1e4).toString(36);
 function renderAdmin(sp){
   const taken = isTaken(sp), mid = draft.ocupados[sp.code] || '';
   $('a-libre').setAttribute('aria-pressed', String(!taken)); $('a-ocup').setAttribute('aria-pressed', String(taken));
+  $('a-mover').hidden = !(taken && mid); $('a-mover').textContent = moveFrom === sp.code ? '✖ Cancelar mover' : '↔ Mover o intercambiar esta marca a otro espacio';
+  $('a-logo-l').hidden = !assets; $('a-fotos-l').hidden = !assets;
   $('a-brandbox').hidden = !taken;
   const sel = $('a-marca'); sel.replaceChildren();
   const opt = (v, t) => { const o = document.createElement('option'); o.value = v; o.textContent = t; sel.appendChild(o); };
@@ -1829,7 +1843,25 @@ function renderAdmin(sp){
     d.append(im, x); fl.appendChild(d);
   });
   const n = SPACES.filter(o => mid && draft.ocupados[o.code] === mid).length;
-  $('a-msg').textContent = !assets && taken ? 'Para subir fotos abre esta página con tu cuenta de editor.' : (m ? `Esta marca está en ${n} espacio${n===1?'':'s'}.` : (taken ? 'Elige una marca o crea una nueva.' : 'Marca el espacio como ocupado para asignarle una marca.'));
+  $('a-msg').textContent = (m ? `Esta marca está en ${n} espacio${n===1?'':'s'}.` : (taken ? 'Elige una marca o crea una nueva.' : 'Marca el espacio como ocupado para asignarle una marca.'));
+}
+$('a-mover').addEventListener('click', () => {
+  if (!selected) return;
+  if (moveFrom === selected.code) { moveFrom = null; updateAdminBar(); renderAdmin(selected); return; }
+  moveFrom = selected.code; const m = draft.marcas[draft.ocupados[moveFrom]];
+  closePanel(); updateAdminBar('↔ Moviendo ' + ((m && m.nombre) || 'la marca') + ' (' + moveFrom + '): toca el espacio de destino. Si está ocupado, se intercambian.');
+});
+function hacerMovida(dest){
+  const a = moveFrom, b = dest.code; moveFrom = null;
+  if (a === b) { touch(); openPanel(dest); return; }
+  const ma = draft.ocupados[a], tieneB = Object.prototype.hasOwnProperty.call(draft.ocupados, b), mb = draft.ocupados[b];
+  draft.ocupados[b] = ma;
+  if (tieneB) draft.ocupados[a] = mb; else delete draft.ocupados[a];
+  if (Array.isArray(draft.retirados)) draft.retirados = draft.retirados.filter(c => c !== b);
+  touch();
+  const nm = id => (draft.marcas[id] && draft.marcas[id].nombre) || 'Marca';
+  updateAdminBar(tieneB ? `Intercambiado: ${nm(ma)} → ${b} y ${nm(mb)} → ${a}. No olvides guardar.` : `${nm(ma)} pasó de ${a} a ${b}. No olvides guardar.`);
+  openPanel(dest);
 }
 $('a-libre').addEventListener('click', () => { if (!selected) return; delete draft.ocupados[selected.code]; touch(); openPanel(selected); });
 $('a-ocup').addEventListener('click', () => { if (!selected) return; if (!isTaken(selected)) draft.ocupados[selected.code] = ''; touch(); openPanel(selected); });
@@ -1877,26 +1909,58 @@ function buildDoc(state){
   const body = src.split(MK_F).map(part => part.split(MK_E).join(json)).join(esc);
   return '<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>' + RESET + '</style></head><body>\n' + body + '\n</body></html>';
 }
+const SB = window.supabase ? window.supabase.createClient('https://eyougzgrquztgrhlkain.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV5b3VnemdycXV6dGdyaGxrYWluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc3OTA1MjcsImV4cCI6MjEwMzM2NjUyN30.b_4ma8HLRGW2F0uFBBhu307F9KqOKz0hI4_LnhwOWJk') : null;
+const canon = v => Array.isArray(v) ? v.map(canon) : (v && typeof v === 'object') ? Object.keys(v).sort().reduce((o, k) => (o[k] = canon(v[k]), o), {}) : v;
+const same = (a, b) => JSON.stringify(canon(a)) === JSON.stringify(canon(b));
+async function cargarPlano(){
+  if (!SB) return;
+  try {
+    const { data, error } = await SB.rpc('plano_get');
+    if (error || !data || typeof data !== 'object') return;
+    const n = normalize(data); if (same(n, estado)) return;
+    estado = n; if (!adminOn) draft = JSON.parse(JSON.stringify(estado));
+    applyAll(); paint(); try { renderPromo(); } catch(e) {}
+  } catch(e) {}
+}
+async function verSocio(){
+  if (!SB) return false;
+  try {
+    const { data: { session } } = await SB.auth.getSession(); if (!session) return false;
+    const { data } = await SB.rpc('es_socio'); canEdit = !!data;
+  } catch(e) { canEdit = false; }
+  adminBtn.hidden = !canEdit; $('t-socios').hidden = canEdit;
+  return canEdit;
+}
+$('t-socios').addEventListener('click', () => { const b = $('login-box'); b.hidden = !b.hidden; if (!b.hidden) $('lg-email').focus(); });
+$('lg-x').addEventListener('click', () => { $('login-box').hidden = true; });
+$('login-box').addEventListener('submit', async e => {
+  e.preventDefault(); $('lg-msg').textContent = 'Entrando…';
+  const { error } = await SB.auth.signInWithPassword({ email: $('lg-email').value.trim(), password: $('lg-pass').value });
+  if (error) { $('lg-msg').textContent = 'Correo o contraseña incorrectos.'; return; }
+  if (!(await verSocio())) { $('lg-msg').textContent = 'Esta cuenta no es de socio.'; return; }
+  $('login-box').hidden = true; $('lg-pass').value = ''; $('lg-msg').textContent = '';
+  await cargarPlano(); setAdmin(true);
+});
 $('btn-save').addEventListener('click', async () => {
-  if (!art) return;
-  updateAdminBar('Guardando…');
-  try { await art.publish(buildDoc(draft)); updateAdminBar('Guardado. La página se actualiza…'); }
-  catch (e) {
-    const m = { conflict:'Alguien guardó antes. La página se recarga con la versión nueva; vuelve a hacer tus cambios.',
-      not_writer:'Tu cuenta no puede guardar cambios en esta página.', not_granted:'No se dio permiso para guardar.',
-      capability_disabled:'Guardar no está disponible en esta vista.', too_large:'Hay demasiados datos para guardar.' }[e && e.code];
-    adminTxt.textContent = m || 'No se pudo guardar. Intenta de nuevo en un momento.';
+  if (!SB || !canEdit) return;
+  updateAdminBar('Guardando…'); $('btn-save').disabled = true;
+  try {
+    const { data: srv } = await SB.rpc('plano_get');
+    if (srv && !same(normalize(srv), estado)) {
+      const nuevo = normalize(srv);
+      adminTxt.textContent = 'Otro socio guardó cambios mientras editabas. Se cargó su versión: vuelve a hacer tus cambios.';
+      estado = nuevo; draft = JSON.parse(JSON.stringify(estado)); moveFrom = null; applyAll(); paint(); $('btn-save').disabled = true; return;
+    }
+    const { error } = await SB.rpc('plano_guardar', { p: draft });
+    if (error) throw error;
+    estado = JSON.parse(JSON.stringify(draft)); moveFrom = null;
+    updateAdminBar('✅ Guardado. Todos ya ven el plano actualizado.');
+  } catch (e) {
+    adminTxt.textContent = (e && /autorizado/.test(e.message || '')) ? 'Tu cuenta no puede guardar el plano.' : 'No se pudo guardar. Revisa la conexión e intenta de nuevo.';
+    $('btn-save').disabled = !dirty();
   }
 });
-(async () => {
-  try {
-    if (!window.claude || !window.claude.use) return;
-    const [a, u, s, d] = await Promise.all(['artifact','user','assets','db'].map(n => window.claude.use(n).catch(() => null)));
-    user = u; db = d; assets = s;
-    canEdit = u ? await u.canEdit() : false;
-    if (a && canEdit){ art = a; adminBtn.hidden = false; }
-  } catch(e) {}
-})();
+(async () => { await cargarPlano(); await verSocio(); })();
 
 /* ---------- vistas y controles ---------- */
 const views = {

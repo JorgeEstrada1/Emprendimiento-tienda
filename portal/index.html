@@ -162,7 +162,7 @@ label.f{display:flex;flex-direction:column;gap:6px;font-weight:700;font-size:1re
     <p class="muted small">Toca la foto para cambiarla. Para cambiar un precio, pídelo con el botón y lo coordinamos contigo (te daremos el código nuevo para la cinta).</p>
     <div class="card" id="pLista"></div>
     <button class="full" data-go="traer">📷 Traer más productos</button>
-    <input type="file" id="fotoInput" accept="image/*" capture="environment" hidden>
+    <input type="file" id="fotoInput" accept="image/*" hidden>
   </section>
 
   <!-- TRAER PRODUCTOS -->
@@ -171,8 +171,8 @@ label.f{display:flex;flex-direction:column;gap:6px;font-weight:700;font-size:1re
     <h2>Traer productos</h2>
     <p class="muted">Agrega uno por uno lo que vas a traer. Cuando llegues a la tienda, lo contamos contigo y aparece en «Mis productos».</p>
     <form class="card" id="tForm">
-      <button type="button" class="foto-grande" id="tFotoBtn"><span class="ic" aria-hidden="true">📷</span><span>Tomar foto del producto</span><span class="small">(opcional)</span></button>
-      <input type="file" id="tFoto" accept="image/*" capture="environment" hidden>
+      <button type="button" class="foto-grande" id="tFotoBtn"><span class="ic" aria-hidden="true">📷</span><span>Tomar foto o elegir de la galería</span><span class="small">(opcional)</span></button>
+      <input type="file" id="tFoto" accept="image/*" hidden>
       <label class="f">¿Qué producto es?<input id="tNombre" list="dlMis" maxlength="80" placeholder="Ej. Llavero de corazón" autocomplete="off"></label>
       <datalist id="dlMis"></datalist>
       <label class="f">¿Cuántos traes?
@@ -347,7 +347,7 @@ label.f{display:flex;flex-direction:column;gap:6px;font-weight:700;font-size:1re
     if (!(precio >= 0) || $("#tPrecio").value === "") { err.textContent = "Pon a cuánto lo vendes."; $("#tPrecio").focus(); return; }
     lista.push({nombre, cant, precio, foto: fotoT});
     fotoT = ""; $("#tNombre").value = ""; $("#tCant").value = 1; $("#tPrecio").value = "";
-    $("#tFotoBtn").innerHTML = `<span class="ic" aria-hidden="true">📷</span><span>Tomar foto del producto</span><span class="small">(opcional)</span>`;
+    $("#tFotoBtn").innerHTML = `<span class="ic" aria-hidden="true">📷</span><span>Tomar foto o elegir de la galería</span><span class="small">(opcional)</span>`;
     $("#tOk").textContent = ""; pintarLista(); $("#tListaCard").scrollIntoView({block: "nearest"});
   });
   const LK = KEY + "_lista";

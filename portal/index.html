@@ -87,6 +87,12 @@ label.f{display:flex;flex-direction:column;gap:6px;font-weight:700;font-size:1re
 .foto-grande{width:100%;aspect-ratio:4/3;max-width:100%;border-radius:16px;border:2px dashed var(--line);background:var(--bg);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:6px;color:var(--muted);overflow:hidden;cursor:pointer;padding:0}
 .foto-grande img{width:100%;height:100%;object-fit:cover}
 .foto-grande .ic{font-size:2.6rem}
+.rep-row{display:grid;grid-template-columns:64px minmax(0,1fr) auto;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
+.rep-row .rph{width:64px;height:64px;border-radius:12px;background:var(--bg);display:flex;align-items:center;justify-content:center;overflow:hidden;font-size:1.4rem}
+.rep-row .rph img{width:100%;height:100%;object-fit:cover}
+.rep-add{grid-column:1/-1;display:flex;gap:10px;align-items:center;flex-wrap:wrap;background:var(--grape-soft);border-radius:14px;padding:10px}
+.rep-add .qty input{width:70px}
+.rep-vacio{padding:14px 0;color:var(--muted);text-align:center}
 .lista-item{display:flex;gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
 .lista-item img,.lista-item .sinfoto{width:52px;height:52px;border-radius:10px;object-fit:cover;background:var(--bg);flex:none}
 .qr{width:220px;max-width:100%;border-radius:14px;background:#fff;align-self:center}
@@ -170,11 +176,19 @@ label.f{display:flex;flex-direction:column;gap:6px;font-weight:700;font-size:1re
     <button class="back" data-go="inicio">← Volver al inicio</button>
     <h2>Traer productos</h2>
     <p class="muted">Agrega uno por uno lo que vas a traer. Cuando llegues a la tienda, lo contamos contigo y aparece en «Mis productos».</p>
+    <div class="card" id="rCard" hidden>
+      <h2 style="font-size:1.15rem;margin:0">🔁 Reponer un producto que ya tienes</h2>
+      <p class="small muted" style="margin:0">Búscalo, toca <b>Reponer</b> y pon cuántos traes. El nombre, el precio y el código se mantienen.</p>
+      <input id="rBuscar" type="search" placeholder="🔎 Escribe el nombre o el código" autocomplete="off" enterkeyhint="search">
+      <div class="chips" id="rFiltro"><button type="button" data-rf="todos" aria-pressed="true">Todos</button><button type="button" data-rf="acabo" aria-pressed="false">Se acabaron</button></div>
+      <div id="rLista"></div>
+    </div>
+    <h2 id="tNuevoT" style="font-size:1.15rem;margin:6px 0 0">🆕 Agregar un producto nuevo</h2>
     <form class="card" id="tForm">
       <button type="button" class="foto-grande" id="tFotoBtn"><span class="ic" aria-hidden="true">📷</span><span>Tomar foto o elegir de la galería</span><span class="small">(opcional)</span></button>
       <input type="file" id="tFoto" accept="image/*" hidden>
-      <label class="f">¿Qué producto es?<input id="tNombre" list="dlMis" maxlength="80" placeholder="Ej. Llavero de corazón" autocomplete="off"></label>
-      <datalist id="dlMis"></datalist>
+      <label class="f">¿Qué producto es?<input id="tNombre" maxlength="80" placeholder="Ej. Llavero de corazón" autocomplete="off"></label>
+      <div class="small" id="tYaTiene" hidden></div>
       <label class="f">¿Cuántos traes?
         <div class="qty"><button type="button" class="sec" id="tMenos" aria-label="Uno menos">−</button><input id="tCant" type="number" min="1" max="9999" value="1" inputmode="numeric"><button type="button" class="sec" id="tMas" aria-label="Uno más">+</button></div>
       </label>
@@ -257,10 +271,12 @@ label.f{display:flex;flex-direction:column;gap:6px;font-weight:700;font-size:1re
   const fmtHora = iso => new Date(iso).toLocaleTimeString("es-BO", {hour: "2-digit", minute: "2-digit", timeZone: "America/La_Paz"});
   const token = new URLSearchParams(location.search).get("t");
   const KEY = "pp_" + (token || "");
+  let repAbierto = null, repFiltro = "todos";
   let D = null, pin = null, vista = "inicio", verMes = PER0(), lista = [], fotoT = "", logoNuevo = "", fotoPara = null, fotoPago = null;
 
   const go = v => { vista = v; $$("section[data-v]").forEach(s => s.hidden = s.dataset.v !== v); window.scrollTo(0, 0); try { history.replaceState(null, "", location.pathname + location.search + (v === "inicio" ? "" : "#" + v)); } catch {} };
   document.addEventListener("click", e => { const b = e.target.closest("[data-go]"); if (b) { e.preventDefault(); go(b.dataset.go); } });
+  document.addEventListener("click", e => { const b = e.target.closest("[data-reponer]"); if (!b) return; e.preventDefault(); $("#rBuscar").value = ""; repFiltro = "todos"; repAbierto = b.dataset.reponer; go("traer"); pintarRep(); const i = $("#rCant"); if (i) { i.closest(".rep-row").scrollIntoView({block: "center"}); i.focus(); i.select(); } });
 
   if (!token) { $("#vSinLink").hidden = false; return; }
   try { pin = localStorage.getItem(KEY); } catch {}
@@ -362,7 +378,53 @@ label.f{display:flex;flex-direction:column;gap:6px;font-weight:700;font-size:1re
     $("#tListaCard").hidden = !lista.length;
     $("#tLista").innerHTML = lista.map((x, i) => `<div class="lista-item">${x.foto ? `<img src="${esc(IMG(x.foto))}" alt="">` : `<span class="sinfoto"></span>`}<div style="flex:1;min-width:0"><b>${esc(x.nombre)}</b><div class="small muted">${x.cant} unidades · ${bs(x.precio)} c/u</div></div><button class="sec sm" data-quitar="${i}" aria-label="Quitar">Quitar</button></div>`).join("");
   }
-  $("#tLista").addEventListener("click", e => { const q = e.target.closest("[data-quitar]"); if (q) { lista.splice(+q.dataset.quitar, 1); pintarLista(); } });
+  $("#tLista").addEventListener("click", e => { const q = e.target.closest("[data-quitar]"); if (q) { lista.splice(+q.dataset.quitar, 1); pintarLista(); pintarRep(); } });
+
+  // ---------- reponer productos que ya tiene ----------
+  const nq = t => String(t || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+  const fotoRep = p => p.foto && p.foto.startsWith(p.marca + "/") && !p.foto.includes("..") ? p.foto : "";
+  const enLista = p => lista.filter(x => nq(x.nombre) === nq(p.nombre) && +x.precio === +p.precio).reduce((a, x) => a + x.cant, 0);
+  function pintarRep() {
+    if (!D) return;
+    const ps = D.productos;
+    $("#rCard").hidden = !ps.length;
+    $("#tNuevoT").textContent = ps.length ? "🆕 ¿Es un producto nuevo? Agrégalo aquí" : "🆕 Agregar un producto";
+    if (!ps.length) return;
+    const q = nq($("#rBuscar").value);
+    const acabo = ps.filter(p => p.stock <= p.minimo).length;
+    $('[data-rf="acabo"]').textContent = "Se acabaron (" + acabo + ")";
+    $$("[data-rf]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.rf === repFiltro)));
+    const lst = ps.filter(p => (repFiltro === "todos" || p.stock <= p.minimo) && (!q || nq(p.nombre).includes(q) || nq(p.codigo).includes(q)))
+      .sort((a, b) => (a.stock > a.minimo) - (b.stock > b.minimo) || a.stock - b.stock || a.nombre.localeCompare(b.nombre));
+    $("#rLista").innerHTML = lst.length ? lst.map(p => {
+      const ya = enLista(p), ab = repAbierto === p.id, f = p.foto;
+      return `<div class="rep-row"><span class="rph">${f ? `<img src="${esc(IMG(f))}" alt="" loading="lazy">` : "📦"}</span>
+        <div style="min-width:0"><b>${esc(p.nombre)}</b><div class="small muted">${p.codigo ? esc(p.codigo) + " · " : ""}${bs(p.precio)}</div>
+        <div style="margin-top:4px">${p.stock <= 0 ? `<span class="pill bad">Se acabó</span>` : p.stock <= p.minimo ? `<span class="pill warn">Quedan ${p.stock}</span>` : `<span class="pill ok">Quedan ${p.stock}</span>`}${ya ? ` <span class="pill g">En tu lista: ${ya}</span>` : ""}</div></div>
+        ${ab ? "<span></span>" : `<button type="button" class="sm" data-rep="${esc(p.id)}">Reponer</button>`}
+        ${ab ? `<div class="rep-add"><span style="font-weight:700">¿Cuántos traes?</span><div class="qty"><button type="button" class="sec" data-rq="-1" aria-label="Uno menos">−</button><input id="rCant" type="number" min="1" max="9999" value="1" inputmode="numeric"><button type="button" class="sec" data-rq="1" aria-label="Uno más">+</button></div><button type="button" class="sm" data-rok="${esc(p.id)}">Agregar a mi lista</button><button type="button" class="sec sm" data-rx>Cancelar</button></div>` : ""}</div>`;
+    }).join("") : `<div class="rep-vacio">No encontramos «${esc($("#rBuscar").value)}» entre tus productos.<br>Si es nuevo, agrégalo abajo 👇</div>`;
+  }
+  $("#rBuscar").addEventListener("input", () => { repAbierto = null; pintarRep(); });
+  $("#rFiltro").addEventListener("click", e => { const b = e.target.closest("[data-rf]"); if (b) { repFiltro = b.dataset.rf; repAbierto = null; pintarRep(); } });
+  $("#rLista").addEventListener("click", e => {
+    const a = e.target.closest("[data-rep]"), q = e.target.closest("[data-rq]"), ok = e.target.closest("[data-rok]"), x = e.target.closest("[data-rx]");
+    if (a) { repAbierto = a.dataset.rep; pintarRep(); const i = $("#rCant"); if (i) { i.focus(); i.select(); } return; }
+    if (q) { const i = $("#rCant"); i.value = Math.min(9999, Math.max(1, (parseInt(i.value, 10) || 1) + +q.dataset.rq)); return; }
+    if (x) { repAbierto = null; pintarRep(); return; }
+    if (ok) {
+      const p = D.productos.find(p => p.id === ok.dataset.rok), cant = parseInt($("#rCant").value, 10);
+      if (!p || !(cant >= 1)) return;
+      const ex = lista.find(y => nq(y.nombre) === nq(p.nombre) && +y.precio === +p.precio);
+      if (ex) ex.cant += cant; else lista.push({nombre: p.nombre, cant, precio: +p.precio, foto: fotoRep(p)});
+      repAbierto = null; pintarLista(); pintarRep();
+      $("#tOk").className = "okm"; $("#tOk").textContent = `Agregaste ${cant} de «${p.nombre}» a tu lista. Puedes reponer otro o tocar «Listo, avisar a la tienda».`;
+    }
+  });
+  $("#tNombre").addEventListener("input", () => {
+    const v = nq($("#tNombre").value), p = v.length >= 3 && D ? D.productos.find(p => nq(p.nombre) === v) : null, h = $("#tYaTiene");
+    h.hidden = !p; if (p) h.innerHTML = `💡 Ya tienes «<b>${esc(p.nombre)}</b>» en la tienda. Para reponerlo, búscalo arriba en <b>Reponer</b> y así se mantiene su código.`;
+  });
   $("#tEnviar").addEventListener("click", async () => {
     if (!lista.length) return; const b = $("#tEnviar"); b.disabled = true;
     const E = {nombre: "falta el nombre o es muy largo (máximo 80 letras)", cant: "la cantidad tiene que ser un número entero desde 1", precio: "el precio tiene que ser un número (ej. 25 o 25.5)", ruta: "hubo un problema con la foto; quítala y vuelve a ponerla", demasiados: "son demasiados productos", muchos_pendientes: "tienes demasiadas cargas sin recibir; espera a que la tienda reciba las anteriores", pin: "tu PIN no es correcto; vuelve a entrar", bloqueado: "demasiados intentos; espera 15 minutos"};
@@ -469,10 +531,10 @@ label.f{display:flex;flex-direction:column;gap:6px;font-weight:700;font-size:1re
     $("#vPagos").innerHTML = ls.length ? ls.map(l => `<div class="sale"><span>29 de ${MESES[+l.periodo.split("-")[1] - 1]}<br><span class="small muted">Vendiste ${bs(l.vendido)}${+l.descontado ? " · descontamos tu repisa " + bs(l.descontado) : ""}</span></span><b>${bs(l.entregado)}</b></div>`).join("") : `<p class="muted">Te pagamos tus ventas el 29 de cada mes. El primer pago es el 29 de noviembre.</p>`;
     // productos
     { const pendI = D.ingresos.filter(i => i.estado === "pendiente").flatMap(i => i.items.map(x => ({...x, nota: i.nota, fecha: i.fecha})));
-      const recibidos = D.productos.length ? `<h3 style="margin:0 0 6px;font-size:1.05rem">✅ Ya están en la tienda (${D.productos.length})</h3>` + D.productos.map(p => `<div class="prod"><button type="button" class="ph" data-foto="${esc(p.id)}" aria-label="Foto de ${esc(p.nombre)}">${p.foto ? `<img src="${esc(IMG(p.foto))}" alt="" loading="lazy">` : `<span class="ic">📷</span>Poner foto`}</button><div style="min-width:0;display:flex;flex-direction:column;gap:6px"><b>${p.codigo ? `<span class="small muted">${esc(p.codigo)}</span> ` : ""}${esc(p.nombre)}</b><div>${p.stock <= 0 ? `<span class="pill bad">Se acabó</span>` : p.stock <= p.minimo ? `<span class="pill warn">Quedan ${p.stock}</span>` : `<span class="pill ok">Quedan ${p.stock}</span>`} <span class="small muted">· vendiste ${p.vendidos ?? 0}</span></div><div class="small">Precio: <b>${bs(p.precio)}</b> · <a href="https://wa.me/59162792888?text=${encodeURIComponent("Hola, soy de " + D.marca.nombre + ". Quiero cambiar el precio de " + p.nombre + (p.codigo ? " (" + p.codigo + ")" : "") + " a: ")}" target="_blank" rel="noopener" style="color:var(--grape);font-weight:700">Pedir cambio de precio</a></div></div></div>`).join("") : "";
+      const recibidos = D.productos.length ? `<h3 style="margin:0 0 6px;font-size:1.05rem">✅ Ya están en la tienda (${D.productos.length})</h3>` + D.productos.map(p => `<div class="prod"><button type="button" class="ph" data-foto="${esc(p.id)}" aria-label="Foto de ${esc(p.nombre)}">${p.foto ? `<img src="${esc(IMG(p.foto))}" alt="" loading="lazy">` : `<span class="ic">📷</span>Poner foto`}</button><div style="min-width:0;display:flex;flex-direction:column;gap:6px"><b>${p.codigo ? `<span class="small muted">${esc(p.codigo)}</span> ` : ""}${esc(p.nombre)}</b><div>${p.stock <= 0 ? `<span class="pill bad">Se acabó</span>` : p.stock <= p.minimo ? `<span class="pill warn">Quedan ${p.stock}</span>` : `<span class="pill ok">Quedan ${p.stock}</span>`} <span class="small muted">· vendiste ${p.vendidos ?? 0}</span></div><div class="small">Precio: <b>${bs(p.precio)}</b> · <a href="https://wa.me/59162792888?text=${encodeURIComponent("Hola, soy de " + D.marca.nombre + ". Quiero cambiar el precio de " + p.nombre + (p.codigo ? " (" + p.codigo + ")" : "") + " a: ")}" target="_blank" rel="noopener" style="color:var(--grape);font-weight:700">Pedir cambio de precio</a></div><button type="button" class="sm" data-reponer="${esc(p.id)}" style="align-self:flex-start">🔁 Reponer</button></div></div>`).join("") : "";
       const porRecibir = pendI.length ? `<h3 style="margin:${D.productos.length ? "18px" : "0"} 0 4px;font-size:1.05rem">🕒 Avisaste que traes (${pendI.length}) — aún no los recibimos</h3><p class="small muted" style="margin:0 0 6px">Cuando los recibamos en la tienda pasan arriba con su stock. La foto te ayuda a saber cuál es cada uno.</p>` + pendI.map(x => `<div class="prod"><span class="ph" style="cursor:default">${x.foto ? `<img src="${esc(IMG(x.foto))}" alt="" loading="lazy">` : `<span class="ic">📦</span>`}</span><div style="min-width:0;display:flex;flex-direction:column;gap:6px"><b>${x.codigo ? `<span class="small muted">${esc(x.codigo)}</span> ` : ""}${esc(x.nombre)}</b><div><span class="pill g">Por recibir: ${x.cant}</span></div><div class="small">Precio: <b>${bs(x.precio)}</b></div></div></div>`).join("") : "";
       if (!document.activeElement?.matches("#pLista input")) $("#pLista").innerHTML = (recibidos || porRecibir) ? recibidos + porRecibir : `<p class="muted">Todavía no tienes productos en la tienda. Toca «Traer más productos» para avisarnos qué vas a traer.</p>`; }
-    $("#dlMis").innerHTML = D.productos.map(p => `<option value="${esc(p.nombre)}"></option>`).join("");
+    pintarRep();
     const pend = D.ingresos.filter(i => i.estado === "pendiente");
     $("#tPend").hidden = !pend.length;
     $("#tPend").innerHTML = `<h2 style="font-size:1.15rem">🏷️ Pon una cinta a cada producto</h2><p class="small muted">Antes de traerlos, escribe en una cinta o etiqueta el <b>código</b> y pégala en cada producto. El precio ya va en el código.</p>` + pend.map(i => `<div style="padding-top:6px"><span class="pill warn">Te esperamos</span>${i.nota ? ` <span class="small muted">· ${esc(i.nota)}</span>` : ""}</div>` + i.items.map(x => `<div class="etq">${x.foto ? `<img src="${esc(IMG(x.foto))}" alt="" loading="lazy" style="width:48px;height:48px;border-radius:10px;object-fit:cover;flex:none">` : ""}<span style="min-width:0;flex:1"><b>${esc(x.nombre)}</b><br><span class="small muted">${x.cant} unidades · ${bs(x.precio)} c/u</span></span>${x.codigo ? `<span class="cod">${esc(x.codigo)}</span>` : ""}</div>`).join("")).join("");

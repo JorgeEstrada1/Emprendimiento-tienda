@@ -32,7 +32,7 @@ form.panel label.f{flex:none}.panel>label.f{flex:none}td.num b{white-space:nowra
 html,body{margin:0}
 body{background:var(--bg);color:var(--ink);padding-top:env(safe-area-inset-top,0px);font-family:var(--f-body);font-size:16px;line-height:1.45}
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--vine)}
-.wrap{max-width:1180px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 48px}
+.wrap{max-width:1600px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 48px}
 header.top{position:sticky;top:0;z-index:5;background:var(--vine);color:#f4f6f1}
 header.top .wrap{padding-block:12px 0;display:flex;flex-direction:column;gap:10px}
 .brandrow{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
@@ -46,7 +46,8 @@ nav.tabs button[aria-selected="true"]{background:var(--bg);color:var(--ink);opac
 h2{font-family:var(--f-display);font-weight:600;font-size:1.25rem;margin:0;text-wrap:balance}
 h3{font-size:.8rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:0}
 .grid{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:16px;margin-top:18px}
-@media (max-width:820px){.grid{grid-template-columns:minmax(0,1fr)}}
+[data-view="caja"] .grid{grid-template-columns:minmax(0,1.9fr) minmax(320px,1fr)}
+@media (max-width:820px){.grid,[data-view="caja"] .grid{grid-template-columns:minmax(0,1fr)}}
 .panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 .row > *{min-width:0}
@@ -62,7 +63,8 @@ button.b.danger{color:var(--bad);border-color:var(--bad)}
 .num{font-family:var(--f-num);font-variant-numeric:tabular-nums}
 .muted{color:var(--muted)}
 .small{font-size:.85rem}
-.prods{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+.prods{display:grid;grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:8px;max-height:70vh;overflow-y:auto;padding-right:4px}
+.prod .m{font-size:.72rem;font-weight:700;color:var(--grape,#6B2A6E)}
 .prod{text-align:left;border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:10px;cursor:pointer;display:flex;flex-direction:column;gap:2px;color:var(--ink);font:inherit}
 .prod:hover{border-color:var(--grape)}
 .prod .p{font-family:var(--f-num);font-weight:700}
@@ -85,7 +87,7 @@ tr.void td{text-decoration:line-through;color:var(--muted)}
 .empty{border:1px dashed var(--line);border-radius:10px;padding:16px;color:var(--muted);font-size:.9rem}
 .banner{background:var(--warn-soft);color:var(--warn);border-radius:10px;padding:12px 14px;font-size:.9rem;margin-top:16px}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(16px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:999px;font-weight:700;z-index:20;max-width:calc(100% - 32px)}
-.prod img{width:100%;height:84px;object-fit:cover;border-radius:8px;margin-bottom:4px}
+.prod img{width:100%;height:72px;object-fit:cover;border-radius:8px;margin-bottom:4px}
 .mlogo{width:34px;height:34px;border-radius:8px;object-fit:cover;vertical-align:middle;margin-right:6px}
 .comp{width:110px;height:110px;object-fit:cover;border-radius:10px;border:1px solid var(--line)}
 .liq{display:flex;flex-direction:column;gap:8px}
@@ -193,6 +195,9 @@ details summary{cursor:pointer;font-weight:700}
           <input id="cajaMarca" list="dlMarcas" placeholder="Escribe la marca o el espacio (ej. Ticuva, M13)" autocomplete="off">
         </label>
         <datalist id="dlMarcas"></datalist>
+        <label class="f">O busca el producto por nombre (en todas las marcas)
+          <input id="cajaQ" type="search" placeholder="Ej. lip smacker, anturio, alfajor" autocomplete="off">
+        </label>
         <div id="cajaProds"></div>
         <details>
           <summary>Producto sin registrar</summary>
@@ -479,14 +484,22 @@ details summary{cursor:pointer;font-weight:700}
     const list = marcasOrden();
     return list.find(m => (m.nombre + " · " + m.espacio).toLowerCase() === v) || list.find(m => m.nombre.toLowerCase() === v) || list.find(m => (m.prefijo || "").toLowerCase() === v) || list.find(m => m.nombre.toLowerCase().includes(v) || (m.espacio || "").toLowerCase().includes(v)) || null;
   }
-  $("#cajaMarca").addEventListener("input", e => { const m = marcaFromInput(e.target.value); S.marcaCaja = m ? m.id : null; renderCaja(); });
+  $("#cajaMarca").addEventListener("input", e => { const m = marcaFromInput(e.target.value); S.marcaCaja = m ? m.id : null; if (m) $("#cajaQ").value = ""; renderCaja(); });
+  $("#cajaQ").addEventListener("input", () => renderCaja());
   function renderCaja() {
     $("#dlMarcas").innerHTML = marcasOrden().map(m => `<option value="${esc(m.nombre + " · " + m.espacio)}"></option>`).join("");
     const box = $("#cajaProds");
-    if (!S.marcaCaja) box.innerHTML = `<div class="empty">Elige una marca para ver sus productos. Si todavía no los registraron, usa «Producto sin registrar».</div>`;
+    const cq = ($("#cajaQ")?.value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+    const card = (p, conMarca) => `<button class="prod" data-add="${esc(p.id)}" ${p.stock <= 0 ? "disabled" : ""}>${p.foto ? `<img src="${esc(IMG(p.foto))}" alt="" loading="lazy">` : ""}${conMarca ? `<span class="m">${esc(S.marcas[p.marca]?.nombre || "")}</span>` : ""}<span class="small muted num">${esc(p.codigo || "")}</span><span>${esc(p.nombre)}</span><span class="p">${bs(p.precio)}</span><span class="s">Stock: ${p.stock}</span></button>`;
+    if (cq.length >= 2) {
+      const nn = t => String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+      const hits = Object.values(S.productos).filter(p => S.marcas[p.marca]?.activa !== false && (nn(p.nombre).includes(cq) || nn(p.codigo).includes(cq) || nn(S.marcas[p.marca]?.nombre).includes(cq))).sort((a, b) => (b.stock > 0) - (a.stock > 0) || a.nombre.localeCompare(b.nombre, "es"));
+      box.innerHTML = hits.length ? `<div class="small muted" style="margin:4px 0 6px">${hits.length} ${hits.length === 1 ? "producto" : "productos"}${hits.length > 120 ? " · mostrando 120, escribe más para afinar" : ""}</div><div class="prods">${hits.slice(0, 120).map(p => card(p, true)).join("")}</div>` : `<div class="empty">No encontramos «${esc($("#cajaQ").value)}». Prueba con otra palabra o usa «Producto sin registrar».</div>`;
+    }
+    else if (!S.marcaCaja) box.innerHTML = `<div class="empty">Elige una marca o busca el producto por nombre. Si todavía no lo registraron, usa «Producto sin registrar».</div>`;
     else {
       const ps = prodsDe(S.marcaCaja);
-      box.innerHTML = ps.length ? `<div class="prods">${ps.map(p => `<button class="prod" data-add="${esc(p.id)}" ${p.stock <= 0 ? "disabled" : ""}>${p.foto ? `<img src="${esc(IMG(p.foto))}" alt="" loading="lazy">` : ""}<span class="small muted num">${esc(p.codigo || "")}</span><span>${esc(p.nombre)}</span><span class="p">${bs(p.precio)}</span><span class="s">Stock: ${p.stock}</span></button>`).join("")}</div>`
+      box.innerHTML = ps.length ? `<div class="small muted" style="margin:4px 0 6px">${ps.length} ${ps.length === 1 ? "producto" : "productos"}</div><div class="prods">${ps.map(p => card(p, false)).join("")}</div>`
         : `<div class="empty">${esc(S.marcas[S.marcaCaja].nombre)} no tiene productos registrados. Regístralos en Stock con la ficha de ingreso, o vende con «Producto sin registrar».</div>`;
     }
     $("#cart").innerHTML = S.cart.length ? S.cart.map((l, i) => `<li><span style="min-width:0"><b>${esc(l.nombre)}</b><br><span class="small muted">${l.codigo ? esc(l.codigo) + " · " : ""}${esc(S.marcas[l.marca]?.nombre || "")}</span></span><span class="row" style="flex-wrap:nowrap"><button class="b sm" data-dec="${i}" aria-label="Quitar uno">−</button><span class="num">${l.cant}</span><button class="b sm" data-inc="${i}" aria-label="Agregar uno">+</button><span class="num" style="min-width:76px;text-align:right">${bs(l.cant * l.precio)}</span></span></li>`).join("")

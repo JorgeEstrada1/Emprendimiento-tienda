@@ -240,6 +240,7 @@ details summary{cursor:pointer;font-weight:700}
   <section data-view="stock" hidden>
     <div class="panel" style="margin-top:18px" id="regPanel"></div>
     <div class="panel" style="margin-top:16px" id="pendPanel"></div>
+    <div class="panel" style="margin-top:16px" id="ihPanel"></div>
     <div class="panel" style="margin-top:16px" id="invPanel"></div>
     <div class="panel" style="margin-top:16px" id="lowPanel"></div>
     <div class="grid">
@@ -379,7 +380,7 @@ details summary{cursor:pointer;font-weight:700}
   const hora = iso => new Date(iso).toLocaleTimeString("es-BO", {hour: "2-digit", minute: "2-digit", timeZone: "America/La_Paz"});
   const fechaCorta = iso => new Date(iso).toLocaleDateString("es-BO", {day: "2-digit", month: "2-digit", year: "numeric", timeZone: "America/La_Paz"});
 
-  const S = { pagos: [], aj: {}, pend: [], uid: null, marcas: {}, productos: {}, ventas: {}, liq: {}, cart: [], metodo: "efectivo", tab: "caja", marcaCaja: null, liqPer: PER_ACT(), editMarca: null, ficha: [] };
+  const S = { pagos: [], aj: {}, pend: [], uid: null, marcas: {}, productos: {}, ventas: {}, liq: {}, cart: [], metodo: "efectivo", tab: "caja", marcaCaja: null, liqPer: PER_ACT(), editMarca: null, ficha: [], ih: {rango: "hoy", q: "", data: [], key: null, socios: null} };
 
   let tt;
   const toast = msg => { const t = $("#toast"); t.textContent = msg; t.hidden = false; clearTimeout(tt); tt = setTimeout(() => t.hidden = true, 3200); };
@@ -399,7 +400,7 @@ details summary{cursor:pointer;font-weight:700}
     S.ventas = {}; d.forEach(v => S.ventas[v.id] = v);
   }
   S.abiertos = new Set(); try { S.agrupar = localStorage.getItem("agrupar") !== "0"; } catch { S.agrupar = true; }
-  async function loadIngresos() { const d = chk(await sb.from("ingresos").select("*").eq("estado", "pendiente").order("fecha")); S.pend = d; }
+  async function loadIngresos() { const d = chk(await sb.from("ingresos").select("*").eq("estado", "pendiente").order("fecha")); S.pend = d; S.ih.key = null; }
   async function loadPagos() { const d = chk(await sb.from("pagos").select("*").eq("estado", "por_verificar").order("fecha")); S.pagos = d; }
   async function loadAjustes() { const d = chk(await sb.from("ajustes").select("*")); S.aj = {}; d.forEach(a => S.aj[a.clave] = a.valor); }
   async function loadLiq() { const d = chk(await sb.from("liquidaciones").select("*").eq("periodo", S.liqPer)); S.liq = {}; d.forEach(l => S.liq[l.periodo + "__" + l.marca] = l); }
@@ -586,8 +587,50 @@ details summary{cursor:pointer;font-weight:700}
     if (!$("#fichaRows").contains(document.activeElement)) $("#fichaRows").innerHTML = S.ficha.map((r, i) => `<div class="row"><label class="f" style="flex:0 1 110px">Código<input list="dlCods" data-fr="codigo" data-i="${i}" value="${esc(r.codigo || "")}" placeholder="nuevo" ></label><label class="f">Producto<input list="dlProds" data-fr="nombre" data-i="${i}" value="${esc(r.nombre)}" placeholder="Nombre del producto"></label><label class="f" style="flex:0 1 80px">Cant.<input data-fr="cant" data-i="${i}" type="number" min="1" step="1" value="${r.cant}"></label><label class="f" style="flex:0 1 100px">Precio Bs<input data-fr="precio" data-i="${i}" type="number" min="0" step="0.5" value="${r.precio}"></label></div>`).join("") + `<datalist id="dlProds">${ps.map(p => `<option value="${esc(p.nombre)}"></option>`).join("")}</datalist><datalist id="dlCods">${ps.map(p => `<option value="${esc(p.codigo)}">${esc(p.nombre)}</option>`).join("")}</datalist>`;
     const m = S.marcas[mid]; if (m) $("#fichaTitle").textContent = "Registrar productos · " + m.nombre + " (" + (m.prefijo || "") + ")";
     renderReg();
+    renderIngHist();
     renderHist(mid);
   }
+  // ---------- historial de ingresos recibidos ----------
+  const nqh = t => String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  const ihRango = r => { const h = laPaz(), k = d => diaKey(d) + "T00:00:00-04:00";
+    const ay = new Date(h); ay.setDate(ay.getDate() - 1); const s7 = new Date(h); s7.setDate(s7.getDate() - 6); const s30 = new Date(h); s30.setDate(s30.getDate() - 29); const mn = new Date(h); mn.setDate(mn.getDate() + 1);
+    return r === "ayer" ? [k(ay), k(h)] : r === "7d" ? [k(s7), k(mn)] : r === "30d" ? [k(s30), k(mn)] : [k(h), k(mn)]; };
+  let ihBusy = false;
+  async function loadIngHist() {
+    const key = S.ih.rango + "|" + diaKey(laPaz()); if (S.ih.key === key || ihBusy) return; ihBusy = true;
+    try {
+      const [a, b] = ihRango(S.ih.rango);
+      S.ih.data = chk(await sb.from("ingresos").select("*").eq("estado", "recibido").gte("recibido", a).lt("recibido", b).order("recibido", {ascending: false}).limit(400));
+      if (!S.ih.socios) { const so = await sb.from("socios").select("user_id,nombre"); S.ih.socios = Object.fromEntries((so.data || []).map(x => [x.user_id, x.nombre])); }
+      S.ih.key = key;
+    } catch (e) { fail(e); } finally { ihBusy = false; }
+    renderIngHist();
+  }
+  const ihRes = (rows, u, v) => { const m = new Set(rows.map(r => r.marca)).size; return `${rows.length} ${rows.length === 1 ? "carga" : "cargas"} · ${m} ${m === 1 ? "marca" : "marcas"} · ${u} ${u === 1 ? "unidad" : "unidades"} · ${bs(v)}`; };
+  function renderIngHist() {
+    const P = $("#ihPanel"); if (!P) return;
+    if (S.ih.key !== S.ih.rango + "|" + diaKey(laPaz())) loadIngHist();
+    const q = nqh(S.ih.q), nomM = id => S.marcas[id]?.nombre || id;
+    const rows = S.ih.data.filter(r => !q || nqh(nomM(r.marca)).includes(q) || r.items.some(i => nqh(i.nombre).includes(q) || nqh(i.codigo).includes(q)));
+    const u = rows.reduce((a, r) => a + r.items.reduce((s2, i) => s2 + (+i.cant || 0), 0), 0), v = rows.reduce((a, r) => a + r.items.reduce((s2, i) => s2 + (+i.cant || 0) * (+i.precio || 0), 0), 0);
+    const chip = (k, t) => `<button class="b sm${S.ih.rango === k ? " pri" : ""}" data-ihr="${k}" aria-pressed="${S.ih.rango === k}">${t}</button>`;
+    const card = r => { const dec = Array.isArray(r.declarado) ? r.declarado : [];
+      return `<div style="padding:10px 0;border-bottom:1px solid var(--line)"><div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:6px"><span><b class="num">${hora(r.recibido)}</b> · <b>${esc(nomM(r.marca))}</b> <span class="small muted">${esc(S.marcas[r.marca]?.espacio || "")}</span></span><span class="small muted">${r.origen === "socio" ? "Registrado en caja" : "Cargado por la marca"}${S.ih.socios?.[r.por] ? " · recibió " + esc(S.ih.socios[r.por]) : ""}</span></div>` +
+        `<div class="tbl"><table><thead><tr><th>Código</th><th>Producto</th><th class="r">Cant.</th><th class="r">Precio</th></tr></thead><tbody>${r.items.map(i => { const d = dec.find(x => (x.codigo && x.codigo === i.codigo) || x.nombre === i.nombre); const dif = d && +d.cant !== +i.cant;
+          return `<tr><td class="num">${esc(i.codigo || "")}</td><td>${esc(i.nombre)}</td><td class="r num">${i.cant}${dif ? ` <span class="chip warn" title="La marca declaró ${d.cant}">declaró ${d.cant}</span>` : ""}</td><td class="r num">${bs(i.precio)}</td></tr>`; }).join("")}</tbody></table></div>${r.nota ? `<div class="small muted">Nota: ${esc(r.nota)}</div>` : ""}</div>`; };
+    const porDia = {}; rows.forEach(r => (porDia[diaKey(new Date(new Date(r.recibido).toLocaleString("en-US", {timeZone: "America/La_Paz"})))] ||= []).push(r));
+    const keep = P.contains(document.activeElement) && document.activeElement.id === "ihQ";
+    const lista = rows.length ? Object.entries(porDia).map(([d, rs]) => (S.ih.rango === "hoy" || S.ih.rango === "ayer" ? "" : `<div class="small" style="font-weight:700;margin-top:10px">${(t => t[0].toUpperCase() + t.slice(1))(new Date(d + "T12:00:00-04:00").toLocaleDateString("es-BO", {weekday: "long", day: "numeric", month: "long", timeZone: "America/La_Paz"}))}</div>`) + rs.map(card).join("")).join("")
+      : `<div class="empty">${S.ih.key ? (q ? "Nada coincide con la búsqueda." : "No se recibieron productos en este período.") : "Cargando…"}</div>`;
+    if (keep) { $("#ihList").innerHTML = lista; $("#ihSum").textContent = ihRes(rows, u, v); return; }
+    P.innerHTML = `<div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px"><h2>Historial de ingresos</h2><span class="chip ok" id="ihSum">${ihRes(rows, u, v)}</span></div>
+      <p class="small muted" style="margin:0 0 8px">Lo que las marcas trajeron y ya se recibió en la tienda, con la hora en que se sumó al stock.</p>
+      <div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:8px">${chip("hoy", "Hoy")}${chip("ayer", "Ayer")}${chip("7d", "Últimos 7 días")}${chip("30d", "Últimos 30 días")}<label class="f" style="flex:1 1 200px"><input id="ihQ" type="search" placeholder="Buscar marca, producto o código" value="${esc(S.ih.q)}"></label></div>
+      <div id="ihList">${lista}</div>`;
+  }
+  $("#ihPanel").addEventListener("click", e => { const b = e.target.closest("[data-ihr]"); if (!b) return; S.ih.rango = b.dataset.ihr; S.ih.key = null; S.ih.data = []; renderIngHist(); });
+  $("#ihPanel").addEventListener("input", e => { if (e.target.id === "ihQ") { S.ih.q = e.target.value; renderIngHist(); } });
+
   let histFor = null;
   async function renderHist(mid) {
     if (!mid || histFor === mid) return; histFor = mid;

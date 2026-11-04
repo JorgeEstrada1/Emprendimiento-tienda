@@ -392,17 +392,19 @@ details summary{cursor:pointer;font-weight:700}
   const ventasPer = k => Object.values(S.ventas).filter(v => v.periodo === k && !v.anulada);
 
   // ---------- carga de datos ----------
+  // Supabase devuelve como máximo 1000 filas por consulta: pedimos por páginas hasta traer todo
+  async function todo(q) { const out = []; for (let i = 0; ; i += 1000) { const d = chk(await q().range(i, i + 999)); out.push(...d); if (d.length < 1000) return out; } }
   async function loadMarcas() { const d = chk(await sb.from("marcas").select("*")); S.marcas = {}; d.forEach(m => S.marcas[m.id] = m); }
-  async function loadProductos() { const d = chk(await sb.from("productos").select("*")); S.productos = {}; d.forEach(p => S.productos[p.id] = p); }
+  async function loadProductos() { const d = await todo(() => sb.from("productos").select("*").order("id")); S.productos = {}; d.forEach(p => S.productos[p.id] = p); }
   async function loadVentas() {
     const pers = [...new Set([PER_ACT(), S.liqPer])];
-    const d = chk(await sb.from("ventas").select("*").in("periodo", pers).order("fecha", {ascending: false}).limit(5000));
+    const d = await todo(() => sb.from("ventas").select("*").in("periodo", pers).order("fecha", {ascending: false}).order("id"));
     S.ventas = {}; d.forEach(v => S.ventas[v.id] = v);
   }
   S.abiertos = new Set(); try { S.agrupar = localStorage.getItem("agrupar") !== "0"; } catch { S.agrupar = true; }
   async function loadIngresos() { const d = chk(await sb.from("ingresos").select("*").eq("estado", "pendiente").order("fecha")); S.pend = d; S.ih.key = null; }
   async function loadPagos() { const d = chk(await sb.from("pagos").select("*").eq("estado", "por_verificar").order("fecha")); S.pagos = d; }
-  async function loadAjustes() { const d = chk(await sb.from("ajustes").select("*")); S.aj = {}; d.forEach(a => S.aj[a.clave] = a.valor); }
+  async function loadAjustes() { const d = await todo(() => sb.from("ajustes").select("*").order("clave")); S.aj = {}; d.forEach(a => S.aj[a.clave] = a.valor); }
   async function loadLiq() { const d = chk(await sb.from("liquidaciones").select("*").eq("periodo", S.liqPer)); S.liq = {}; d.forEach(l => S.liq[l.periodo + "__" + l.marca] = l); }
   const loaders = {marcas: loadMarcas, productos: loadProductos, ventas: loadVentas, liquidaciones: loadLiq, ingresos: loadIngresos, pagos: loadPagos, ajustes: loadAjustes};
   const pend = new Set(); let tmr;
@@ -743,7 +745,7 @@ details summary{cursor:pointer;font-weight:700}
   async function ventasDelDia(dia) {
     const per = perKey(new Date(dia + "T12:00:00"));
     if (dia === HOY() || [PER_ACT(), S.liqPer].includes(per)) return Object.values(S.ventas).filter(v => v.dia === dia);
-    if (!S.ciCache[dia]) S.ciCache[dia] = chk(await sb.from("ventas").select("*").eq("dia", dia).order("fecha").limit(5000));
+    if (!S.ciCache[dia]) S.ciCache[dia] = await todo(() => sb.from("ventas").select("*").eq("dia", dia).order("fecha").order("id"));
     return S.ciCache[dia];
   }
   const ciNum = id => { const v = $("#" + id)?.value; return v === "" || v == null ? null : +v; };
@@ -933,7 +935,7 @@ details summary{cursor:pointer;font-weight:700}
     const b = $("#semBtn"); b.disabled = true; b.textContent = "Armando…";
     try {
       const desde = new Date(Date.now() - 7 * 864e5).toISOString();
-      const vs = chk(await sb.from("ventas").select("marca,nombre,cant,total").eq("anulada", false).gte("fecha", desde).limit(5000));
+      const vs = await todo(() => sb.from("ventas").select("marca,nombre,cant,total").eq("anulada", false).gte("fecha", desde).order("fecha").order("id"));
       const por = {}; vs.forEach(v => { (por[v.marca] = por[v.marca] || []).push(v); });
       $("#semList").innerHTML = marcasOrden().map(m => {
         const xs = por[m.id] || []; const tot = xs.reduce((a, v) => a + +v.total, 0), n = xs.reduce((a, v) => a + v.cant, 0);

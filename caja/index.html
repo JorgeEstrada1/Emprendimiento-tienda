@@ -67,6 +67,12 @@ button.b.danger{color:var(--bad);border-color:var(--bad)}
 .prod .m{font-size:.72rem;font-weight:700;color:var(--grape,#6B2A6E)}
 .prod{text-align:left;border:1px solid var(--line);background:var(--bg);border-radius:10px;padding:10px;cursor:pointer;display:flex;flex-direction:column;gap:2px;color:var(--ink);font:inherit}
 .prod:hover{border-color:var(--grape)}
+.compra{border:1px solid var(--line);border-radius:10px;padding:8px 10px;margin-bottom:8px}
+.compra.void{opacity:.55}
+.compra table td{padding-block:4px}
+.compra table{table-layout:fixed;width:100%}
+.compra td:nth-child(1){width:28%}.compra td:nth-child(2){width:36%}.compra td:nth-child(3){width:8%}.compra td:nth-child(4){width:14%}.compra td:nth-child(5){width:14%}
+.compra td{overflow:hidden;text-overflow:ellipsis}
 .prod .p{font-family:var(--f-num);font-weight:700}
 .prod .s{font-size:.75rem;color:var(--muted)}
 .prod[disabled]{opacity:.45;cursor:not-allowed}
@@ -488,20 +494,21 @@ details summary{cursor:pointer;font-weight:700}
   $("#cajaQ").addEventListener("input", () => renderCaja());
   function renderCaja() {
     $("#dlMarcas").innerHTML = marcasOrden().map(m => `<option value="${esc(m.nombre + " · " + m.espacio)}"></option>`).join("");
-    const box = $("#cajaProds");
+    const box = $("#cajaProds"); let boxHTML = "";
     const cq = ($("#cajaQ")?.value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
     const card = (p, conMarca) => `<button class="prod" data-add="${esc(p.id)}" ${p.stock <= 0 ? "disabled" : ""}>${p.foto ? `<img src="${esc(IMG(p.foto))}" alt="" loading="lazy">` : ""}${conMarca ? `<span class="m">${esc(S.marcas[p.marca]?.nombre || "")}</span>` : ""}<span class="small muted num">${esc(p.codigo || "")}</span><span>${esc(p.nombre)}</span><span class="p">${bs(p.precio)}</span><span class="s">Stock: ${p.stock}</span></button>`;
     if (cq.length >= 2) {
       const nn = t => String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
       const hits = Object.values(S.productos).filter(p => S.marcas[p.marca]?.activa !== false && (nn(p.nombre).includes(cq) || nn(p.codigo).includes(cq) || nn(S.marcas[p.marca]?.nombre).includes(cq))).sort((a, b) => (b.stock > 0) - (a.stock > 0) || a.nombre.localeCompare(b.nombre, "es"));
-      box.innerHTML = hits.length ? `<div class="small muted" style="margin:4px 0 6px">${hits.length} ${hits.length === 1 ? "producto" : "productos"}${hits.length > 120 ? " · mostrando 120, escribe más para afinar" : ""}</div><div class="prods">${hits.slice(0, 120).map(p => card(p, true)).join("")}</div>` : `<div class="empty">No encontramos «${esc($("#cajaQ").value)}». Prueba con otra palabra o usa «Producto sin registrar».</div>`;
+      boxHTML = hits.length ? `<div class="small muted" style="margin:4px 0 6px">${hits.length} ${hits.length === 1 ? "producto" : "productos"}${hits.length > 120 ? " · mostrando 120, escribe más para afinar" : ""}</div><div class="prods">${hits.slice(0, 120).map(p => card(p, true)).join("")}</div>` : `<div class="empty">No encontramos «${esc($("#cajaQ").value)}». Prueba con otra palabra o usa «Producto sin registrar».</div>`;
     }
-    else if (!S.marcaCaja) box.innerHTML = `<div class="empty">Elige una marca o busca el producto por nombre. Si todavía no lo registraron, usa «Producto sin registrar».</div>`;
+    else if (!S.marcaCaja) boxHTML = `<div class="empty">Elige una marca o busca el producto por nombre. Si todavía no lo registraron, usa «Producto sin registrar».</div>`;
     else {
       const ps = prodsDe(S.marcaCaja);
-      box.innerHTML = ps.length ? `<div class="small muted" style="margin:4px 0 6px">${ps.length} ${ps.length === 1 ? "producto" : "productos"}</div><div class="prods">${ps.map(p => card(p, false)).join("")}</div>`
+      boxHTML = ps.length ? `<div class="small muted" style="margin:4px 0 6px">${ps.length} ${ps.length === 1 ? "producto" : "productos"}</div><div class="prods">${ps.map(p => card(p, false)).join("")}</div>`
         : `<div class="empty">${esc(S.marcas[S.marcaCaja].nombre)} no tiene productos registrados. Regístralos en Stock con la ficha de ingreso, o vende con «Producto sin registrar».</div>`;
     }
+    if (box.__html !== boxHTML) { box.innerHTML = boxHTML; box.__html = boxHTML; }
     $("#cart").innerHTML = S.cart.length ? S.cart.map((l, i) => `<li><span style="min-width:0"><b>${esc(l.nombre)}</b><br><span class="small muted">${l.codigo ? esc(l.codigo) + " · " : ""}${esc(S.marcas[l.marca]?.nombre || "")}</span></span><span class="row" style="flex-wrap:nowrap"><button class="b sm" data-dec="${i}" aria-label="Quitar uno">−</button><span class="num">${l.cant}</span><button class="b sm" data-inc="${i}" aria-label="Agregar uno">+</button><span class="num" style="min-width:76px;text-align:right">${bs(l.cant * l.precio)}</span></span></li>`).join("")
       : `<li class="muted small">Toca un producto para agregarlo a la cuenta.</li>`;
     $("#cartTot").textContent = bs(S.cart.reduce((a, l) => a + l.cant * l.precio, 0));
@@ -509,8 +516,12 @@ details summary{cursor:pointer;font-weight:700}
     $$("#metodo button").forEach(b => b.setAttribute("aria-pressed", b.dataset.m === S.metodo));
     $("#hoyFecha").textContent = laPaz().toLocaleDateString("es-BO", {weekday: "long", day: "numeric", month: "long"});
     const hoy = Object.values(S.ventas).filter(v => v.dia === HOY()).sort((a, b) => b.fecha.localeCompare(a.fecha));
-    $("#hoyList").innerHTML = hoy.length ? `<div class="tbl"><table><thead><tr><th>Hora</th><th>Marca</th><th>Producto</th><th class="r">Cant.</th><th class="r">Total</th><th>Pago</th><th></th></tr></thead><tbody>${hoy.map(v => `<tr class="${v.anulada ? "void" : ""}"><td class="num">${hora(v.fecha)}</td><td>${esc(S.marcas[v.marca]?.nombre || v.marca)}</td><td>${esc(v.nombre)}</td><td class="r num">${v.cant}</td><td class="r num">${bs(v.total)}</td><td><span class="chip g">${esc(v.metodo)}</span></td><td>${v.anulada ? `<span class="chip bad">Anulada</span>` : `<span><button class="b sm danger" data-anular="${esc(v.id)}">Anular</button></span>`}</td></tr>`).join("")}</tbody></table></div>`
-      : `<div class="empty">Todavía no hay ventas hoy. Cuando cobres, aparecen aquí con la hora y la marca.</div>`;
+    const compras = []; { const by = new Map(); hoy.forEach(v => { const k = v.fecha + "|" + v.metodo + "|" + (v.por || ""); if (!by.has(k)) { by.set(k, []); compras.push(by.get(k)); } by.get(k).push(v); }); }
+    const hoyHTML = hoy.length ? `<div class="small muted" style="margin-bottom:6px">${compras.length} ${compras.length === 1 ? "compra" : "compras"} · ${hoy.filter(v => !v.anulada).reduce((a, v) => a + v.cant, 0)} productos</div>` + compras.map((c, i) => { const ok = c.filter(v => !v.anulada), tot = ok.reduce((a, v) => a + +v.total, 0), u = ok.reduce((a, v) => a + v.cant, 0);
+      return `<div class="compra${ok.length ? "" : " void"}"><div class="row" style="justify-content:space-between;gap:8px;flex-wrap:wrap"><span><b class="num">${hora(c[0].fecha)}</b> · Compra ${compras.length - i} · ${u} ${u === 1 ? "producto" : "productos"}</span><span class="row" style="gap:8px"><span class="chip g">${esc(c[0].metodo)}</span><b class="num">${bs(tot)}</b></span></div>
+        <div class="tbl"><table><tbody>${c.map(v => `<tr class="${v.anulada ? "void" : ""}"><td>${esc(S.marcas[v.marca]?.nombre || v.marca)}</td><td>${esc(v.nombre)}</td><td class="r num">${v.cant}</td><td class="r num">${bs(v.total)}</td><td class="r">${v.anulada ? `<span class="chip bad">Anulada</span>` : `<span><button class="b sm danger" data-anular="${esc(v.id)}">Anular</button></span>`}</td></tr>`).join("")}</tbody></table></div></div>`; }).join("")
+      : `<div class="empty">Todavía no hay ventas hoy. Cuando cobres, aparecen aquí agrupadas por compra.</div>`;
+    const hl = $("#hoyList"); if (hl.__html !== hoyHTML && !hl.querySelector(".confirm")) { hl.innerHTML = hoyHTML; hl.__html = hoyHTML; }
   }
   $("#cajaProds").addEventListener("click", e => {
     const b = e.target.closest("[data-add]"); if (!b) return;
@@ -518,6 +529,7 @@ details summary{cursor:pointer;font-weight:700}
     const l = S.cart.find(x => x.producto === p.id);
     if ((l ? l.cant : 0) + 1 > p.stock) return toast("No hay más stock de " + p.nombre);
     if (l) l.cant++; else S.cart.push({producto: p.id, marca: p.marca, nombre: p.nombre, codigo: p.codigo, precio: +p.precio, cant: 1});
+    toast("Agregado: " + p.nombre + " (×" + (l ? l.cant : 1) + ")");
     renderCaja();
   });
   const addProd = p => {
@@ -564,8 +576,8 @@ details summary{cursor:pointer;font-weight:700}
   $("#hoyList").addEventListener("click", async e => {
     const a = e.target.closest("[data-anular]"), y = e.target.closest("[data-yes]"), n = e.target.closest("[data-no]");
     if (a) { a.parentElement.innerHTML = `<span class="confirm small">¿Anular? <button class="b sm danger" data-yes="${esc(a.dataset.anular)}">Sí</button><button class="b sm" data-no="1">No</button></span>`; return; }
-    if (n) return renderCaja();
-    if (y) { try { chk(await sb.rpc("anular_venta", {p_id: y.dataset.yes})); toast("Venta anulada y stock devuelto"); refresh("ventas", "productos"); } catch (er) { fail(er); } }
+    if (n) { $("#hoyList").__html = ""; $("#hoyList").innerHTML = ""; return renderCaja(); }
+    if (y) { try { chk(await sb.rpc("anular_venta", {p_id: y.dataset.yes})); toast("Venta anulada y stock devuelto"); $("#hoyList").innerHTML = ""; $("#hoyList").__html = ""; refresh("ventas", "productos"); } catch (er) { fail(er); } }
   });
 
   // ---------- stock ----------

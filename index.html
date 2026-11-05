@@ -773,11 +773,11 @@ let mN = 0;
 function hilera(p, q, s0, n, where, premium=false){
   const f = frameOf(p,q), rot = Math.atan2(f.n.x, f.n.y), first = mN + 1;
   for (let k=0;k<n;k++){
-    const s = s0 + 0.645 + k*1.26; mN++;
+    const s = first === 1 ? (k === 0 ? s0 + 0.345 : s0 + 1.305 + (k-1)*1.26) : s0 + 0.645 + k*1.26; mN++;   /* pared izq.: MD2 en la esquina y M2–M7 juntos, sin hueco */
     const c = f.a.clone().addScaledVector(f.d, s).addScaledVector(f.n, 0.155);
     if (mN === 1){   /* M1 se dividió en dos medios estantes en su mismo lugar: MD1 (lado A) y MD2 (lado B) */
       const lx = new THREE.Vector2(Math.cos(rot), -Math.sin(rot));
-      placeAt(rack(scene, { id:'MD2', kind:'Medio estante MD2 (mitad del antiguo M1)', bays:1, premium, where }), c.clone().addScaledVector(lx, 0.33), rot, scene);
+      placeAt(rack(scene, { id:'MD2', kind:'Medio estante MD2 (mitad del antiguo M1)', bays:1, premium, where }), c, rot, scene);
       continue;
     }
     placeAt(rack(scene, { id:'M'+mN, kind:'Estante de pared M'+mN, premium, where }), c, rot, scene);
@@ -1484,11 +1484,11 @@ let mN = 0;
 function hilera(p, q, s0, n, where, premium=false){
   const f = frameOf(p,q), rot = Math.atan2(f.n.x, f.n.y), first = mN + 1;
   for (let k=0;k<n;k++){
-    const s = s0 + 0.645 + k*1.26; mN++;
+    const s = first === 1 ? (k === 0 ? s0 + 0.345 : s0 + 1.305 + (k-1)*1.26) : s0 + 0.645 + k*1.26; mN++;   /* pared izq.: MD2 en la esquina y M2–M7 juntos, sin hueco */
     const c = f.a.clone().addScaledVector(f.d, s).addScaledVector(f.n, 0.155);
     if (mN === 1){   /* M1 se dividió en dos medios estantes en su mismo lugar: MD1 (lado A) y MD2 (lado B) */
       const lx = new THREE.Vector2(Math.cos(rot), -Math.sin(rot));
-      placeAt(rack(scene, { id:'MD2', kind:'Medio estante MD2 (mitad del antiguo M1)', bays:1, premium, where }), c.clone().addScaledVector(lx, 0.33), rot, scene);
+      placeAt(rack(scene, { id:'MD2', kind:'Medio estante MD2 (mitad del antiguo M1)', bays:1, premium, where }), c, rot, scene);
       continue;
     }
     placeAt(rack(scene, { id:'M'+mN, kind:'Estante de pared M'+mN, premium, where }), c, rot, scene);

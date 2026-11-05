@@ -38,6 +38,12 @@ header.top .wrap{padding-block:12px 0;display:flex;flex-direction:column;gap:10p
 .brandrow{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .brandrow h1{font-family:var(--f-display);font-weight:800;font-size:1.35rem;margin:0;letter-spacing:-.01em}
 .brandrow .per{font-size:.85rem;opacity:.85}
+.dnk{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-top:14px}
+.dnk>div{border:1px solid var(--line);border-radius:12px;padding:12px 14px;background:var(--panel)}
+.dnk span{display:block;font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;font-weight:700}
+.dnk b{display:block;font-family:var(--f-num);font-size:1.7rem;line-height:1.15;margin-top:2px}
+.dnk small{color:var(--muted)}
+.dnk .ef{border-left:5px solid var(--ok)} .dnk .qr{border-left:5px solid var(--grape)} .dnk .tt{border-left:5px solid var(--ink)}
 .kpis{display:flex;gap:18px;flex-wrap:wrap;font-size:.8rem}
 .kpis b{display:block;font-family:var(--f-num);font-size:1.05rem;font-weight:700}
 nav.tabs{display:flex;gap:4px;overflow-x:auto}
@@ -178,6 +184,7 @@ details summary{cursor:pointer;font-weight:700}
     <nav class="tabs" role="tablist">
       <button role="tab" data-tab="caja" aria-selected="true">Caja</button>
       <button role="tab" data-tab="cierre" aria-selected="false">Cierre de caja</button>
+      <button role="tab" data-tab="dinero" aria-selected="false">Dinero</button>
       <button role="tab" data-tab="stock" aria-selected="false">Stock</button>
       <button role="tab" data-tab="inv" aria-selected="false">Inventario</button>
       <button role="tab" data-tab="liq" aria-selected="false">Liquidación</button>
@@ -245,6 +252,23 @@ details summary{cursor:pointer;font-weight:700}
         </div>
       </div>
       <div id="ciRes"></div>
+    </div>
+  </section>
+
+  <section data-view="dinero" hidden>
+    <div class="panel" style="margin-top:18px">
+      <div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px;align-items:flex-end">
+        <div><h2 style="margin:0">Dinero: efectivo y QR</h2><div class="small muted" id="dnSub"></div></div>
+        <div class="row" style="gap:6px;flex-wrap:wrap;align-items:flex-end" id="dnRangos">
+          <button class="b sm" type="button" data-dnr="hoy">Hoy</button>
+          <button class="b sm" type="button" data-dnr="7d">Últimos 7 días</button>
+          <button class="b sm" type="button" data-dnr="per">Desde el 29</button>
+          <button class="b sm" type="button" data-dnr="todo">Todo</button>
+          <label class="f" style="margin:0">Desde<input id="dnD1" type="date"></label>
+          <label class="f" style="margin:0">Hasta<input id="dnD2" type="date"></label>
+        </div>
+      </div>
+      <div id="dnRes"><p class="small muted">Cargando…</p></div>
     </div>
   </section>
 
@@ -1089,11 +1113,62 @@ details summary{cursor:pointer;font-weight:700}
     } catch (er) { fail(er); }
   });
 
+  /* ---------- DINERO: total en efectivo y en QR ---------- */
+  S.dn = {r: "todo", d1: "", d2: "", key: null, v: [], l: [], busy: false};
+  function dnRango() {
+    const hoy = diaKey(laPaz()), r = S.dn.r;
+    if (r === "hoy") return [hoy, hoy];
+    if (r === "7d") { const d = laPaz(); d.setDate(d.getDate() - 6); return [diaKey(d), hoy]; }
+    if (r === "per") { const d = laPaz(); d.setDate(1); if (laPaz().getDate() < 29) d.setMonth(d.getMonth() - 1); const fin = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate(); d.setDate(Math.min(29, fin)); return [diaKey(d), hoy]; }
+    if (r === "rango") { const a = S.dn.d1 || hoy, b = S.dn.d2 || hoy; return a <= b ? [a, b] : [b, a]; }
+    return ["2026-01-01", hoy];
+  }
+  async function loadDinero() {
+    const [a, b] = dnRango(), key = a + "|" + b;
+    S.dn.key = key;
+    const v = await todo(() => sb.from("ventas").select("id,dia,fecha,metodo,total,por,anulada").eq("anulada", false).gte("dia", a).lte("dia", b).order("fecha").order("id"));
+    let l = [];
+    try { l = await todo(() => sb.from("liquidaciones").select("marca,entregado,metodo,fecha").gte("fecha", a + "T00:00:00-04:00").lte("fecha", b + "T23:59:59-04:00").order("fecha")); } catch {}
+    if (!S.ih.socios) { try { const so = await sb.from("socios").select("user_id,nombre"); S.ih.socios = Object.fromEntries((so.data || []).map(x => [x.user_id, x.nombre])); } catch {} }
+    if (S.dn.key !== key) return false;
+    S.dn.v = v.filter(x => !x.anulada); S.dn.l = l; return true;
+  }
+  async function renderDinero() {
+    $$("#dnRangos [data-dnr]").forEach(x => { const on = x.dataset.dnr === S.dn.r; x.classList.toggle("pri", on); x.setAttribute("aria-pressed", on); });
+    const [a, b] = dnRango();
+    $("#dnD1").value = a === "2026-01-01" ? "" : a; $("#dnD2").value = b;
+    const fmt = d => new Date(d + "T12:00:00").toLocaleDateString("es-BO", {weekday: "short", day: "numeric", month: "short"});
+    $("#dnSub").textContent = S.dn.r === "todo" ? "Todo lo cobrado desde que abrimos" : a === b ? fmt(a) : fmt(a) + " → " + fmt(b);
+    try { if (!(await loadDinero())) return; } catch (e) { fail(e); return; }
+    const M = m => (m || "efectivo") === "qr" ? "qr" : m === "tarjeta" ? "tj" : "ef";
+    const z = () => ({ef: 0, qr: 0, tj: 0});
+    const tot = z(), nC = new Set(), porDia = {}, porSocio = {};
+    S.dn.v.forEach(v => { const k = M(v.metodo), t = +v.total || 0; tot[k] += t; nC.add(v.fecha + "|" + v.metodo + "|" + (v.por || ""));
+      (porDia[v.dia] ||= Object.assign(z(), {c: new Set()}))[k] += t; porDia[v.dia].c.add(v.fecha + "|" + v.metodo + "|" + (v.por || ""));
+      const sn = (S.ih.socios || {})[v.por] || "Sin nombre"; (porSocio[sn] ||= z())[k] += t; });
+    const pag = z(); S.dn.l.forEach(x => { pag[M(x.metodo)] += +x.entregado || 0; });
+    const total = tot.ef + tot.qr + tot.tj, pagT = pag.ef + pag.qr + pag.tj, pct = n => total ? Math.round(n / total * 100) + " %" : "—";
+    const card = (cls, t, n, sub) => `<div class="${cls}"><span>${t}</span><b>${bs(n)}</b><small>${sub}</small></div>`;
+    let h = `<div class="dnk">${card("ef", "💵 Efectivo", tot.ef, pct(tot.ef) + " de lo cobrado")}${card("qr", "📱 QR", tot.qr, pct(tot.qr) + " de lo cobrado")}${tot.tj ? card("qr", "💳 Tarjeta", tot.tj, pct(tot.tj)) : ""}${card("tt", "Total cobrado", total, nC.size + (nC.size === 1 ? " compra" : " compras"))}</div>`;
+    h += pagT ? `<div class="dnk">${card("ef", "Efectivo que queda", tot.ef - pag.ef, "Entregado a emprendedores: " + bs(pag.ef))}${card("qr", "QR que queda", tot.qr - pag.qr, "Entregado a emprendedores: " + bs(pag.qr))}${card("tt", "Total que queda", total - pagT, "Entregado: " + bs(pagT))}</div>`
+      : `<p class="small muted" style="margin:10px 0 0">En estas fechas todavía no se registró dinero entregado a emprendedores (liquidación del 29).</p>`;
+    const socios = Object.entries(porSocio).sort((x, y) => (y[1].ef + y[1].qr + y[1].tj) - (x[1].ef + x[1].qr + x[1].tj));
+    if (socios.length) h += `<h3 style="margin:18px 0 6px">¿Quién cobró?</h3><div class="tbl"><table><thead><tr><th>Socio</th><th class="r">Efectivo</th><th class="r">QR</th><th class="r">Total</th></tr></thead><tbody>${socios.map(([n, x]) => `<tr><td>${esc(n)}</td><td class="r num">${bs(x.ef)}</td><td class="r num">${bs(x.qr + x.tj)}</td><td class="r num"><b>${bs(x.ef + x.qr + x.tj)}</b></td></tr>`).join("")}</tbody></table></div>`;
+    const dias = Object.keys(porDia).sort().reverse();
+    h += dias.length ? `<h3 style="margin:18px 0 6px">Día por día</h3><div class="tbl"><table><thead><tr><th>Día</th><th class="r">Compras</th><th class="r">Efectivo</th><th class="r">QR</th><th class="r">Total</th></tr></thead><tbody>${dias.map(d => { const x = porDia[d]; return `<tr><td>${fmt(d)}</td><td class="r num">${x.c.size}</td><td class="r num">${bs(x.ef)}</td><td class="r num">${bs(x.qr + x.tj)}</td><td class="r num"><b>${bs(x.ef + x.qr + x.tj)}</b></td></tr>`; }).join("")}</tbody><tfoot><tr><td><b>Total</b></td><td class="r num"><b>${nC.size}</b></td><td class="r num"><b>${bs(tot.ef)}</b></td><td class="r num"><b>${bs(tot.qr + tot.tj)}</b></td><td class="r num"><b>${bs(total)}</b></td></tr></tfoot></table></div>`
+      : `<p class="small muted" style="margin:14px 0 0">No hay ventas en estas fechas.</p>`;
+    h += `<p class="small muted" style="margin:12px 0 0">Suma las ventas cobradas en caja (sin las anuladas). Los pagos de espacios de los emprendedores no entran aquí.</p>`;
+    $("#dnRes").innerHTML = h;
+  }
+  $("#dnRangos").addEventListener("click", e => { const b = e.target.closest("[data-dnr]"); if (!b) return; S.dn.r = b.dataset.dnr; renderDinero(); });
+  ["#dnD1", "#dnD2"].forEach(id => $(id).addEventListener("change", () => { S.dn.r = "rango"; S.dn.d1 = $("#dnD1").value; S.dn.d2 = $("#dnD2").value; renderDinero(); }));
+
   function render() {
     if ($("#appView").hidden) return;
     renderTop();
     if (S.tab === "caja") renderCaja();
     if (S.tab === "cierre") renderCierre();
+    if (S.tab === "dinero") renderDinero();
     if (S.tab === "stock") renderStock();
     if (S.tab === "inv") renderInv();
     if (S.tab === "liq") renderLiq();

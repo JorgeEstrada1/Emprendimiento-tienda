@@ -248,7 +248,7 @@ details summary{cursor:pointer;font-weight:700}
         <div class="row noprint" style="gap:8px;flex-wrap:wrap;align-items:flex-end">
           <label class="f" style="margin:0">Día<input id="ciDia" type="date"></label>
           <button class="b sm" id="ciHoy" type="button">Hoy</button>
-          <div class="seg" id="ciTurno" role="group" aria-label="Turno"><button type="button" data-citurno="manana">☀️ Mañana</button><button type="button" data-citurno="tarde">🌤️ Tarde</button><button type="button" data-citurno="dia">Día completo</button></div>
+          <div class="seg" id="ciTurno" role="group" aria-label="Turno"><button type="button" data-citurno="manana">☀️ Mañana</button><button type="button" data-citurno="tarde">🌤️ Tarde</button><button type="button" data-citurno="noche">🌙 Noche</button><button type="button" data-citurno="dia">Día completo</button></div>
           <button class="b sm" id="ciPrint" type="button">🖨️ Imprimir / PDF</button>
         </div>
       </div>
@@ -800,9 +800,15 @@ details summary{cursor:pointer;font-weight:700}
     return S.ciCache[dia];
   }
   const ciNum = id => { const v = $("#" + id)?.value; return v === "" || v == null ? null : +v; };
-  // Turno según la hora de La Paz: mañana antes de las 14:00 · tarde desde las 14:00 hasta el cierre (la noche va junto con la tarde)
-  const TURNOS = {manana: {n: "Mañana", i: "☀️", h: "hasta las 14:00"}, tarde: {n: "Tarde", i: "🌤️", h: "desde las 14:00 hasta el cierre"}};
-  const turnoDe = iso => +new Date(iso).toLocaleString("en-US", {hour: "2-digit", hour12: false, timeZone: "America/La_Paz"}) % 24 < 14 ? "manana" : "tarde";
+  // Turno según la hora de La Paz: mañana antes de las 14:00 · tarde de 14:00 a 18:29 · noche desde las 18:30
+  // Días sin turno noche (no se abrió la caja de la noche): todo lo de la tarde queda en la tarde
+  const SIN_NOCHE = ["2026-11-05"];
+  const TURNOS = {manana: {n: "Mañana", i: "☀️", h: "hasta las 14:00"}, tarde: {n: "Tarde", i: "🌤️", h: "14:00 a 18:30"}, noche: {n: "Noche", i: "🌙", h: "desde las 18:30"}};
+  const turnoDe = iso => {
+    const p = Object.fromEntries(new Intl.DateTimeFormat("en-CA", {timeZone: "America/La_Paz", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23"}).formatToParts(new Date(iso)).map(x => [x.type, x.value]));
+    const m = (+p.hour % 24) * 60 + +p.minute, dia = p.year + "-" + p.month + "-" + p.day;
+    return m < 14 * 60 ? "manana" : (m < 18 * 60 + 30 || SIN_NOCHE.includes(dia)) ? "tarde" : "noche";
+  };
   if (!S.ciTurno) S.ciTurno = turnoDe(new Date().toISOString());
   async function renderCierre() {
     const dia = S.ciDia; $("#ciDia").value = dia;
@@ -813,7 +819,7 @@ details summary{cursor:pointer;font-weight:700}
     let vs; try { vs = await ventasDelDia(dia); } catch (e) { $("#ciRes").innerHTML = `<div class="empty">No se pudieron cargar las ventas de ese día.</div>`; return; }
     if (S.ciDia !== dia) return;
     vs = vs.slice().sort((a, b) => a.fecha.localeCompare(b.fecha));
-    const T = S.ciTurno, KEY = "cierre:" + dia + (T === "dia" ? "" : ":" + T), TN = {manana: "Turno mañana (hasta las 14:00)", tarde: "Turno tarde (desde las 14:00 hasta el cierre)", dia: "Día completo"};
+    const T = S.ciTurno, KEY = "cierre:" + dia + (T === "dia" ? "" : ":" + T), TN = {manana: "Turno mañana (hasta las 14:00)", tarde: "Turno tarde (14:00 a 18:30)", noche: "Turno noche (desde las 18:30)", dia: "Día completo"};
     $$("[data-citurno]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.citurno === T)));
     $("#ciTit").textContent = "Cierre de caja · " + (T === "dia" ? "Día completo" : TURNOS[T].n);
     const todasDia = vs; if (T !== "dia") vs = vs.filter(v => turnoDe(v.fecha) === T);
@@ -838,7 +844,7 @@ details summary{cursor:pointer;font-weight:700}
     const resT = t => { let sv = null; try { sv = S.aj["cierre:" + dia + ":" + t] ? JSON.parse(S.aj["cierre:" + dia + ":" + t]) : null; } catch {} const a = todasDia.filter(v => !v.anulada && turnoDe(v.fecha) === t); const e2 = a.filter(v => (v.metodo || "efectivo") === "efectivo").reduce((x, v) => x + +v.total, 0), q2 = a.filter(v => v.metodo === "qr").reduce((x, v) => x + +v.total, 0), t2 = a.reduce((x, v) => x + +v.total, 0);
       return `<tr><td><b>${TURNOS[t].i} ${TURNOS[t].n}</b> <span class="small muted">${TURNOS[t].h}</span></td><td class="r num">${a.length}</td><td class="r num">${bs(e2)}</td><td class="r num">${bs(q2)}</td><td class="r num"><b>${bs(t2)}</b></td><td>${sv ? `<span class="chip ok">Cerrado por ${esc(sv.porNom || "")} ${hora(sv.at)}</span>` : `<span class="chip warn">Sin cerrar</span>`}</td></tr>`; };
     $("#ciRes").innerHTML =
-      (T === "dia" ? `<div class="cisec" style="margin-top:12px"><h3 style="margin:0 0 6px">Turnos del día</h3><div class="tbl"><table><thead><tr><th>Turno</th><th class="r">Ventas</th><th class="r">Efectivo</th><th class="r">QR</th><th class="r">Total</th><th>Cierre</th></tr></thead><tbody>${resT("manana")}${resT("tarde")}</tbody></table></div></div>` : "") +
+      (T === "dia" ? `<div class="cisec" style="margin-top:12px"><h3 style="margin:0 0 6px">Turnos del día</h3><div class="tbl"><table><thead><tr><th>Turno</th><th class="r">Ventas</th><th class="r">Efectivo</th><th class="r">QR</th><th class="r">Total</th><th>Cierre</th></tr></thead><tbody>${resT("manana")}${resT("tarde")}${resT("noche")}</tbody></table></div></div>` : "") +
       (saved ? `<div class="banner noprint" style="margin-top:10px;${cambio ? "" : "background:var(--ok-soft);color:var(--ok)"}">${cambio ? "⚠ Hubo ventas o cambios después de guardar el cierre. Revisa y vuelve a guardarlo." : "✔ Cierre guardado"} por ${esc(saved.porNom || "socio")} el ${new Date(saved.at).toLocaleString("es-BO", {day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", timeZone: "America/La_Paz"})}</div>` : "") +
       `<div class="cig"><div class="cik ef"><div class="l">💵 EFECTIVO</div><div class="v">${bs(tEf)}</div><div class="s">${ef.length} ${ef.length === 1 ? "venta" : "ventas"}</div></div><div class="cik qr"><div class="l">📱 QR</div><div class="v">${bs(tQr)}</div><div class="s">${qr.length} ${qr.length === 1 ? "venta" : "ventas"}</div></div>${tj.length ? `<div class="cik"><div class="l">💳 TARJETA</div><div class="v">${bs(tTj)}</div><div class="s">${tj.length} ventas</div></div>` : ""}<div class="cik tot"><div class="l">TOTAL VENDIDO</div><div class="v">${bs(tot)}</div><div class="s">${ok.length} ventas · ${uds} unidades${an.length ? " · " + an.length + " anuladas" : ""}</div></div></div>` +
       `<div class="cisec panel" style="background:var(--bg);margin-top:4px"><h3 style="margin:0 0 8px">Arqueo</h3>

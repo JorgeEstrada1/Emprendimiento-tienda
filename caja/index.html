@@ -801,13 +801,14 @@ details summary{cursor:pointer;font-weight:700}
   }
   const ciNum = id => { const v = $("#" + id)?.value; return v === "" || v == null ? null : +v; };
   // Turno según la hora de La Paz: mañana antes de las 14:00 · tarde de 14:00 a 18:29 · noche desde las 18:30
-  // Días sin turno noche (no se abrió la caja de la noche): todo lo de la tarde queda en la tarde
-  const SIN_NOCHE = ["2026-11-05"];
+  // Días en que la caja de la noche se abrió a otra hora (HH:MM)
+  const CORTE_NOCHE = {"2026-11-05": "19:40"};
   const TURNOS = {manana: {n: "Mañana", i: "☀️", h: "hasta las 14:00"}, tarde: {n: "Tarde", i: "🌤️", h: "14:00 a 18:30"}, noche: {n: "Noche", i: "🌙", h: "desde las 18:30"}};
   const turnoDe = iso => {
     const p = Object.fromEntries(new Intl.DateTimeFormat("en-CA", {timeZone: "America/La_Paz", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23"}).formatToParts(new Date(iso)).map(x => [x.type, x.value]));
     const m = (+p.hour % 24) * 60 + +p.minute, dia = p.year + "-" + p.month + "-" + p.day;
-    return m < 14 * 60 ? "manana" : (m < 18 * 60 + 30 || SIN_NOCHE.includes(dia)) ? "tarde" : "noche";
+    const c = (CORTE_NOCHE[dia] || "18:30").split(":").map(Number);
+    return m < 14 * 60 ? "manana" : m < c[0] * 60 + c[1] ? "tarde" : "noche";
   };
   if (!S.ciTurno) S.ciTurno = turnoDe(new Date().toISOString());
   async function renderCierre() {

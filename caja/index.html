@@ -186,6 +186,7 @@ details summary{cursor:pointer;font-weight:700}
       <button role="tab" data-tab="caja" aria-selected="true">Caja</button>
       <button role="tab" data-tab="cierre" aria-selected="false">Cierre de caja</button>
       <button role="tab" data-tab="dinero" aria-selected="false">Dinero</button>
+      <button role="tab" data-tab="cobros" aria-selected="false">Cobros</button>
       <button role="tab" data-tab="stock" aria-selected="false">Stock</button>
       <button role="tab" data-tab="inv" aria-selected="false">Inventario</button>
       <button role="tab" data-tab="liq" aria-selected="false">Liquidación</button>
@@ -253,6 +254,26 @@ details summary{cursor:pointer;font-weight:700}
         </div>
       </div>
       <div id="ciRes"></div>
+    </div>
+  </section>
+
+  <section data-view="cobros" hidden>
+    <div class="panel" style="margin-top:18px">
+      <div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px;align-items:flex-end">
+        <div><h2 style="margin:0">Cobros de espacios</h2><div class="small muted">Qué emprendedores ya pagaron su espacio y quiénes tienen saldo pendiente</div></div>
+        <label class="f" style="margin:0;flex:0 1 240px">Buscar<input id="cbQ" type="search" placeholder="Marca, titular o celular" autocomplete="off"></label>
+      </div>
+      <div class="row" id="cbFil" style="gap:6px;flex-wrap:wrap;margin-top:10px">
+        <button class="b sm" type="button" data-cbf="todos">Todos</button>
+        <button class="b sm" type="button" data-cbf="debe">Con saldo</button>
+        <button class="b sm" type="button" data-cbf="sin">Sin pago</button>
+        <button class="b sm" type="button" data-cbf="pagado">Pagados</button>
+        <button class="b sm" type="button" data-cbf="definir">Monto por definir</button>
+        <span style="flex:1"></span>
+        <button class="b sm" type="button" data-cbo="reciente">Más recientes primero</button>
+        <button class="b sm" type="button" data-cbo="debe">Mayor saldo primero</button>
+      </div>
+      <div id="cbRes"></div>
     </div>
   </section>
 
@@ -1172,12 +1193,52 @@ details summary{cursor:pointer;font-weight:700}
   $("#dnRangos").addEventListener("click", e => { const b = e.target.closest("[data-dnr]"); if (!b) return; S.dn.r = b.dataset.dnr; renderDinero(); });
   ["#dnD1", "#dnD2"].forEach(id => $(id).addEventListener("change", () => { S.dn.r = "rango"; S.dn.d1 = $("#dnD1").value; S.dn.d2 = $("#dnD2").value; renderDinero(); }));
 
+  /* ---------- COBROS: pagos de espacios por emprendedor ---------- */
+  S.cb = {f: "todos", o: "reciente", q: "", armed: null};
+  const cbCalc = m => {
+    const tar = +m.tarifa || 0, ad = +m.adelanto || 0, sal = +m.saldo || 0;
+    const pagado = ad + (m.saldo_pagado ? sal : 0), debe = Math.max(0, m.saldo_pagado ? 0 : sal);
+    const est = tar === 0 && ad === 0 ? "definir" : pagado === 0 ? "sin" : debe > 0 ? "debe" : "pagado";
+    return {tar, pagado, debe, est};
+  };
+  function renderCobros() {
+    $$("#cbFil [data-cbf]").forEach(x => { const on = x.dataset.cbf === S.cb.f; x.classList.toggle("pri", on); x.setAttribute("aria-pressed", on); });
+    $$("#cbFil [data-cbo]").forEach(x => { const on = x.dataset.cbo === S.cb.o; x.classList.toggle("pri", on); x.setAttribute("aria-pressed", on); });
+    const porVer = {}; (S.pagos || []).forEach(p => { porVer[p.marca] = (porVer[p.marca] || 0) + (+p.monto || 0); });
+    const all = Object.values(S.marcas).filter(m => m.activa !== false && !/^reserva/.test(m.id)).map(m => ({m, ...cbCalc(m)}));
+    const tot = all.reduce((a, x) => (a.tar += x.tar, a.pag += x.pagado, a.debe += x.debe, a), {tar: 0, pag: 0, debe: 0});
+    const n = k => all.filter(x => x.est === k).length;
+    const q = S.cb.q.trim().toLowerCase();
+    let vis = all.filter(x => (S.cb.f === "todos" || x.est === S.cb.f) && (!q || [x.m.nombre, x.m.titular, x.m.celular, x.m.espacio].join(" ").toLowerCase().includes(q)));
+    vis.sort(S.cb.o === "debe" ? (a, b) => b.debe - a.debe || String(b.m.creado || "").localeCompare(String(a.m.creado || "")) : (a, b) => String(b.m.creado || "").localeCompare(String(a.m.creado || "")) || (b.m.n || 0) - (a.m.n || 0));
+    const chip = x => x.est === "pagado" ? `<span class="chip ok">Pagado</span>` : x.est === "debe" ? `<span class="chip warn">Debe ${bs(x.debe)}</span>` : x.est === "sin" ? `<span class="chip bad">Sin pago · ${bs(x.debe || x.tar)}</span>` : `<span class="chip">Monto por definir</span>`;
+    const fecha = iso => iso ? new Date(iso).toLocaleDateString("es-BO", {day: "2-digit", month: "short", timeZone: "America/La_Paz"}) : "—";
+    const card = (cls, t, v, sub) => `<div class="${cls}"><span>${t}</span><b>${v}</b><small>${sub}</small></div>`;
+    let h = `<div class="dnk">${card("tt", "Total mensual de espacios", bs(tot.tar), all.length + " emprendedores activos")}${card("ef", "Cobrado", bs(tot.pag), n("pagado") + " pagaron completo")}${card("qr", "Por cobrar", bs(tot.debe), (n("debe") + n("sin")) + " con saldo · " + n("definir") + " por definir")}</div>`;
+    h += vis.length ? `<div class="tbl" style="margin-top:14px"><table><thead><tr><th>Emprendedor</th><th>Espacio</th><th>Registro</th><th class="r">Tarifa</th><th class="r">Pagado</th><th>Estado</th><th></th></tr></thead><tbody>${vis.map(x => {
+      const m = x.m, pv = porVer[m.id];
+      const btn = x.debe > 0 && x.pagado > 0 ? `<button class="b sm" type="button" data-cbpay="${esc(m.id)}">${S.cb.armed === m.id ? "Confirmar: pagó " + bs(x.debe) : "Registrar saldo"}</button>` : "";
+      return `<tr><td><b>${esc(m.nombre)}</b><div class="small muted">${[m.titular, m.celular].filter(Boolean).map(esc).join(" · ")}</div>${pv ? `<div class="small" style="color:var(--warn)">Subió un comprobante de ${bs(pv)} por verificar (Liquidación)</div>` : ""}</td><td class="small">${esc(m.espacio || "—")}</td><td class="num small">${fecha(m.creado)}</td><td class="r num">${x.tar ? bs(x.tar) : "—"}</td><td class="r num">${bs(x.pagado)}</td><td>${chip(x)}</td><td class="r">${btn}</td></tr>`;
+    }).join("")}</tbody></table></div>` : `<p class="small muted" style="margin:14px 0 0">No hay emprendedores en este filtro.</p>`;
+    h += `<p class="small muted" style="margin:12px 0 0">«Registro» es el día en que la marca se cargó al sistema. Las del 21/10 se cargaron todas juntas antes de abrir.</p>`;
+    $("#cbRes").innerHTML = h;
+  }
+  $("#cbFil").addEventListener("click", e => { const f = e.target.closest("[data-cbf]"), o = e.target.closest("[data-cbo]"); if (f) S.cb.f = f.dataset.cbf; if (o) S.cb.o = o.dataset.cbo; if (f || o) { S.cb.armed = null; renderCobros(); } });
+  $("#cbQ").addEventListener("input", e => { S.cb.q = e.target.value; renderCobros(); });
+  $("#cbRes").addEventListener("click", async e => {
+    const b = e.target.closest("[data-cbpay]"); if (!b) return; const id = b.dataset.cbpay;
+    if (S.cb.armed !== id) { S.cb.armed = id; renderCobros(); return; }
+    S.cb.armed = null; b.disabled = true;
+    try { chk(await sb.from("marcas").update({saldo_pagado: true}).eq("id", id)); S.marcas[id].saldo_pagado = true; toast("Saldo registrado: " + S.marcas[id].nombre); renderCobros(); } catch (er) { fail(er); }
+  });
+
   function render() {
     if ($("#appView").hidden) return;
     renderTop();
     if (S.tab === "caja") renderCaja();
     if (S.tab === "cierre") renderCierre();
     if (S.tab === "dinero") renderDinero();
+    if (S.tab === "cobros") renderCobros();
     if (S.tab === "stock") renderStock();
     if (S.tab === "inv") renderInv();
     if (S.tab === "liq") renderLiq();

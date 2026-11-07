@@ -337,7 +337,13 @@ details summary{cursor:pointer;font-weight:700}
   </section>
 
   <section data-view="liq" hidden>
-    <div class="panel" style="margin-top:18px">
+    <div class="panel" style="margin-top:18px" id="rkPanel">
+      <div class="row" style="justify-content:space-between"><h2>Ranking de ventas</h2><span class="small muted" id="rkPerTxt"></span></div>
+      <p class="small muted" style="margin:0">Quién vende más y quién no está vendiendo, para saber a qué marcas darles publicidad. Toca «Ver productos» para ver qué ofrecer y copiar un texto listo para estados o redes.</p>
+      <div class="row" id="rkFil" style="gap:6px;flex-wrap:wrap;margin-top:10px"></div>
+      <div id="rkList" class="liq" style="margin-top:10px"></div>
+    </div>
+    <div class="panel" style="margin-top:16px">
       <div class="row" style="justify-content:space-between">
         <h2>Liquidación del día 29</h2>
         <label class="f" style="flex:0 1 260px">Periodo<select id="liqPer"></select></label>
@@ -1043,8 +1049,39 @@ details summary{cursor:pointer;font-weight:700}
     b.disabled = false; b.textContent = "Armar mensajes de los últimos 7 días";
   });
   $("#semList").addEventListener("click", e => { const c = e.target.closest("[data-semcopy]"); if (c) { const t = $(`[data-semtxt="${c.dataset.semcopy}"]`); copiar(t.value, t); } });
+  // ---------- ranking de ventas (para enfocar la publicidad) ----------
+  S.rk = {f: "cero", open: null};
+  function renderRanking() {
+    const vs = ventasPer(S.liqPer), by = {};
+    vs.forEach(v => { const r = by[v.marca] || (by[v.marca] = {n: 0, u: 0, t: 0}); r.n++; r.u += +v.cant || 0; r.t += +v.total || 0; });
+    const all = marcasOrden().filter(m => !/^reserva/.test(m.id)).map(m => ({m, ...(by[m.id] || {n: 0, u: 0, t: 0}), stock: prodsDe(m.id).reduce((a, p) => a + Math.max(0, +p.stock || 0), 0)}));
+    const cero = all.filter(x => x.t === 0), con = all.filter(x => x.t > 0);
+    const top = [...con].sort((a, b) => b.t - a.t || b.u - a.u), low = [...con].sort((a, b) => a.t - b.t || a.u - b.u);
+    const F = [["cero", "Sin ventas", cero.length], ["menos", "Menos vendieron", con.length], ["mas", "Más vendieron", con.length]];
+    $("#rkFil").innerHTML = F.map(([k, t, n]) => `<button class="b sm${S.rk.f === k ? " pri" : ""}" type="button" data-rkf="${k}" aria-pressed="${S.rk.f === k}">${t} (${n})</button>`).join("");
+    $("#rkPerTxt").textContent = perLabel(S.liqPer) + " · " + all.length + " marcas · vendido " + bs(all.reduce((a, x) => a + x.t, 0));
+    let list = S.rk.f === "cero" ? [...cero].sort((a, b) => b.stock - a.stock || String(a.m.creado || "").localeCompare(String(b.m.creado || ""))) : S.rk.f === "menos" ? low : top;
+    const fecha = iso => iso ? new Date(iso).toLocaleDateString("es-BO", {day: "2-digit", month: "short", timeZone: "America/La_Paz"}) : "—";
+    $("#rkList").innerHTML = list.length ? list.map((x, i) => {
+      const m = x.m, ps = prodsDe(m.id), open = S.rk.open === m.id;
+      const det = open ? `<div style="grid-column:1/-1">${ps.length ? `<div class="tbl"><table><thead><tr><th>Producto</th><th class="r">Precio</th><th class="r">Stock</th></tr></thead><tbody>${ps.map(p => `<tr><td>${p.foto ? `<img class="mlogo" src="${esc(IMG(p.foto))}" alt="">` : ""}${esc(p.nombre)}</td><td class="r num">${bs(p.precio)}</td><td class="r num">${+p.stock > 0 ? p.stock : `<span class="chip bad">0</span>`}</td></tr>`).join("")}</tbody></table></div>` : `<p class="small muted" style="margin:6px 0">Esta marca todavía no tiene productos cargados en el sistema.</p>`}<textarea hidden data-rktxt="${esc(m.id)}">${esc(rkTexto(m, ps))}</textarea></div>` : "";
+      const pos = S.rk.f === "cero" ? "" : `<span class="chip g">#${i + 1}</span> `;
+      return `<div class="liqcard"><div>${pos}<b>${esc(m.nombre)}</b> <span class="small muted">· ${esc(m.espacio || "—")}</span><div class="meta">${esc(m.rubro || "")}${m.rubro ? " · " : ""}${x.t ? `${x.u} ${x.u === 1 ? "producto vendido" : "productos vendidos"} en ${x.n} ${x.n === 1 ? "venta" : "ventas"}` : "Sin ventas este periodo"} · ${ps.length} ${ps.length === 1 ? "producto cargado" : "productos cargados"}, ${x.stock} en stock · entró ${fecha(m.creado)}</div></div><div class="amt">${bs(x.t)}<div class="small muted" style="font-family:var(--f-body);font-weight:400">vendido</div></div><div class="acts"><button class="b sm" type="button" data-rkopen="${esc(m.id)}">${open ? "Ocultar productos" : "Ver productos"}</button>${open && ps.length ? `<button class="b sm pri" type="button" data-rkcopy="${esc(m.id)}">Copiar texto para promocionar</button>` : ""}</div>${det}</div>`;
+    }).join("") : `<div class="empty">${S.rk.f === "cero" ? "Todas las marcas ya vendieron algo este periodo." : "Todavía no hay ventas en este periodo."}</div>`;
+  }
+  function rkTexto(m, ps) {
+    const disp = ps.filter(p => +p.stock > 0).slice(0, 8);
+    return [`✨ ${m.nombre} ya está en El Parralito 🍇`, m.rubro ? m.rubro : "", ``, ...(disp.length ? disp : ps.slice(0, 8)).map(p => `• ${p.nombre}: ${bs(p.precio)}`), ``, `Ven a conocerlos 📍 Calle 15 de Abril esquina O'Connor, Tarija`, `🕒 Lunes a sábado, 9:00 a 12:00 y 16:00 a 21:00`, `@el_parralito.bo`].filter((l, i, a) => l !== "" || a[i - 1] !== "").join("\n");
+  }
+  $("#rkFil").addEventListener("click", e => { const b = e.target.closest("[data-rkf]"); if (b) { S.rk.f = b.dataset.rkf; S.rk.open = null; renderRanking(); } });
+  $("#rkList").addEventListener("click", e => {
+    const o = e.target.closest("[data-rkopen]"), c = e.target.closest("[data-rkcopy]");
+    if (o) { S.rk.open = S.rk.open === o.dataset.rkopen ? null : o.dataset.rkopen; renderRanking(); }
+    if (c) { const t = $(`[data-rktxt="${c.dataset.rkcopy}"]`); copiar(t.value, t); }
+  });
   function renderLiq() {
     renderPagos();
+    renderRanking();
     const sel = $("#liqPer"); const opts = []; for (let i = 3; i >= -6; i--) opts.push(perShift(PER_ACT(), i));
     sel.innerHTML = [...new Set(opts)].filter(k => k >= "2026-11").map(k => `<option value="${k}">${perLabel(k)}${k === PER_ACT() ? " (actual)" : ""}</option>`).join("");
     sel.value = S.liqPer;

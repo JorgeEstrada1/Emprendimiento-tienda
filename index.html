@@ -124,7 +124,7 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-off
 .resacts{display:flex;gap:6px;flex-wrap:wrap}
 .resacts a,.resacts button{flex:1 1 140px;min-height:40px}
 .resacts a{display:flex;align-items:center;justify-content:center;border-radius:8px;background:var(--wa);color:#fff;text-decoration:none;font-weight:700;font-size:14px}
-.chip.reservado{background:#8E5BD6} .chip.pg-ok{background:#2E9A52} .chip.pg-ingreso{background:#E8C21C;color:#1C2321} .chip.pg-mes{background:#D9443A} .chip.pg-pronto{background:#F07A1A;color:#1C2321}
+.chip.reservado{background:#8E5BD6} .chip.pg-ok{background:#2E9A52} .chip.pg-ingreso{background:#F07A1A;color:#1C2321} .chip.pg-mes{background:#D9443A} .chip.pg-pronto{background:#F07A1A;color:#1C2321}
 .admin-leg{display:flex;gap:12px;flex-wrap:wrap;font-size:13px;width:100%}
 .admin-leg span{display:inline-flex;align-items:center;gap:6px}
 .admin-leg i{width:14px;height:14px;border-radius:4px;display:inline-block}
@@ -187,7 +187,7 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-off
       <label class="num">Tomados<input id="ad-promo-tom" type="number" min="0" max="999"></label>
       <button id="ad-promo-on" aria-pressed="true">Promo visible</button>
     </div>
-    <div class="admin-leg" aria-label="Colores en modo socios"><span><i style="background:#2E9A52"></i>Al día</span><span><i style="background:#E8C21C"></i>Debe saldo de ingreso</span><span><i style="background:#D9443A"></i>Debe el mes</span><span><i style="background:#F07A1A"></i>Pago por vencer</span><span><i style="background:#8E5BD6"></i>Reservado</span><span><i style="background:#8A8F8C"></i>Ocupado sin marca</span><span><i style="background:#D9A45E"></i>Libre</span></div>
+    <div class="admin-leg" aria-label="Colores en modo socios"><span><i style="background:#2E9A52"></i>Al día</span><span><i style="background:#D9443A"></i>Debe el mes</span><span><i style="background:#F07A1A"></i>Debe saldo de ingreso o pago por vencer</span><span><i style="background:#8E5BD6"></i>Reservado</span><span><i style="background:#8A8F8C"></i>Ocupado sin marca</span><span><i style="background:#D9A45E"></i>Libre</span></div>
     <details class="admin-res"><summary>Reservas activas (<span id="ad-nres">0</span>)</summary><div id="ad-reslist"></div></details>
   </div>
 
@@ -1672,7 +1672,7 @@ const cerradoP = sp => !SPACES.some(o => o.parent === sp.parent && isOpen(o));
 /* reservas y pagos (solo socios) */
 let RES = new Map(), RESLIST = [], PAGO = {};
 const pagoSp = sp => { const id = draft.ocupados[sp.code]; return (id && PAGO[id]) || null; };
-const PAGO_MAT = { ingreso: 'amar', mes: 'rojo', pronto: 'naranja', ok: 'aldia' };
+const PAGO_MAT = { ingreso: 'naranja', mes: 'rojo', pronto: 'naranja', ok: 'aldia' };
 function adminMat(sp){
   if (isRet(sp)) return S.retA;
   if (RES.has(sp.code)) return S.res;
@@ -1934,7 +1934,7 @@ function renderAdmin(sp){
   });
   const n = SPACES.filter(o => mid && draft.ocupados[o.code] === mid).length;
   const pg = mid && PAGO[mid];
-  const pgTxt = !pg ? ' No encontré sus pagos en la caja.' : pg.estado === 'ingreso' ? ` 🟡 Debe ${fmtBs(pg.falta)} del saldo de ingreso.` : pg.estado === 'mes' ? ` 🔴 Debe ${fmtBs(pg.falta)} del mes.` : pg.estado === 'pronto' ? ` 🟠 Le toca pagar ${fmtBs(pg.falta)} en ${pg.dias} día${pg.dias === 1 ? '' : 's'} (el 29).` : ' 🟢 Está al día.';
+  const pgTxt = !pg ? ' No encontré sus pagos en la caja.' : pg.estado === 'ingreso' ? ` 🟠 Debe ${fmtBs(pg.falta)} del saldo de ingreso.` : pg.estado === 'mes' ? ` 🔴 Debe ${fmtBs(pg.falta)} del mes.` : pg.estado === 'pronto' ? ` 🟠 Le toca pagar ${fmtBs(pg.falta)} en ${pg.dias} día${pg.dias === 1 ? '' : 's'} (el 29).` : ' 🟢 Está al día.';
   $('a-msg').textContent = (m ? `Esta marca está en ${n} espacio${n===1?'':'s'}.` + pgTxt : (r ? 'Cuando pague y traiga sus productos, toca «Ya pagó y trajo» y elige su marca.' : taken ? 'Elige una marca o crea una nueva.' : 'Marca el espacio como ocupado para asignarle una marca, o resérvalo con los datos de la persona.'));
 }
 /* Estado de pago por marca. Cada mes va del 29 al 29; «2026-10» es el primer mes (adelanto + saldo de ingreso). */

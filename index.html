@@ -124,7 +124,7 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-off
 .resacts{display:flex;gap:6px;flex-wrap:wrap}
 .resacts a,.resacts button{flex:1 1 140px;min-height:40px}
 .resacts a{display:flex;align-items:center;justify-content:center;border-radius:8px;background:var(--wa);color:#fff;text-decoration:none;font-weight:700;font-size:14px}
-.chip.reservado{background:#8E5BD6}
+.chip.reservado{background:#8E5BD6} .chip.pg-ok{background:#2E9A52} .chip.pg-ingreso{background:#E8C21C;color:#1C2321} .chip.pg-mes{background:#D9443A} .chip.pg-pronto{background:#F07A1A;color:#1C2321}
 .admin-leg{display:flex;gap:12px;flex-wrap:wrap;font-size:13px;width:100%}
 .admin-leg span{display:inline-flex;align-items:center;gap:6px}
 .admin-leg i{width:14px;height:14px;border-radius:4px;display:inline-block}
@@ -187,7 +187,7 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-off
       <label class="num">Tomados<input id="ad-promo-tom" type="number" min="0" max="999"></label>
       <button id="ad-promo-on" aria-pressed="true">Promo visible</button>
     </div>
-    <div class="admin-leg" aria-label="Colores en modo socios"><span><i style="background:#8E5BD6"></i>Reservado</span><span><i style="background:#D9443A"></i>Debe pago</span><span><i style="background:var(--ocupado)"></i>Ocupado al día</span><span><i style="background:var(--libre)"></i>Libre</span></div>
+    <div class="admin-leg" aria-label="Colores en modo socios"><span><i style="background:#2E9A52"></i>Al día</span><span><i style="background:#E8C21C"></i>Debe saldo de ingreso</span><span><i style="background:#D9443A"></i>Debe el mes</span><span><i style="background:#F07A1A"></i>Pago por vencer</span><span><i style="background:#8E5BD6"></i>Reservado</span><span><i style="background:#8A8F8C"></i>Ocupado sin marca</span><span><i style="background:#D9A45E"></i>Libre</span></div>
     <details class="admin-res"><summary>Reservas activas (<span id="ad-nres">0</span>)</summary><div id="ad-reslist"></div></details>
   </div>
 
@@ -1386,6 +1386,9 @@ const S = {
   recP:    new THREE.MeshStandardMaterial({ color:0xF0BE3C, roughness:.4, metalness:.15, emissive:0xd99a10, emissiveIntensity:.6 }),
   naranja: new THREE.MeshStandardMaterial({ color:0xF07A1A, roughness:.5, emissive:0x5a2400, emissiveIntensity:.4 }),
   res:     new THREE.MeshStandardMaterial({ color:0x8E5BD6, roughness:.5, emissive:0x2c1060, emissiveIntensity:.45 }),
+  amar:    new THREE.MeshStandardMaterial({ color:0xE8C21C, roughness:.5, emissive:0x4a3a00, emissiveIntensity:.4 }),
+  aldia:   new THREE.MeshStandardMaterial({ color:0x2E9A52, roughness:.55, emissive:0x0a2e15, emissiveIntensity:.35 }),
+  retA:    new THREE.MeshStandardMaterial({ color:0x2B2B2B, roughness:.8 }),
 };
 const prodMats = [0xD94F3D,0xF2B134,0x3E8E7E,0x5470C6,0xE7DCC8,0x9A6FB0,0x2D2D2D,0xE88AA8,0x7FA650,0xC9A27E]
   .map(c => new THREE.MeshStandardMaterial({ color:c, roughness:.7 }));
@@ -1668,13 +1671,20 @@ let soloDisp = false;
 const cerradoP = sp => !SPACES.some(o => o.parent === sp.parent && isOpen(o));
 /* reservas y pagos (solo socios) */
 let RES = new Map(), RESLIST = [], PAGO = {};
-const debeSp = sp => { const id = draft.ocupados[sp.code]; const p = id && PAGO[id]; return !!(p && p.debe > 0); };
+const pagoSp = sp => { const id = draft.ocupados[sp.code]; return (id && PAGO[id]) || null; };
+const PAGO_MAT = { ingreso: 'amar', mes: 'rojo', pronto: 'naranja', ok: 'aldia' };
+function adminMat(sp){
+  if (isRet(sp)) return S.retA;
+  if (RES.has(sp.code)) return S.res;
+  if (!isTaken(sp)) return M.pine;
+  const p = pagoSp(sp); return p ? S[PAGO_MAT[p.estado]] : S.ocupado;
+}
 function paint(){
   const cerrados = new Set(SPACES.map(sp => sp.parent));
   SPACES.filter(isOpen).forEach(sp => cerrados.delete(sp.parent));
   SPACES.forEach(sp => { sp.parent.visible = !(soloDisp && cerrados.has(sp.parent)); });
   SPACES.forEach(sp => {
-    sp.board.material = selSet.has(sp) ? S.sel : isRet(sp) ? S.naranja : !showAvail ? M.pine : soloDisp && !isOpen(sp) ? S.dim : !matchF(sp) ? S.dim : isTaken(sp) ? (adminOn && RES.has(sp.code) ? S.res : adminOn && debeSp(sp) ? S.rojo : soloDisp ? S.rojo : S.ocupado) : !isOpen(sp) ? M.pine : isRec(sp) ? (sp.premium ? S.recP : S.rec) : sp.premium ? S.premium : S.libre;
+    sp.board.material = selSet.has(sp) ? S.sel : adminOn && showAvail ? adminMat(sp) : isRet(sp) ? S.naranja : !showAvail ? M.pine : soloDisp && !isOpen(sp) ? S.dim : !matchF(sp) ? S.dim : isTaken(sp) ? (soloDisp ? S.rojo : S.ocupado) : !isOpen(sp) ? M.pine : isRec(sp) ? (sp.premium ? S.recP : S.rec) : sp.premium ? S.premium : S.libre;
   });
   const vis = SPACES.filter(sp => sp.phase === 1 || phase2.visible);
   document.getElementById('n-libre').textContent = vis.filter(sp => !isTaken(sp) && isOpen(sp)).length;
@@ -1783,8 +1793,9 @@ function openPanel(sp){
   const chip = $('p-chip');
   const ret = isRet(sp), pronto = !taken && !ret && !isOpen(sp);
   const resv = adminOn && RES.has(sp.code);
-  chip.className = 'chip ' + (ret ? 'retirado' : resv ? 'reservado' : taken ? 'ocupado' : pronto ? 'pronto' : sp.premium ? 'premium' : 'libre');
-  chip.textContent = ret ? 'Retirado' : resv ? 'Reservado' : taken ? 'Ocupado' : pronto ? 'Próximamente' : isRec(sp) ? (sp.premium ? 'Premium · recomendado' : 'Recomendado') : sp.premium ? 'Premium · libre' : 'Libre';
+  const pgc = adminOn && !resv && taken && pagoSp(sp);
+  chip.className = 'chip ' + (ret ? 'retirado' : resv ? 'reservado' : pgc ? 'pg-' + pgc.estado : taken ? 'ocupado' : pronto ? 'pronto' : sp.premium ? 'premium' : 'libre');
+  chip.textContent = ret ? 'Retirado' : resv ? 'Reservado' : pgc ? ({ ingreso:'Debe saldo de ingreso', mes:'Debe el mes', pronto:'Pago por vencer', ok:'Al día' })[pgc.estado] : taken ? 'Ocupado' : pronto ? 'Próximamente' : isRec(sp) ? (sp.premium ? 'Premium · recomendado' : 'Recomendado') : sp.premium ? 'Premium · libre' : 'Libre';
   $('p-pronto').hidden = !pronto; $('p-ret').hidden = !ret;
   $('p-brand').hidden = !b; $('p-taken').hidden = !(taken && !b) || adminOn;
   if (b){
@@ -1923,18 +1934,43 @@ function renderAdmin(sp){
   });
   const n = SPACES.filter(o => mid && draft.ocupados[o.code] === mid).length;
   const pg = mid && PAGO[mid];
-  $('a-msg').textContent = (m ? `Esta marca está en ${n} espacio${n===1?'':'s'}.` + (pg ? (pg.debe > 0 ? ` Debe ${fmtBs(pg.debe)} de su espacio.` : ' Su espacio está pagado.') : '') : (r ? 'Cuando pague y traiga sus productos, toca «Ya pagó y trajo» y elige su marca.' : taken ? 'Elige una marca o crea una nueva.' : 'Marca el espacio como ocupado para asignarle una marca, o resérvalo con los datos de la persona.'));
+  const pgTxt = !pg ? ' No encontré sus pagos en la caja.' : pg.estado === 'ingreso' ? ` 🟡 Debe ${fmtBs(pg.falta)} del saldo de ingreso.` : pg.estado === 'mes' ? ` 🔴 Debe ${fmtBs(pg.falta)} del mes.` : pg.estado === 'pronto' ? ` 🟠 Le toca pagar ${fmtBs(pg.falta)} en ${pg.dias} día${pg.dias === 1 ? '' : 's'} (el 29).` : ' 🟢 Está al día.';
+  $('a-msg').textContent = (m ? `Esta marca está en ${n} espacio${n===1?'':'s'}.` + pgTxt : (r ? 'Cuando pague y traiga sus productos, toca «Ya pagó y trajo» y elige su marca.' : taken ? 'Elige una marca o crea una nueva.' : 'Marca el espacio como ocupado para asignarle una marca, o resérvalo con los datos de la persona.'));
+}
+/* Estado de pago por marca. Cada mes va del 29 al 29; «2026-10» es el primer mes (adelanto + saldo de ingreso). */
+function calcPagos(marcas, pagos, liqs){
+  const lp = new Date(new Date().toLocaleString('en-US', { timeZone:'America/La_Paz' }));
+  const pad = n => String(n).padStart(2,'0'), shift = (k, d) => { let [y, m] = k.split('-').map(Number); m += d; while (m > 12){ m -= 12; y++; } while (m < 1){ m += 12; y--; } return y + '-' + pad(m); };
+  const ym = lp.getFullYear() + '-' + pad(lp.getMonth() + 1);
+  let actual = lp.getDate() >= 29 ? ym : shift(ym, -1); if (actual < '2026-10') actual = '2026-10';
+  const proximo = shift(actual, 1), dias = lp.getDate() >= 29 ? 99 : 29 - lp.getDate();
+  const out = {};
+  marcas.forEach(m => {
+    const tar = +m.tarifa || 0;
+    const pagado = k => { let t = pagos.filter(p => p.marca === m.id && p.mes === k && p.estado === 'confirmado').reduce((a, p) => a + (+p.monto || 0), 0);
+      const l = liqs.find(x => x.marca === m.id && x.periodo === k); if (l) t += +l.descontado || 0;
+      if (k === '2026-10') t += (+m.adelanto || 0) + (m.saldo_pagado ? (+m.saldo || 0) : 0); return t; };
+    const falta = k => Math.max(0, tar - pagado(k));
+    let estado = 'ok', monto = 0;
+    if (falta('2026-10') > 0){ estado = 'ingreso'; monto = falta('2026-10'); }
+    else { for (let k = '2026-11'; k <= actual; k = shift(k, 1)) if (falta(k) > 0){ estado = 'mes'; monto += falta(k); }
+      if (estado === 'ok' && dias <= 5 && falta(proximo) > 0){ estado = 'pronto'; monto = falta(proximo); } }
+    out[m.id] = { estado, falta: monto, dias };
+  });
+  return out;
 }
 async function cargarAdminData(){
   if (!SB || !canEdit) return;
   try {
-    const [rs, ms] = await Promise.all([
+    const [rs, ms, pg, lq] = await Promise.all([
       SB.from('reservas').select('*').eq('estado','activa').order('creado', { ascending:false }),
-      SB.from('marcas').select('id,tarifa,adelanto,saldo,saldo_pagado')
+      SB.from('marcas').select('id,tarifa,adelanto,saldo,saldo_pagado'),
+      SB.from('pagos').select('marca,mes,monto,estado'),
+      SB.from('liquidaciones').select('marca,periodo,descontado')
     ]);
     RESLIST = rs.data || []; RES = new Map();
     RESLIST.forEach(r => (r.espacios||[]).forEach(c => RES.set(c, r)));
-    PAGO = {}; (ms.data || []).forEach(m => { PAGO[m.id] = { debe: m.saldo_pagado ? 0 : Math.max(0, +m.saldo || 0) }; });
+    PAGO = calcPagos(ms.data || [], pg.data || [], lq.data || []);
   } catch(e) {}
   renderResList(); paint(); if (selected && adminOn) renderAdmin(selected);
 }

@@ -1582,10 +1582,10 @@ function mesa(where){
   return m;
 }
 /* mesas reubicadas según el plano 2D (07/11/2026) */
-[[3.6,4.05,'Mesas del centro'],[3.55,6.05,'Mesas del centro'],[3.55,7.9,'Mesas del centro'],[8.15,7.95,'Mesas de la entrada'],[8.2,6.05,'Mesas de la entrada'],[8.25,4.05,'Mesas de la entrada']]
+[[3.6,4.05,'Mesas del centro'],[3.55,6.05,'Mesas del centro'],[3.55,7.9,'Mesas del centro'],[8.1,8.0,'Mesas de la entrada'],[8.1,4.05,'Mesas de la entrada'],[8.1,5.9,'Mesas de la entrada']]
   .forEach(([x,y,wh]) => placeAt(mesa(wh), W(x,y), Math.PI/2, phase2));
 label('Mesas ME1–ME3', W(3.55,5.05), 1.15, phase2);
-label('Mesas ME4–ME6', W(8.2,5.05), 1.15, phase2);
+label('Mesas ME4–ME6', W(8.1,6.95), 1.15, phase2);
 
 [[6.338,5.163,Math.PI/2,'C1'],[6.188,5.693,Math.PI,'C2'],[5.658,5.343,-Math.PI/2,'C3'],[5.808,4.813,0,'C4']].forEach(([x,y,r,id]) => {
   placeAt(rack(phase2, { id, kind:`Columna, cara ${id}`, bays:1, phase:2, where:'Columna central', family:'C' }), W(x,y), r, phase2);

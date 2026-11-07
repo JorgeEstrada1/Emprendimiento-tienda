@@ -187,7 +187,7 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-off
       <label class="num">Tomados<input id="ad-promo-tom" type="number" min="0" max="999"></label>
       <button id="ad-promo-on" aria-pressed="true">Promo visible</button>
     </div>
-    <div class="admin-leg" aria-label="Colores en modo socios"><span><i style="background:#2E9A52"></i>Al día</span><span><i style="background:#D9443A"></i>Debe el mes</span><span><i style="background:#F07A1A"></i>Debe saldo de ingreso o pago por vencer</span><span><i style="background:#8E5BD6"></i>Reservado</span><span><i style="background:#8A8F8C"></i>Ocupado sin marca</span><span><i style="background:#D9A45E"></i>Libre</span></div>
+    <div class="admin-leg" aria-label="Colores en modo socios"><span><i style="background:#D9443A"></i>Debe el mes</span><span><i style="background:#F07A1A"></i>Debe saldo de ingreso o pago por vencer</span><span><i style="background:#8E5BD6"></i>Reservado</span><span><i style="background:#151515;outline:1px solid var(--line)"></i>En orden, libre o sin dueño</span></div>
     <details class="admin-res"><summary>Reservas activas (<span id="ad-nres">0</span>)</summary><div id="ad-reslist"></div></details>
   </div>
 
@@ -1389,6 +1389,7 @@ const S = {
   amar:    new THREE.MeshStandardMaterial({ color:0xE8C21C, roughness:.5, emissive:0x4a3a00, emissiveIntensity:.4 }),
   aldia:   new THREE.MeshStandardMaterial({ color:0x2E9A52, roughness:.55, emissive:0x0a2e15, emissiveIntensity:.35 }),
   retA:    new THREE.MeshStandardMaterial({ color:0x2B2B2B, roughness:.8 }),
+  negro:   new THREE.MeshStandardMaterial({ color:0x151515, roughness:.9 }),
 };
 const prodMats = [0xD94F3D,0xF2B134,0x3E8E7E,0x5470C6,0xE7DCC8,0x9A6FB0,0x2D2D2D,0xE88AA8,0x7FA650,0xC9A27E]
   .map(c => new THREE.MeshStandardMaterial({ color:c, roughness:.7 }));
@@ -1674,10 +1675,10 @@ let RES = new Map(), RESLIST = [], PAGO = {};
 const pagoSp = sp => { const id = draft.ocupados[sp.code]; return (id && PAGO[id]) || null; };
 const PAGO_MAT = { ingreso: 'naranja', mes: 'rojo', pronto: 'naranja', ok: 'aldia' };
 function adminMat(sp){
-  if (isRet(sp)) return S.retA;
+  /* Solo se pintan las que necesitan atención; lo que está en orden, libre o sin dueño va en negro */
   if (RES.has(sp.code)) return S.res;
-  if (!isTaken(sp)) return M.pine;
-  const p = pagoSp(sp); return p ? S[PAGO_MAT[p.estado]] : S.ocupado;
+  if (isRet(sp) || !isTaken(sp)) return S.negro;
+  const p = pagoSp(sp); return p && p.estado !== 'ok' ? S[PAGO_MAT[p.estado]] : S.negro;
 }
 function paint(){
   const cerrados = new Set(SPACES.map(sp => sp.parent));

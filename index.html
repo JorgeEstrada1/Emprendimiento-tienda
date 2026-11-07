@@ -118,6 +118,22 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-off
 .req{color:var(--premium)}
 .cta[aria-disabled="true"]{opacity:.55}
 .err{margin:0;font-size:13px;color:#C2410C}
+.resbox{border:2px solid #8E5BD6;border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:8px;background:var(--surface)}
+.resbox dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:3px 10px;font-size:14px}
+.resbox dt{color:var(--muted)} .resbox dd{margin:0;overflow-wrap:anywhere}
+.resacts{display:flex;gap:6px;flex-wrap:wrap}
+.resacts a,.resacts button{flex:1 1 140px;min-height:40px}
+.resacts a{display:flex;align-items:center;justify-content:center;border-radius:8px;background:var(--wa);color:#fff;text-decoration:none;font-weight:700;font-size:14px}
+.chip.reservado{background:#8E5BD6}
+.admin-leg{display:flex;gap:12px;flex-wrap:wrap;font-size:13px;width:100%}
+.admin-leg span{display:inline-flex;align-items:center;gap:6px}
+.admin-leg i{width:14px;height:14px;border-radius:4px;display:inline-block}
+.admin-res{width:100%}
+.admin-res summary{cursor:pointer;font-weight:700;padding:4px 0}
+.resrow{display:grid;grid-template-columns:1fr auto;gap:2px 10px;align-items:center;border-top:1px solid var(--line);padding:8px 0;font-size:14px}
+.resrow small{color:var(--muted);font-family:var(--mono);font-size:12px;overflow-wrap:anywhere}
+.resrow button{min-height:36px}
+.resform:not([hidden]){display:flex;flex-direction:column;gap:8px}
 .incl{margin:0;font-size:13px;color:var(--fg);background:color-mix(in srgb,var(--premium) 18%,transparent);border-radius:6px;padding:8px 10px}
 .brand{display:flex;gap:12px;align-items:center}
 .brand img{width:56px;height:56px;border-radius:10px;object-fit:cover;border:1px solid var(--line);background:var(--bg)}
@@ -171,6 +187,8 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-off
       <label class="num">Tomados<input id="ad-promo-tom" type="number" min="0" max="999"></label>
       <button id="ad-promo-on" aria-pressed="true">Promo visible</button>
     </div>
+    <div class="admin-leg" aria-label="Colores en modo socios"><span><i style="background:#8E5BD6"></i>Reservado</span><span><i style="background:#D9443A"></i>Debe pago</span><span><i style="background:var(--ocupado)"></i>Ocupado al día</span><span><i style="background:var(--libre)"></i>Libre</span></div>
+    <details class="admin-res"><summary>Reservas activas (<span id="ad-nres">0</span>)</summary><div id="ad-reslist"></div></details>
   </div>
 
   <div class="intro">
@@ -264,6 +282,30 @@ button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-off
   </div>
 
   <div class="sec" id="p-admin" hidden>
+    <div class="resbox" id="a-resbox" hidden>
+      <h3>Reservado</h3>
+      <dl id="a-resdl"></dl>
+      <div class="resacts">
+        <a id="a-reswa" href="#" target="_blank" rel="noopener">WhatsApp</a>
+        <button id="a-resconv" type="button">Ya pagó y trajo: pasar a ocupado</button>
+        <button id="a-rescan" type="button">Cancelar reserva</button>
+      </div>
+    </div>
+    <button id="a-resbtn" type="button" style="width:100%">📝 Reservar este espacio</button>
+    <div id="a-resform" class="resform" hidden>
+      <h3>Datos de la reserva</h3>
+      <div class="form">
+        <label><span>Nombre <span class="req">*</span></span><input id="r-nombre" maxlength="80" autocomplete="off"></label>
+        <label><span>Celular <span class="req">*</span></span><input id="r-cel" inputmode="tel" maxlength="20" autocomplete="off"></label>
+        <label>Emprendimiento<input id="r-emp" maxlength="80" autocomplete="off"></label>
+        <label>¿Qué vende?<input id="r-rubro" maxlength="80" autocomplete="off"></label>
+        <label>Adelanto (Bs)<input id="r-adel" type="number" min="0" step="1" inputmode="numeric"></label>
+        <label>Otros espacios<input id="r-otros" maxlength="80" placeholder="Ej.: M5-N3-A, M5-N4-A" autocomplete="off"></label>
+        <label class="full">Nota<input id="r-nota" maxlength="200" placeholder="Ej.: paga el saldo el lunes" autocomplete="off"></label>
+      </div>
+      <p class="err" id="r-err" hidden></p>
+      <button id="r-save" type="button" class="cta" style="border:0;cursor:pointer">Guardar reserva</button>
+    </div>
     <h3>Estado</h3>
     <div class="seg"><button id="a-libre" aria-pressed="false">Libre</button><button id="a-ocup" aria-pressed="false">Ocupado</button></div>
     <button id="a-mover" style="margin-top:8px;width:100%">↔ Mover o intercambiar esta marca a otro espacio</button>
@@ -1343,6 +1385,7 @@ const S = {
   rec:     new THREE.MeshStandardMaterial({ color:0x46D474, roughness:.45, emissive:0x2bd160, emissiveIntensity:.6 }),
   recP:    new THREE.MeshStandardMaterial({ color:0xF0BE3C, roughness:.4, metalness:.15, emissive:0xd99a10, emissiveIntensity:.6 }),
   naranja: new THREE.MeshStandardMaterial({ color:0xF07A1A, roughness:.5, emissive:0x5a2400, emissiveIntensity:.4 }),
+  res:     new THREE.MeshStandardMaterial({ color:0x8E5BD6, roughness:.5, emissive:0x2c1060, emissiveIntensity:.45 }),
 };
 const prodMats = [0xD94F3D,0xF2B134,0x3E8E7E,0x5470C6,0xE7DCC8,0x9A6FB0,0x2D2D2D,0xE88AA8,0x7FA650,0xC9A27E]
   .map(c => new THREE.MeshStandardMaterial({ color:c, roughness:.7 }));
@@ -1623,12 +1666,15 @@ function matchF(sp){
 }
 let soloDisp = false;
 const cerradoP = sp => !SPACES.some(o => o.parent === sp.parent && isOpen(o));
+/* reservas y pagos (solo socios) */
+let RES = new Map(), RESLIST = [], PAGO = {};
+const debeSp = sp => { const id = draft.ocupados[sp.code]; const p = id && PAGO[id]; return !!(p && p.debe > 0); };
 function paint(){
   const cerrados = new Set(SPACES.map(sp => sp.parent));
   SPACES.filter(isOpen).forEach(sp => cerrados.delete(sp.parent));
   SPACES.forEach(sp => { sp.parent.visible = !(soloDisp && cerrados.has(sp.parent)); });
   SPACES.forEach(sp => {
-    sp.board.material = selSet.has(sp) ? S.sel : isRet(sp) ? S.naranja : !showAvail ? M.pine : soloDisp && !isOpen(sp) ? S.dim : !matchF(sp) ? S.dim : isTaken(sp) ? (soloDisp ? S.rojo : S.ocupado) : !isOpen(sp) ? M.pine : isRec(sp) ? (sp.premium ? S.recP : S.rec) : sp.premium ? S.premium : S.libre;
+    sp.board.material = selSet.has(sp) ? S.sel : isRet(sp) ? S.naranja : !showAvail ? M.pine : soloDisp && !isOpen(sp) ? S.dim : !matchF(sp) ? S.dim : isTaken(sp) ? (adminOn && RES.has(sp.code) ? S.res : adminOn && debeSp(sp) ? S.rojo : soloDisp ? S.rojo : S.ocupado) : !isOpen(sp) ? M.pine : isRec(sp) ? (sp.premium ? S.recP : S.rec) : sp.premium ? S.premium : S.libre;
   });
   const vis = SPACES.filter(sp => sp.phase === 1 || phase2.visible);
   document.getElementById('n-libre').textContent = vis.filter(sp => !isTaken(sp) && isOpen(sp)).length;
@@ -1691,6 +1737,7 @@ function computePacks(sp){
 
 /* ---------- panel ---------- */
 const $ = id => document.getElementById(id);
+const fmtBs = n => (Math.round((+n||0)*100)/100).toLocaleString('es-BO') + ' Bs';
 const panel = $('panel');
 let form = { nombre:'', cel:'', rubro:'', ig:'' };
 try { Object.assign(form, JSON.parse(localStorage.getItem('reserva-datos') || '{}')); } catch(e) {}
@@ -1735,8 +1782,9 @@ function openPanel(sp){
   $('p-code').textContent = sp.code; $('p-desc').textContent = sp.desc; $('p-where').textContent = sp.where; $('p-size').textContent = Math.round(sp.bw*100) + ' × ' + Math.round((sp.family==='G' ? 0.2 : sp.bd)*100) + ' cm';
   const chip = $('p-chip');
   const ret = isRet(sp), pronto = !taken && !ret && !isOpen(sp);
-  chip.className = 'chip ' + (ret ? 'retirado' : taken ? 'ocupado' : pronto ? 'pronto' : sp.premium ? 'premium' : 'libre');
-  chip.textContent = ret ? 'Retirado' : taken ? 'Ocupado' : pronto ? 'Próximamente' : isRec(sp) ? (sp.premium ? 'Premium · recomendado' : 'Recomendado') : sp.premium ? 'Premium · libre' : 'Libre';
+  const resv = adminOn && RES.has(sp.code);
+  chip.className = 'chip ' + (ret ? 'retirado' : resv ? 'reservado' : taken ? 'ocupado' : pronto ? 'pronto' : sp.premium ? 'premium' : 'libre');
+  chip.textContent = ret ? 'Retirado' : resv ? 'Reservado' : taken ? 'Ocupado' : pronto ? 'Próximamente' : isRec(sp) ? (sp.premium ? 'Premium · recomendado' : 'Recomendado') : sp.premium ? 'Premium · libre' : 'Libre';
   $('p-pronto').hidden = !pronto; $('p-ret').hidden = !ret;
   $('p-brand').hidden = !b; $('p-taken').hidden = !(taken && !b) || adminOn;
   if (b){
@@ -1831,7 +1879,7 @@ $('ad-promo-on').addEventListener('click', () => { draft.promo.activo = !draft.p
 function setAdmin(on){
   adminOn = on; adminBtn.setAttribute('aria-pressed', String(on)); adminBar.hidden = !on;
   draft = JSON.parse(JSON.stringify(estado));
-  if (on) watchSolicitudes();
+  if (on) { watchSolicitudes(); cargarAdminData(); }
   closePanel(); touch();
 }
 adminBtn.addEventListener('click', () => setAdmin(!adminOn));
@@ -1840,6 +1888,17 @@ $('btn-discard').addEventListener('click', () => { moveFrom = null; setAdmin(fal
 const newId = () => 'm' + Date.now().toString(36) + Math.floor(Math.random()*1e4).toString(36);
 function renderAdmin(sp){
   const taken = isTaken(sp), mid = draft.ocupados[sp.code] || '';
+  const r = RES.get(sp.code);
+  $('a-resbox').hidden = !r;
+  if (r){
+    const dl = $('a-resdl'); dl.replaceChildren();
+    const fila = (k, v) => { if (!v && v !== 0) return; const dt = document.createElement('dt'); dt.textContent = k; const dd = document.createElement('dd'); dd.textContent = String(v); dl.append(dt, dd); };
+    fila('Nombre', r.nombre); fila('Celular', r.celular); fila('Emprendimiento', r.emprendimiento); fila('Qué vende', r.rubro);
+    fila('Adelanto', fmtBs(r.adelanto)); fila('Espacios', (r.espacios||[]).join(', ')); fila('Reservó', new Date(r.creado).toLocaleString('es-BO', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'})); fila('Nota', r.nota);
+    const cel = String(r.celular||'').replace(/\D/g,''); $('a-reswa').hidden = !cel; $('a-reswa').href = 'https://wa.me/' + (cel.length === 8 ? '591' + cel : cel);
+  }
+  $('a-resbtn').hidden = !!r || !!mid || isRet(sp) || !SB;
+  if (r || mid) $('a-resform').hidden = true;
   $('a-libre').setAttribute('aria-pressed', String(!taken)); $('a-ocup').setAttribute('aria-pressed', String(taken));
   $('a-mover').hidden = !(taken && mid); $('a-mover').textContent = moveFrom === sp.code ? '✖ Cancelar mover' : '↔ Mover o intercambiar esta marca a otro espacio';
   $('a-logo-l').hidden = !assets; $('a-fotos-l').hidden = !assets;
@@ -1863,8 +1922,83 @@ function renderAdmin(sp){
     d.append(im, x); fl.appendChild(d);
   });
   const n = SPACES.filter(o => mid && draft.ocupados[o.code] === mid).length;
-  $('a-msg').textContent = (m ? `Esta marca está en ${n} espacio${n===1?'':'s'}.` : (taken ? 'Elige una marca o crea una nueva.' : 'Marca el espacio como ocupado para asignarle una marca.'));
+  const pg = mid && PAGO[mid];
+  $('a-msg').textContent = (m ? `Esta marca está en ${n} espacio${n===1?'':'s'}.` + (pg ? (pg.debe > 0 ? ` Debe ${fmtBs(pg.debe)} de su espacio.` : ' Su espacio está pagado.') : '') : (r ? 'Cuando pague y traiga sus productos, toca «Ya pagó y trajo» y elige su marca.' : taken ? 'Elige una marca o crea una nueva.' : 'Marca el espacio como ocupado para asignarle una marca, o resérvalo con los datos de la persona.'));
 }
+async function cargarAdminData(){
+  if (!SB || !canEdit) return;
+  try {
+    const [rs, ms] = await Promise.all([
+      SB.from('reservas').select('*').eq('estado','activa').order('creado', { ascending:false }),
+      SB.from('marcas').select('id,tarifa,adelanto,saldo,saldo_pagado')
+    ]);
+    RESLIST = rs.data || []; RES = new Map();
+    RESLIST.forEach(r => (r.espacios||[]).forEach(c => RES.set(c, r)));
+    PAGO = {}; (ms.data || []).forEach(m => { PAGO[m.id] = { debe: m.saldo_pagado ? 0 : Math.max(0, +m.saldo || 0) }; });
+  } catch(e) {}
+  renderResList(); paint(); if (selected && adminOn) renderAdmin(selected);
+}
+function renderResList(){
+  $('ad-nres').textContent = RESLIST.length;
+  const box = $('ad-reslist'); box.replaceChildren();
+  if (!RESLIST.length){ const p = document.createElement('p'); p.className = 'msg'; p.textContent = 'No hay reservas pendientes. Toca un espacio libre y usa «Reservar este espacio».'; box.appendChild(p); return; }
+  RESLIST.forEach(r => {
+    const row = document.createElement('div'); row.className = 'resrow';
+    const a = document.createElement('div'); const b = document.createElement('b'); b.textContent = r.nombre + (r.emprendimiento ? ' · ' + r.emprendimiento : '');
+    const sm = document.createElement('small'); sm.textContent = `${(r.espacios||[]).join(', ')} · ${r.celular} · adelanto ${fmtBs(r.adelanto)} · ${new Date(r.creado).toLocaleDateString('es-BO', {day:'2-digit', month:'short'})}`;
+    a.append(b, document.createElement('br'), sm);
+    const btn = document.createElement('button'); btn.type = 'button'; btn.textContent = 'Ver';
+    btn.addEventListener('click', () => { const sp = BY.get((r.espacios||[])[0]); if (sp){ if (sp.phase === 2 && !phase2.visible) setPhase(true); openPanel(sp); } });
+    row.append(a, btn); box.appendChild(row);
+  });
+}
+$('a-resbtn').addEventListener('click', () => {
+  const f = $('a-resform'); f.hidden = !f.hidden;
+  if (!f.hidden){ ['r-nombre','r-cel','r-emp','r-rubro','r-adel','r-otros','r-nota'].forEach(id => $(id).value = ''); $('r-err').hidden = true; $('r-nombre').focus(); }
+});
+$('r-save').addEventListener('click', async () => {
+  if (!selected || !SB) return;
+  const err = t => { $('r-err').textContent = t; $('r-err').hidden = false; };
+  const nombre = $('r-nombre').value.trim(), cel = $('r-cel').value.trim();
+  if (!nombre || !cel) return err('Escribe al menos el nombre y el celular.');
+  const otros = $('r-otros').value.split(/[,;\s]+/).map(x => x.trim().toUpperCase()).filter(Boolean);
+  const malos = otros.filter(c => !BY.has(c)); if (malos.length) return err('No existe el espacio ' + malos.join(', ') + '. Revisa el código.');
+  const espacios = [...new Set([selected.code, ...otros])];
+  const ocup = espacios.filter(c => draft.ocupados[c] || RES.has(c)); if (ocup.length) return err('Ya está ocupado o reservado: ' + ocup.join(', ') + '.');
+  $('r-save').disabled = true; $('r-save').textContent = 'Guardando…';
+  try {
+    const { error } = await SB.from('reservas').insert({ espacios, nombre, celular: cel, emprendimiento: $('r-emp').value.trim(), rubro: $('r-rubro').value.trim(), adelanto: Math.max(0, +$('r-adel').value || 0), nota: $('r-nota').value.trim() });
+    if (error) throw error;
+    espacios.forEach(c => { draft.ocupados[c] = ''; });
+    if (Array.isArray(draft.retirados)) draft.retirados = draft.retirados.filter(c => !espacios.includes(c));
+    $('a-resform').hidden = true;
+    await guardarPlano();
+    await cargarAdminData();
+    updateAdminBar('📝 Reserva guardada para ' + nombre + ' (' + espacios.join(', ') + ').');
+  } catch(e) { err('No se pudo guardar la reserva. Revisa la conexión e intenta de nuevo.'); }
+  $('r-save').disabled = false; $('r-save').textContent = 'Guardar reserva';
+});
+$('a-rescan').addEventListener('click', async e => {
+  const r = selected && RES.get(selected.code); if (!r) return;
+  const b = e.currentTarget;
+  if (b.dataset.armed !== '1'){ b.dataset.armed = '1'; b.textContent = 'Toca otra vez para cancelar'; setTimeout(() => { b.dataset.armed = ''; b.textContent = 'Cancelar reserva'; }, 3000); return; }
+  b.dataset.armed = ''; b.textContent = 'Cancelar reserva';
+  try {
+    const { error } = await SB.from('reservas').update({ estado:'cancelada' }).eq('id', r.id); if (error) throw error;
+    (r.espacios||[]).forEach(c => { if (draft.ocupados[c] === '') delete draft.ocupados[c]; });
+    await guardarPlano(); await cargarAdminData();
+    updateAdminBar('Reserva de ' + r.nombre + ' cancelada. Sus espacios quedaron libres.');
+  } catch(e) { updateAdminBar('No se pudo cancelar la reserva. Intenta de nuevo.'); }
+});
+$('a-resconv').addEventListener('click', async () => {
+  const r = selected && RES.get(selected.code); if (!r) return;
+  try {
+    const { error } = await SB.from('reservas').update({ estado:'convertida' }).eq('id', r.id); if (error) throw error;
+    await cargarAdminData();
+    updateAdminBar('Listo. Ahora elige su marca en «Marca en este espacio» (o crea una nueva) y guarda.');
+    $('a-marca').focus();
+  } catch(e) { updateAdminBar('No se pudo actualizar la reserva. Intenta de nuevo.'); }
+});
 $('a-mover').addEventListener('click', () => {
   if (!selected) return;
   if (moveFrom === selected.code) { moveFrom = null; updateAdminBar(); renderAdmin(selected); return; }
@@ -1961,7 +2095,7 @@ $('login-box').addEventListener('submit', async e => {
   $('login-box').hidden = true; $('lg-pass').value = ''; $('lg-msg').textContent = '';
   await cargarPlano(); setAdmin(true);
 });
-$('btn-save').addEventListener('click', async () => {
+async function guardarPlano(){
   if (!SB || !canEdit) return;
   updateAdminBar('Guardando…'); $('btn-save').disabled = true;
   try {
@@ -1979,7 +2113,8 @@ $('btn-save').addEventListener('click', async () => {
     adminTxt.textContent = (e && /autorizado/.test(e.message || '')) ? 'Tu cuenta no puede guardar el plano.' : 'No se pudo guardar. Revisa la conexión e intenta de nuevo.';
     $('btn-save').disabled = !dirty();
   }
-});
+}
+$('btn-save').addEventListener('click', guardarPlano);
 (async () => { await cargarPlano(); await verSocio(); })();
 
 /* ---------- vistas y controles ---------- */

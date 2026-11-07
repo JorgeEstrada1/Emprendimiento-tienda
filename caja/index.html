@@ -185,8 +185,8 @@ details summary{cursor:pointer;font-weight:700}
     <nav class="tabs" role="tablist">
       <button role="tab" data-tab="caja" aria-selected="true">Caja</button>
       <button role="tab" data-tab="cierre" aria-selected="false">Cierre de caja</button>
-      <button role="tab" data-tab="dinero" aria-selected="false">Dinero</button>
-      <button role="tab" data-tab="cobros" aria-selected="false">Cobros</button>
+      <button role="tab" data-tab="dinero" aria-selected="false">Dinero emprendedores</button>
+      <button role="tab" data-tab="cobros" aria-selected="false">Cobros alquileres</button>
       <button role="tab" data-tab="stock" aria-selected="false">Stock</button>
       <button role="tab" data-tab="inv" aria-selected="false">Inventario</button>
       <button role="tab" data-tab="liq" aria-selected="false">Liquidación</button>
@@ -260,7 +260,7 @@ details summary{cursor:pointer;font-weight:700}
   <section data-view="cobros" hidden>
     <div class="panel" style="margin-top:18px">
       <div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px;align-items:flex-end">
-        <div><h2 style="margin:0">Cobros de espacios</h2><div class="small muted">Qué emprendedores ya pagaron su espacio y quiénes tienen saldo pendiente</div></div>
+        <div><h2 style="margin:0">Cobros de alquileres</h2><div class="small muted">Qué emprendedores ya pagaron su espacio y quiénes tienen saldo pendiente</div></div>
         <label class="f" style="margin:0;flex:0 1 240px">Buscar<input id="cbQ" type="search" placeholder="Marca, titular o celular" autocomplete="off"></label>
       </div>
       <div class="row" id="cbFil" style="gap:6px;flex-wrap:wrap;margin-top:10px">
@@ -280,7 +280,7 @@ details summary{cursor:pointer;font-weight:700}
   <section data-view="dinero" hidden>
     <div class="panel" style="margin-top:18px">
       <div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px;align-items:flex-end">
-        <div><h2 style="margin:0">Dinero: efectivo y QR</h2><div class="small muted" id="dnSub"></div></div>
+        <div><h2 style="margin:0">Dinero de emprendedores: efectivo y QR</h2><div class="small muted" id="dnSub"></div></div>
         <div class="row" style="gap:6px;flex-wrap:wrap;align-items:flex-end" id="dnRangos">
           <button class="b sm" type="button" data-dnr="hoy">Hoy</button>
           <button class="b sm" type="button" data-dnr="7d">Últimos 7 días</button>

@@ -143,13 +143,14 @@ textarea.rep{min-height:220px;font-family:var(--f-num);font-size:.82rem}
 .confirm{display:inline-flex;gap:6px;align-items:center}
 details summary{cursor:pointer;font-weight:700}
 @media (prefers-reduced-motion:no-preference){.prod,button.b{transition:border-color .15s,background .15s}}
+body.emp .soc{display:none!important}body.emp #stockList input{pointer-events:none;border-color:transparent;background:transparent}body.emp [data-anular]{display:none!important}
 </style>
 </head>
 <body>
 <div id="loginView" hidden><div class="wrap" style="max-width:420px;padding-block:48px">
   <form class="panel" id="loginForm">
     <h2>El Parralito · Caja</h2>
-    <p class="small muted" style="margin:0">Solo para los socios. Entra con tu correo y contraseña.</p>
+    <p class="small muted" style="margin:0">Para los socios y el personal de la tienda. Entra con tu correo y contraseña.</p>
     <label class="f">Correo<input id="lgEmail" type="email" autocomplete="username" required></label>
     <label class="f">Contraseña<input id="lgPass" type="password" autocomplete="current-password" minlength="6" required></label>
     <button class="b pri big" data-modo="entrar">Entrar</button>
@@ -159,10 +160,10 @@ details summary{cursor:pointer;font-weight:700}
 </div></div>
 <div id="joinView" hidden><div class="wrap" style="max-width:420px;padding-block:48px">
   <form class="panel" id="joinForm">
-    <h2>Activa tu acceso de socio</h2>
-    <p class="small muted" style="margin:0">Entraste como <b id="joinEmail"></b>. Escribe el código de socios para activar la caja.</p>
+    <h2>Activa tu acceso</h2>
+    <p class="small muted" style="margin:0">Entraste como <b id="joinEmail"></b>. Escribe el código que te dieron para activar la caja.</p>
     <label class="f">Tu nombre<input id="jNombre" required></label>
-    <label class="f">Código de socios<input id="jCodigo" required autocomplete="off"></label>
+    <label class="f">Código de acceso<input id="jCodigo" required autocomplete="off"></label>
     <button class="b pri big">Activar</button>
     <div class="small" id="jMsg" style="color:var(--bad)"></div>
     <button type="button" class="b sm salir">Salir</button>
@@ -176,7 +177,7 @@ details summary{cursor:pointer;font-weight:700}
       <button class="b sm salir" style="background:transparent;color:#f4f6f1;border-color:rgba(255,255,255,.4)">Salir</button>
       <span class="per" id="perLabel"></span>
     </div>
-    <div class="kpis">
+    <div class="kpis soc">
       <span>Vendido hoy<b class="num" id="kHoy">0 Bs</b></span>
       <span>Ventas hoy<b class="num" id="kN">0</b></span>
       <span>Vendido en el periodo<b class="num" id="kPer">0 Bs</b></span>
@@ -184,13 +185,13 @@ details summary{cursor:pointer;font-weight:700}
     </div>
     <nav class="tabs" role="tablist">
       <button role="tab" data-tab="caja" aria-selected="true">Caja</button>
-      <button role="tab" data-tab="cierre" aria-selected="false">Cierre de caja</button>
-      <button role="tab" data-tab="dinero" aria-selected="false">Dinero emprendedores</button>
-      <button role="tab" data-tab="cobros" aria-selected="false">Cobros alquileres</button>
+      <button role="tab" class="soc" data-tab="cierre" aria-selected="false">Cierre de caja</button>
+      <button role="tab" class="soc" data-tab="dinero" aria-selected="false">Dinero emprendedores</button>
+      <button role="tab" class="soc" data-tab="cobros" aria-selected="false">Cobros alquileres</button>
       <button role="tab" data-tab="stock" aria-selected="false">Stock</button>
       <button role="tab" data-tab="inv" aria-selected="false">Inventario</button>
-      <button role="tab" data-tab="liq" aria-selected="false">Liquidación</button>
-      <button role="tab" data-tab="marcas" aria-selected="false">Marcas</button>
+      <button role="tab" class="soc" data-tab="liq" aria-selected="false">Liquidación</button>
+      <button role="tab" class="soc" data-tab="marcas" aria-selected="false">Marcas</button>
     </nav>
   </div>
 </header>
@@ -480,14 +481,22 @@ details summary{cursor:pointer;font-weight:700}
     sb.auth.onAuthStateChange((_e, s) => { if (!s) showLogin(); });
     if (!session) return showLogin();
     S.uid = session.user.id;
-    const ok = chk(await sb.rpc("es_socio"));
-    if (!ok) return showJoin(session.user.email);
+    S.rol = chk(await sb.rpc("mi_rol"));
+    if (!S.rol) return showJoin(session.user.email);
     showApp();
   }
   function showLogin() { $("#appView").hidden = true; $("#joinView").hidden = true; $("#loginView").hidden = false; }
   function showJoin(email) { $("#appView").hidden = true; $("#loginView").hidden = true; $("#joinView").hidden = false; $("#joinEmail").textContent = email; }
   async function showApp() {
     $("#loginView").hidden = true; $("#joinView").hidden = true; $("#appView").hidden = false;
+    if (S.rol === "empleado") {
+      // Personal: solo vender, recibir mercadería y ver stock. Sin dinero, tarifas ni liquidaciones.
+      document.body.classList.add("emp");
+      for (const k of ["pagos", "liquidaciones", "ajustes"]) loaders[k] = async () => {};
+      loaders.marcas = async () => { const d = chk(await sb.rpc("marcas_caja")); S.marcas = {}; (d || []).forEach(m => S.marcas[m.id] = m); };
+      loaders.ventas = async () => { const d = await todo(() => sb.from("ventas").select("*").eq("dia", HOY()).eq("por", S.uid).order("fecha", {ascending: false}).order("id")); S.ventas = {}; d.forEach(v => S.ventas[v.id] = v); };
+      if (!["caja", "stock", "inv"].includes(S.tab)) $('nav.tabs button[data-tab="caja"]').click();
+    }
     try { await Promise.all(Object.values(loaders).map(f => f())); } catch (e) { fail(e); }
     sb.channel("caja").on("postgres_changes", {event: "*", schema: "public"}, p => { if (loaders[p.table]) refresh(p.table); }).subscribe();
     setInterval(() => refresh("ventas", "productos"), 60000);
@@ -511,14 +520,17 @@ details summary{cursor:pointer;font-weight:700}
   const traducir = m => /Invalid login/i.test(m) ? "Correo o contraseña incorrectos." : /least 6/i.test(m) ? "La contraseña debe tener al menos 6 caracteres." : /already registered/i.test(m) ? "Ese correo ya tiene cuenta: usa «Entrar»." : /not confirmed/i.test(m) ? "Primero confirma tu correo con el enlace que te enviamos." : m;
   $("#joinForm").addEventListener("submit", async e => {
     e.preventDefault();
-    const {data, error} = await sb.rpc("unirse_como_socio", {p_codigo: $("#jCodigo").value.trim(), p_nombre: $("#jNombre").value.trim()});
-    if (error || !data) { $("#jMsg").textContent = "El código de socios no es correcto."; return; }
-    showApp();
+    const args = {p_codigo: $("#jCodigo").value.trim(), p_nombre: $("#jNombre").value.trim()};
+    let {data, error} = await sb.rpc("unirse_como_socio", args);
+    if (!error && !data) ({data, error} = await sb.rpc("unirse_como_empleado", args));
+    if (error || !data) { $("#jMsg").textContent = "El código no es correcto."; return; }
+    S.rol = chk(await sb.rpc("mi_rol")); showApp();
   });
   $$(".salir").forEach(b => b.addEventListener("click", async () => { await sb.auth.signOut(); location.reload(); }));
 
   // ---------- tabs ----------
   $$("nav.tabs button").forEach(b => b.addEventListener("click", () => {
+    if (S.rol === "empleado" && b.classList.contains("soc")) return;
     S.tab = b.dataset.tab;
     $$("nav.tabs button").forEach(x => x.setAttribute("aria-selected", x === b));
     $$("section[data-view]").forEach(s => s.hidden = s.dataset.view !== S.tab);
@@ -719,7 +731,7 @@ details summary{cursor:pointer;font-weight:700}
   }
   $("#stockMarca").addEventListener("change", () => { S.ficha = []; histFor = null; $("#fichaRows").innerHTML = ""; renderStock(); });
   $("#stockList").addEventListener("change", async e => {
-    const i = e.target.closest("[data-pf]"); if (!i) return;
+    const i = e.target.closest("[data-pf]"); if (!i || S.rol === "empleado") return;
     const f = i.dataset.pf; let v = f === "nombre" ? i.value.trim() : parseFloat(i.value);
     if (f !== "nombre" && !(v >= 0)) return toast("Escribe un número válido.");
     if (f === "nombre" && !v) return toast("El nombre no puede quedar vacío.");

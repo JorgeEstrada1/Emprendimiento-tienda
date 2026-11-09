@@ -143,7 +143,7 @@ textarea.rep{min-height:220px;font-family:var(--f-num);font-size:.82rem}
 .confirm{display:inline-flex;gap:6px;align-items:center}
 details summary{cursor:pointer;font-weight:700}
 @media (prefers-reduced-motion:no-preference){.prod,button.b{transition:border-color .15s,background .15s}}
-body.emp .soc{display:none!important}body.emp #stockList input{pointer-events:none;border-color:transparent;background:transparent}body.emp [data-anular]{display:none!important}
+body.emp .soc{display:none!important}body.emp #stockList input{pointer-events:none;border-color:transparent;background:transparent}
 </style>
 </head>
 <body>
@@ -232,6 +232,11 @@ body.emp .soc{display:none!important}body.emp #stockList input{pointer-events:no
           <button data-m="efectivo" aria-pressed="true">Efectivo</button>
           <button data-m="qr" aria-pressed="false">QR</button>
           <button data-m="tarjeta" aria-pressed="false">Tarjeta</button>
+          <button data-m="dividido" aria-pressed="false">Dividir</button>
+        </div>
+        <div id="divBox" hidden style="margin-top:8px">
+          <label class="f">¿Cuánto paga en efectivo? (Bs)<input id="divEf" type="number" min="0.5" step="0.5" inputmode="decimal"></label>
+          <div class="small" id="divRes" style="margin-top:4px"></div>
         </div>
         <button class="b pri big" id="cobrar" disabled>Cobrar</button>
       </div>
@@ -577,14 +582,17 @@ body.emp .soc{display:none!important}body.emp #stockList input{pointer-events:no
     $("#cart").innerHTML = S.cart.length ? S.cart.map((l, i) => `<li><span style="min-width:0"><b>${esc(l.nombre)}</b><br><span class="small muted">${l.codigo ? esc(l.codigo) + " · " : ""}${esc(S.marcas[l.marca]?.nombre || "")}</span></span><span class="row" style="flex-wrap:nowrap"><button class="b sm" data-dec="${i}" aria-label="Quitar uno">−</button><span class="num">${l.cant}</span><button class="b sm" data-inc="${i}" aria-label="Agregar uno">+</button><span class="num" style="min-width:76px;text-align:right">${bs(l.cant * l.precio)}</span></span></li>`).join("")
       : `<li class="muted small">Toca un producto para agregarlo a la cuenta.</li>`;
     $("#cartTot").textContent = bs(S.cart.reduce((a, l) => a + l.cant * l.precio, 0));
-    $("#cobrar").disabled = !S.cart.length;
     $$("#metodo button").forEach(b => b.setAttribute("aria-pressed", b.dataset.m === S.metodo));
+    { const tot = S.cart.reduce((a, l) => a + l.cant * l.precio, 0), dv = S.metodo === "dividido", ef = parseFloat($("#divEf").value) || 0, ok = ef > 0 && ef < tot;
+      $("#divBox").hidden = !dv;
+      $("#divRes").innerHTML = !dv ? "" : !S.cart.length ? `<span class="muted">Agrega productos a la cuenta.</span>` : ok ? `Efectivo <b class="num">${bs(ef)}</b> + QR <b class="num">${bs(tot - ef)}</b>` : `<span style="color:var(--bad)">Escribe un monto mayor a 0 y menor al total (${bs(tot)}).</span>`;
+      $("#cobrar").disabled = !S.cart.length || (dv && !ok); }
     $("#hoyFecha").textContent = laPaz().toLocaleDateString("es-BO", {weekday: "long", day: "numeric", month: "long"});
     const hoy = Object.values(S.ventas).filter(v => v.dia === HOY()).sort((a, b) => b.fecha.localeCompare(a.fecha));
-    const compras = []; { const by = new Map(); hoy.forEach(v => { const k = v.fecha + "|" + v.metodo + "|" + (v.por || ""); if (!by.has(k)) { by.set(k, []); compras.push(by.get(k)); } by.get(k).push(v); }); }
+    const compras = []; { const by = new Map(); hoy.forEach(v => { const k = v.fecha + "|" + (v.por || ""); if (!by.has(k)) { by.set(k, []); compras.push(by.get(k)); } by.get(k).push(v); }); }
     const hoyHTML = hoy.length ? `<div class="small muted" style="margin-bottom:6px">${compras.length} ${compras.length === 1 ? "compra" : "compras"} · ${hoy.filter(v => !v.anulada).reduce((a, v) => a + v.cant, 0)} productos</div>` + compras.map((c, i) => { const ok = c.filter(v => !v.anulada), tot = ok.reduce((a, v) => a + +v.total, 0), u = ok.reduce((a, v) => a + v.cant, 0);
-      return `<div class="compra${ok.length ? "" : " void"}"><div class="row" style="justify-content:space-between;gap:8px;flex-wrap:wrap"><span><b class="num">${hora(c[0].fecha)}</b> · Compra ${compras.length - i} · ${u} ${u === 1 ? "producto" : "productos"}</span><span class="row" style="gap:8px"><span class="chip g">${esc(c[0].metodo)}</span><b class="num">${bs(tot)}</b></span></div>
-        <div class="tbl"><table><tbody>${c.map(v => `<tr class="${v.anulada ? "void" : ""}"><td>${esc(S.marcas[v.marca]?.nombre || v.marca)}</td><td>${esc(v.nombre)}</td><td class="r num">${v.cant}</td><td class="r num">${bs(v.total)}</td><td class="r">${v.anulada ? `<span class="chip bad">Anulada</span>` : `<span><button class="b sm danger" data-anular="${esc(v.id)}">Anular</button></span>`}</td></tr>`).join("")}</tbody></table></div></div>`; }).join("")
+      return `<div class="compra${ok.length ? "" : " void"}"><div class="row" style="justify-content:space-between;gap:8px;flex-wrap:wrap"><span><b class="num">${hora(c[0].fecha)}</b> · Compra ${compras.length - i} · ${u} ${u === 1 ? "producto" : "productos"}</span><span class="row" style="gap:8px"><span class="chip g">${esc([...new Set(c.map(v => v.metodo))].join(" + "))}</span><b class="num">${bs(tot)}</b></span></div>
+        <div class="tbl"><table><tbody>${c.map(v => `<tr class="${v.anulada ? "void" : ""}"><td>${esc(S.marcas[v.marca]?.nombre || v.marca)}</td><td>${esc(v.nombre)}</td><td class="r num">${v.cant || ""}</td><td class="r num">${bs(v.total)}${new Set(c.map(x => x.metodo)).size > 1 ? ` <span class="small muted">${esc(v.metodo)}</span>` : ""}</td><td class="r">${v.anulada ? `<span class="chip bad">Anulada</span>` : `<span><button class="b sm danger" data-anular="${esc(v.id)}">Anular</button></span>`}</td></tr>`).join("")}</tbody></table></div></div>`; }).join("")
       : `<div class="empty">Todavía no hay ventas hoy. Cuando cobres, aparecen aquí agrupadas por compra.</div>`;
     const hl = $("#hoyList"); if (hl.__html !== hoyHTML && !hl.querySelector(".confirm")) { hl.innerHTML = hoyHTML; hl.__html = hoyHTML; }
   }
@@ -626,14 +634,21 @@ body.emp .soc{display:none!important}body.emp #stockList input{pointer-events:no
     if (j != null) { S.cart[j].cant--; if (S.cart[j].cant <= 0) S.cart.splice(j, 1); }
     renderCaja();
   });
-  $("#metodo").addEventListener("click", e => { const b = e.target.closest("button"); if (b) { S.metodo = b.dataset.m; renderCaja(); } });
+  $("#metodo").addEventListener("click", e => { const b = e.target.closest("button"); if (b) { S.metodo = b.dataset.m; renderCaja(); if (S.metodo === "dividido") $("#divEf").focus(); } });
+  $("#divEf").addEventListener("input", () => renderCaja());
   $("#cobrar").addEventListener("click", async () => {
     if (!S.cart.length) return;
     const btn = $("#cobrar"); btn.disabled = true;
     const total = S.cart.reduce((a, l) => a + l.cant * l.precio, 0);
     try {
-      chk(await sb.rpc("vender", {p_items: S.cart, p_metodo: S.metodo}));
-      S.cart = []; toast("Cobrado " + bs(total) + " (" + S.metodo + ")");
+      if (S.metodo === "dividido") {
+        const ef = parseFloat($("#divEf").value) || 0;
+        chk(await sb.rpc("vender_dividido", {p_items: S.cart, p_efectivo: ef}));
+        S.cart = []; $("#divEf").value = ""; S.metodo = "efectivo"; toast("Cobrado " + bs(total) + " (efectivo " + bs(ef) + " + QR " + bs(total - ef) + ")");
+      } else {
+        chk(await sb.rpc("vender", {p_items: S.cart, p_metodo: S.metodo}));
+        S.cart = []; toast("Cobrado " + bs(total) + " (" + S.metodo + ")");
+      }
       refresh("ventas", "productos");
     } catch (e) { fail(e); }
     renderCaja();

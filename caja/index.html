@@ -144,7 +144,7 @@ textarea.rep{min-height:220px;font-family:var(--f-num);font-size:.82rem}
 .confirm{display:inline-flex;gap:6px;align-items:center}
 details summary{cursor:pointer;font-weight:700}
 @media (prefers-reduced-motion:no-preference){.prod,button.b{transition:border-color .15s,background .15s}}
-body.emp .soc{display:none!important}body.emp #stockList input{pointer-events:none;border-color:transparent;background:transparent}
+body.emp .soc{display:none!important}body.emp [data-cimet]{display:none!important}body.emp #stockList input{pointer-events:none;border-color:transparent;background:transparent}
 </style>
 </head>
 <body>
@@ -178,15 +178,15 @@ body.emp .soc{display:none!important}body.emp #stockList input{pointer-events:no
       <button class="b sm salir" style="background:transparent;color:#f4f6f1;border-color:rgba(255,255,255,.4)">Salir</button>
       <span class="per" id="perLabel"></span>
     </div>
-    <div class="kpis soc">
+    <div class="kpis">
       <span>Vendido hoy<b class="num" id="kHoy">0 Bs</b></span>
       <span>Ventas hoy<b class="num" id="kN">0</b></span>
-      <span>Vendido en el periodo<b class="num" id="kPer">0 Bs</b></span>
+      <span class="soc">Vendido en el periodo<b class="num" id="kPer">0 Bs</b></span>
       <span>Stock bajo<b class="num" id="kLow">0</b></span>
     </div>
     <nav class="tabs" role="tablist">
       <button role="tab" data-tab="caja" aria-selected="true">Caja</button>
-      <button role="tab" class="soc" data-tab="cierre" aria-selected="false">Cierre de caja</button>
+      <button role="tab" data-tab="cierre" aria-selected="false">Cierre de caja</button>
       <button role="tab" class="soc" data-tab="dinero" aria-selected="false">Dinero emprendedores</button>
       <button role="tab" class="soc" data-tab="cobros" aria-selected="false">Cobros alquileres</button>
       <button role="tab" data-tab="stock" aria-selected="false">Stock</button>
@@ -254,8 +254,8 @@ body.emp .soc{display:none!important}body.emp #stockList input{pointer-events:no
       <div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px;align-items:flex-end">
         <div><h2 style="margin:0" id="ciTit">Cierre de caja</h2><div class="small muted" id="ciSub"></div></div>
         <div class="row noprint" style="gap:8px;flex-wrap:wrap;align-items:flex-end">
-          <label class="f" style="margin:0">Día<input id="ciDia" type="date"></label>
-          <button class="b sm" id="ciHoy" type="button">Hoy</button>
+          <label class="f soc" style="margin:0">Día<input id="ciDia" type="date"></label>
+          <button class="b sm soc" id="ciHoy" type="button">Hoy</button>
           <div class="seg" id="ciTurno" role="group" aria-label="Turno"><button type="button" data-citurno="manana">☀️ Mañana</button><button type="button" data-citurno="tarde">🌤️ Tarde</button><button type="button" data-citurno="noche">🌙 Noche</button><button type="button" data-citurno="dia">Día completo</button></div>
           <button class="b sm" id="ciPrint" type="button">🖨️ Imprimir / PDF</button>
         </div>
@@ -498,10 +498,10 @@ body.emp .soc{display:none!important}body.emp #stockList input{pointer-events:no
     if (S.rol === "empleado") {
       // Personal: solo vender, recibir mercadería y ver stock. Sin dinero, tarifas ni liquidaciones.
       document.body.classList.add("emp");
-      for (const k of ["pagos", "liquidaciones", "ajustes"]) loaders[k] = async () => {};
+      for (const k of ["pagos", "liquidaciones"]) loaders[k] = async () => {};
       loaders.marcas = async () => { const d = chk(await sb.rpc("marcas_caja")); S.marcas = {}; (d || []).forEach(m => S.marcas[m.id] = m); };
-      loaders.ventas = async () => { const d = await todo(() => sb.from("ventas").select("*").eq("dia", HOY()).eq("por", S.uid).order("fecha", {ascending: false}).order("id")); S.ventas = {}; d.forEach(v => S.ventas[v.id] = v); };
-      if (!["caja", "stock", "inv"].includes(S.tab)) $('nav.tabs button[data-tab="caja"]').click();
+      loaders.ventas = async () => { const d = await todo(() => sb.from("ventas").select("*").eq("dia", HOY()).order("fecha", {ascending: false}).order("id")); S.ventas = {}; d.forEach(v => S.ventas[v.id] = v); };
+      if (!["caja", "cierre", "stock", "inv"].includes(S.tab)) $('nav.tabs button[data-tab="caja"]').click();
     }
     try { await Promise.all(Object.values(loaders).map(f => f())); } catch (e) { fail(e); }
     sb.channel("caja").on("postgres_changes", {event: "*", schema: "public"}, p => { if (loaders[p.table]) refresh(p.table); }).subscribe();
@@ -593,7 +593,7 @@ body.emp .soc{display:none!important}body.emp #stockList input{pointer-events:no
     const compras = []; { const by = new Map(); hoy.forEach(v => { const k = v.fecha + "|" + (v.por || ""); if (!by.has(k)) { by.set(k, []); compras.push(by.get(k)); } by.get(k).push(v); }); }
     const hoyHTML = hoy.length ? `<div class="small muted" style="margin-bottom:6px">${compras.length} ${compras.length === 1 ? "compra" : "compras"} · ${hoy.filter(v => !v.anulada).reduce((a, v) => a + v.cant, 0)} productos</div>` + compras.map((c, i) => { const ok = c.filter(v => !v.anulada), tot = ok.reduce((a, v) => a + +v.total, 0), u = ok.reduce((a, v) => a + v.cant, 0);
       return `<div class="compra${ok.length ? "" : " void"}"><div class="row" style="justify-content:space-between;gap:8px;flex-wrap:wrap"><span><b class="num">${hora(c[0].fecha)}</b> · Compra ${compras.length - i} · ${u} ${u === 1 ? "producto" : "productos"}</span><span class="row" style="gap:8px"><span class="chip g">${esc([...new Set(c.map(v => v.metodo))].join(" + "))}</span><b class="num">${bs(tot)}</b></span></div>
-        <div class="tbl"><table><tbody>${c.map(v => `<tr class="${v.anulada ? "void" : ""}"><td>${esc(S.marcas[v.marca]?.nombre || v.marca)}</td><td>${esc(v.nombre)}</td><td class="r num">${v.cant || ""}</td><td class="r num">${bs(v.total)}${new Set(c.map(x => x.metodo)).size > 1 ? ` <span class="small muted">${esc(v.metodo)}</span>` : ""}</td><td class="r">${v.anulada ? `<span class="chip bad">Anulada</span>` : `<span><button class="b sm danger" data-anular="${esc(v.id)}">Anular</button></span>`}</td></tr>`).join("")}</tbody></table></div></div>`; }).join("")
+        <div class="tbl"><table><tbody>${c.map(v => `<tr class="${v.anulada ? "void" : ""}"><td>${esc(S.marcas[v.marca]?.nombre || v.marca)}</td><td>${esc(v.nombre)}</td><td class="r num">${v.cant || ""}</td><td class="r num">${bs(v.total)}${new Set(c.map(x => x.metodo)).size > 1 ? ` <span class="small muted">${esc(v.metodo)}</span>` : ""}</td><td class="r">${v.anulada ? `<span class="chip bad">Anulada</span>` : (S.rol === "empleado" && v.por !== S.uid ? "" : `<span><button class="b sm danger" data-anular="${esc(v.id)}">Anular</button></span>`)}</td></tr>`).join("")}</tbody></table></div></div>`; }).join("")
       : `<div class="empty">Todavía no hay ventas hoy. Cuando cobres, aparecen aquí agrupadas por compra.</div>`;
     const hl = $("#hoyList"); if (hl.__html !== hoyHTML && !hl.querySelector(".confirm")) { hl.innerHTML = hoyHTML; hl.__html = hoyHTML; }
   }
@@ -867,6 +867,7 @@ body.emp .soc{display:none!important}body.emp #stockList input{pointer-events:no
   };
   if (!S.ciTurno) S.ciTurno = turnoDe(new Date().toISOString());
   async function renderCierre() {
+    if (S.rol === "empleado") S.ciDia = HOY();
     const dia = S.ciDia; $("#ciDia").value = dia;
     if ($("#ciFondo") && S.ciForm && S.ciForm.k === "cierre:" + dia + (S.ciTurno === "dia" ? "" : ":" + S.ciTurno)) { const f0 = S.ciForm; f0.fondo = $("#ciFondo").value; f0.contado = $("#ciContado").value; f0.qrBanco = $("#ciQrBanco").value; f0.porNom = $("#ciPor").value; f0.obs = $("#ciObs").value; }
     const foco = document.activeElement?.id, caret = (() => { try { return document.activeElement?.selectionStart; } catch { return null; } })();

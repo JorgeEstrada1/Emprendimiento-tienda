@@ -107,6 +107,7 @@ tr.void td{text-decoration:line-through;color:var(--muted)}
 .invg{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:10px}
 .invc{border:1px solid var(--line);border-radius:12px;padding:8px;display:flex;flex-direction:column;gap:3px;background:var(--bg)}
 .invc img,.invc .nf{width:100%;aspect-ratio:1/1;object-fit:cover;border-radius:8px;background:var(--line);display:flex;align-items:center;justify-content:center;font-size:1.6rem}
+.invc .addf{flex-direction:column;gap:2px;cursor:pointer;border:2px dashed var(--line);background:var(--panel);color:var(--muted)}.invc .addf small{font-size:.75rem;font-weight:700}.invc .addf.subiendo{opacity:.5;pointer-events:none}.invc .noemp{display:none}body.emp .invc .noemp{display:flex}
 .invc .cod{font-family:var(--f-num);font-size:.78rem;color:var(--muted)}
 .invc.rv-ok{border-color:var(--ok);background:var(--ok-soft)}
 .invc.rv-dif{border-color:var(--warn);background:var(--warn-soft)}
@@ -983,7 +984,7 @@ body.emp .soc{display:none!important}body.emp #stockList input{pointer-events:no
     const ok = p => (!q || p.nombre.toLowerCase().includes(q) || (p.codigo || "").toLowerCase().includes(q)) &&
       (f === "todos" || (f === "sinrev" && !revEst(p)) || (f === "dif" && (revEst(p) === "dif" || revEst(p) === "falta")) || (f === "stock" && p.stock > 0) || (f === "reponer" && p.stock > 0 && p.stock <= p.minimo) || (f === "agotado" && p.stock <= 0) || (f === "vendidos" && vend[p.id]));
     const rvUI = p => { if (!S.rev) return ""; const r = REV[p.id] || {}, e = revEst(p); return `<div class="rvbar"><button type="button" class="b sm${e === "ok" ? " on" : ""}" data-rv="ok" data-pid="${esc(p.id)}">✔ Está</button><button type="button" class="b sm danger${e === "falta" ? " on" : ""}" data-rv="falta" data-pid="${esc(p.id)}">✖ Falta</button></div><label class="rvn">Contados <input type="number" inputmode="numeric" min="0" data-rvn="${esc(p.id)}" value="${r.n ?? ""}" placeholder="${Math.max(0, +p.stock || 0)}">${e === "dif" ? `<span class="chip warn">sistema ${Math.max(0, +p.stock || 0)}</span>` : ""}</label>`; };
-    const card = p => `<div class="invc${S.rev && revEst(p) ? " rv-" + revEst(p) : ""}" data-card="${esc(p.id)}">${p.foto ? `<img src="${esc(IMG(p.foto))}" alt="" loading="lazy">` : `<span class="nf" aria-hidden="true">📦</span>`}<span class="cod">${esc(p.codigo || "")}</span><b style="line-height:1.2">${esc(p.nombre)}</b><span class="small">${bs(p.precio)}</span><span class="row" style="gap:6px;flex-wrap:wrap"><span class="chip ${p.stock <= 0 ? "bad" : p.stock <= p.minimo ? "warn" : "ok"}">${p.stock <= 0 ? "Agotado" : "Quedan " + p.stock}</span>${vend[p.id] ? `<span class="chip g">Vendió ${vend[p.id]}</span>` : ""}</span>${rvUI(p)}</div>`;
+    const card = p => `<div class="invc${S.rev && revEst(p) ? " rv-" + revEst(p) : ""}" data-card="${esc(p.id)}">${p.foto ? `<img src="${esc(IMG(p.foto))}" alt="" loading="lazy">` : `<label class="nf addf soc" title="Agregar foto"><input type="file" accept="image/*" hidden data-pfoto="${esc(p.id)}"><span>📷</span><small>Agregar foto</small></label><span class="nf noemp" aria-hidden="true">📦</span>`}${p.foto ? `<label class="b sm soc" style="text-align:center;cursor:pointer">Cambiar foto<input type="file" accept="image/*" hidden data-pfoto="${esc(p.id)}"></label>` : ""}<span class="cod">${esc(p.codigo || "")}</span><b style="line-height:1.2">${esc(p.nombre)}</b><span class="small">${bs(p.precio)}</span><span class="row" style="gap:6px;flex-wrap:wrap"><span class="chip ${p.stock <= 0 ? "bad" : p.stock <= p.minimo ? "warn" : "ok"}">${p.stock <= 0 ? "Agotado" : "Quedan " + p.stock}</span>${vend[p.id] ? `<span class="chip g">Vendió ${vend[p.id]}</span>` : ""}</span>${rvUI(p)}</div>`;
     const resumen = ps => { const u = ps.reduce((a, p) => a + Math.max(0, +p.stock || 0), 0), v = ps.reduce((a, p) => a + Math.max(0, +p.stock || 0) * (+p.precio || 0), 0), vn = ps.reduce((a, p) => a + (vend[p.id] || 0), 0), ag = ps.filter(p => p.stock <= 0).length, rp = ps.filter(p => p.stock > 0 && p.stock <= p.minimo).length;
       return `<span class="chip ok">${ps.length} productos</span><span class="chip ok">${u} unidades</span><span class="chip ok">${bs(v)} en tienda</span>${vn ? `<span class="chip g">${vn} vendidos este periodo</span>` : ""}${rp ? `<span class="chip warn">${rp} por reponer</span>` : ""}${ag ? `<span class="chip bad">${ag} agotados</span>` : ""}`; };
     const pendDe = id => S.pend.filter(i => i.marca === id).reduce((a, i) => a + i.items.length, 0);
@@ -1020,6 +1021,22 @@ body.emp .soc{display:none!important}body.emp #stockList input{pointer-events:no
   $("#invRes").addEventListener("change", e => { const i = e.target.closest("[data-rvn]"); if (!i) return; const id = i.dataset.rvn, v = i.value.trim();
     if (v === "") { if (REV[id]) REV[id].n = null; } else REV[id] = {s: +v === 0 ? "falta" : "ok", n: +v, t: new Date().toISOString()};
     guardaRev(); repintaCard(id); });
+  // Foto de producto desde el inventario (solo socios): se achica a 1000 px y se sube al almacenamiento
+  const achicarImg = (file, max) => new Promise((res, rej) => { const img = new Image(), u = URL.createObjectURL(file);
+    img.onload = () => { const k = Math.min(1, max / Math.max(img.width, img.height)), c = document.createElement("canvas"); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k); c.getContext("2d").drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(u); c.toBlob(b => b ? res(b) : rej(new Error("No se pudo leer la foto.")), "image/jpeg", 0.82); };
+    img.onerror = () => rej(new Error("No se pudo leer esa foto. Prueba con otra.")); img.src = u; });
+  $("#invRes").addEventListener("change", async e => {
+    const i = e.target.closest("[data-pfoto]"); if (!i || !i.files[0]) return;
+    const p = S.productos[i.dataset.pfoto]; if (!p) return;
+    const lab = i.closest("label"); lab?.classList.add("subiendo"); toast("Subiendo foto…");
+    try {
+      const blob = await achicarImg(i.files[0], 1000);
+      const ruta = "productos/" + p.marca + "/" + p.id + "-" + crypto.randomUUID().slice(0, 8) + ".jpg";
+      chk(await sb.storage.from("parralito").upload(ruta, blob, {contentType: "image/jpeg"}));
+      chk(await sb.from("productos").update({foto: ruta}).eq("id", p.id));
+      p.foto = ruta; toast("Foto guardada: " + p.nombre); repintaCard(p.id);
+    } catch (er) { lab?.classList.remove("subiendo"); fail(er); }
+  });
   $("#invRevBar").addEventListener("click", e => { const v = e.target.closest("[data-rvver]"), r = e.target.closest("[data-rvreset]");
     if (v) { $("#invFiltro").value = v.dataset.rvver; pintarInv(); }
     if (r) { if (r.dataset.rvreset === "1") { r.dataset.rvreset = "2"; r.textContent = $("#invMarca").value ? "¿Borrar la revisión de esta marca? Toca de nuevo" : "¿Borrar TODA la revisión? Toca de nuevo"; return; } const mid = $("#invMarca").value; if (mid) prodsDe(mid).forEach(p => delete REV[p.id]); else REV = {}; guardaRev(); toast("Revisión reiniciada"); pintarInv(); }

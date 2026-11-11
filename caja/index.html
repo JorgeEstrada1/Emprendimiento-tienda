@@ -359,6 +359,11 @@ body.emp .soc{display:none!important}body.emp [data-cimet]{display:none!importan
       <div class="row small" id="liqTotals"></div>
       <div class="liq" id="liqList"></div>
     </div>
+    <div class="panel" style="margin-top:16px" id="liqPropPanel" hidden>
+      <div class="row" style="justify-content:space-between"><h2>Marcas de los socios</h2><div class="row small" id="liqPropTot"></div></div>
+      <p class="small muted" style="margin:0">Estas ventas son de marcas propias (no pagan espacio). No entran en el total a entregar a los emprendedores.</p>
+      <div class="liq" id="liqPropList"></div>
+    </div>
     <div class="panel" style="margin-top:16px" id="pagosPanel"></div>
     <div class="panel" style="margin-top:16px">
       <div class="row" style="justify-content:space-between"><h2>Resumen de la semana</h2><button class="b pri" id="semBtn">Armar mensajes de los últimos 7 días</button></div>
@@ -1131,12 +1136,17 @@ body.emp .soc{display:none!important}body.emp [data-cimet]{display:none!importan
     sel.innerHTML = [...new Set(opts)].filter(k => k >= "2026-11").map(k => `<option value="${k}">${perLabel(k)}${k === PER_ACT() ? " (actual)" : ""}</option>`).join("");
     sel.value = S.liqPer;
     $("#liqHint").textContent = "Ventas del " + perLabel(S.liqPer) + ". Si la marca aceptó descontar, la tarifa del mes siguiente se resta de lo vendido.";
-    const all = marcasOrden().map(m => ({m, ...calcLiq(m), done: S.liq[S.liqPer + "__" + m.id]}));
+    const todas = marcasOrden().map(m => ({m, ...calcLiq(m), done: S.liq[S.liqPer + "__" + m.id]}));
+    const all = todas.filter(x => !x.m.propia), prop = todas.filter(x => x.m.propia);
     const sum = f => all.reduce((a, x) => a + x[f], 0);
+    $("#liqPropPanel").hidden = !prop.length;
+    $("#liqPropTot").innerHTML = `<span class="chip g">Vendido ${bs(prop.reduce((a, x) => a + x.vendido, 0))}</span>`;
+    $("#liqPropList").innerHTML = prop.map(({m, vs, vendido}) => `<div class="liqcard"><div><b>${esc(m.nombre)}</b> <span class="small muted">· ${esc(m.espacio || "—")}</span><div class="meta">${vs.length} ${vs.length === 1 ? "venta" : "ventas"} · ${esc(m.rubro || "")}</div></div><div class="amt">${bs(vendido)}<div class="small muted" style="font-family:var(--f-body);font-weight:400">vendido</div></div><div class="acts"><button class="b sm" data-rep="${esc(m.id)}">Reporte</button></div></div>`).join("");
     $("#liqTotals").innerHTML = `<span class="chip g">Vendido ${bs(sum("vendido"))}</span><span class="chip ok">A entregar ${bs(sum("entregar"))}</span><span class="chip warn">Tarifas descontadas ${bs(sum("desc"))}</span><span class="chip bad">Tarifas por cobrar ${bs(sum("falta"))}</span><span class="chip g">${all.filter(x => x.done).length}/${all.length} entregadas</span>`;
     $("#liqList").innerHTML = all.map(({m, vs, vendido, desc, entregar, falta, done}) => `<div class="liqcard"><div><b>${esc(m.nombre)}</b> <span class="small muted">· ${esc(m.espacio)}</span><div class="meta">${vs.length} ventas · vendido ${bs(vendido)}${m.descuenta ? ` · tarifa descontada ${bs(desc)}` : ` · tarifa ${bs(m.tarifa)} se cobra aparte`}${falta && m.descuenta ? ` · <b>falta cobrar ${bs(falta)}</b>` : ""}</div></div><div class="amt">${bs(entregar)}<div class="small muted" style="font-family:var(--f-body);font-weight:400">a entregar</div></div><div class="acts"><button class="b sm" data-rep="${esc(m.id)}">Reporte</button>${done ? `<span class="chip ok">Entregado ${fechaCorta(done.fecha)} · ${esc(done.metodo)}</span> <button class="b sm" data-undo="${esc(m.id)}">Deshacer</button>` : `<button class="b sm pri" data-done="${esc(m.id)}" data-met="efectivo">Entregado en efectivo</button><button class="b sm" data-done="${esc(m.id)}" data-met="transferencia">Entregado por transferencia</button>`}</div></div>`).join("") || `<div class="empty">No hay marcas activas.</div>`;
   }
   $("#liqPer").addEventListener("change", e => { S.liqPer = e.target.value; $("#repPanel").hidden = true; refresh("ventas", "liquidaciones"); });
+  $("#liqPropList").addEventListener("click", e => { const r = e.target.closest("[data-rep]"); if (r) showRep(r.dataset.rep); });
   $("#liqList").addEventListener("click", async e => {
     const r = e.target.closest("[data-rep]"), d = e.target.closest("[data-done]"), u = e.target.closest("[data-undo]");
     if (r) return showRep(r.dataset.rep);

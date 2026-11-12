@@ -300,7 +300,7 @@ label.f{display:flex;flex-direction:column;gap:6px;font-weight:700;font-size:1re
     if (first) { const h = location.hash.slice(1); go(["vendi","productos","traer","pagar","marca"].includes(h) ? h : (lista.length || $("#tNombre").value || fotoT ? "traer" : "inicio")); if (lista.length) { pintarLista(); $("#tOk").className = "okm"; $("#tOk").textContent = "Recuperamos tu lista: tienes " + lista.length + " productos sin enviar. Sigue agregando o toca «Listo, avisar a la tienda»."; } }
     render();
   }
-  setInterval(() => { if (D && !document.hidden && !document.activeElement?.closest("form")) cargar(); }, 90000);
+  setInterval(() => { if (D && !document.hidden && !document.activeElement?.closest("form") && !edIng) cargar(); }, 90000);
   document.addEventListener("visibilitychange", () => { if (!document.hidden && D) cargar(); });
 
   // ---------- instalar ----------
@@ -376,9 +376,20 @@ label.f{display:flex;flex-direction:column;gap:6px;font-weight:700;font-size:1re
   function pintarLista() {
     guardarLista();
     $("#tListaCard").hidden = !lista.length;
-    $("#tLista").innerHTML = lista.map((x, i) => `<div class="lista-item">${x.foto ? `<img src="${esc(IMG(x.foto))}" alt="">` : `<span class="sinfoto"></span>`}<div style="flex:1;min-width:0"><b>${esc(x.nombre)}</b><div class="small muted">${x.cant} unidades · ${bs(x.precio)} c/u</div></div><button class="sec sm" data-quitar="${i}" aria-label="Quitar">Quitar</button></div>`).join("");
+    $("#tLista").innerHTML = lista.map((x, i) => `<div class="lista-item">${x.foto ? `<img src="${esc(IMG(x.foto))}" alt="">` : `<span class="sinfoto"></span>`}<div style="flex:1;min-width:0"><b>${esc(x.nombre)}</b><div class="small muted">${x.cant} unidades · ${bs(x.precio)} c/u</div></div><button class="sec sm" data-editar="${i}" aria-label="Corregir">Corregir</button><button class="sec sm" data-quitar="${i}" aria-label="Quitar">Quitar</button></div>`).join("");
   }
-  $("#tLista").addEventListener("click", e => { const q = e.target.closest("[data-quitar]"); if (q) { lista.splice(+q.dataset.quitar, 1); pintarLista(); pintarRep(); } });
+  $("#tLista").addEventListener("click", e => {
+    const q = e.target.closest("[data-quitar]"), ed = e.target.closest("[data-editar]");
+    if (q) { lista.splice(+q.dataset.quitar, 1); pintarLista(); pintarRep(); }
+    if (ed) { // vuelve el producto al formulario para corregirlo
+      const [x] = lista.splice(+ed.dataset.editar, 1);
+      $("#tNombre").value = x.nombre; $("#tCant").value = x.cant; $("#tPrecio").value = x.precio; fotoT = x.foto || "";
+      $("#tFotoBtn").innerHTML = fotoT ? `<img src="${esc(IMG(fotoT))}" alt="Foto del producto">` : `<span class="ic" aria-hidden="true">📷</span><span>Tomar foto o elegir de la galería</span><span class="small">(opcional)</span>`;
+      pintarLista(); pintarRep();
+      $("#tOk").className = "okm"; $("#tOk").textContent = `Corrige «${x.nombre}» y vuelve a tocar «Agregar a mi lista».`;
+      $("#tNombre").scrollIntoView({block: "center"}); $("#tNombre").focus();
+    }
+  });
 
   // ---------- reponer productos que ya tiene ----------
   const nq = t => String(t || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
@@ -445,6 +456,55 @@ label.f{display:flex;flex-direction:column;gap:6px;font-weight:700;font-size:1re
     if (fallo) { $("#tOk").className = "err"; $("#tOk").textContent = (enviados ? `Ya enviamos ${enviados} de ${total} productos. ` : "") + fallo; if (enviados) cargar(); return; }
     $("#tNota").value = ""; pintarLista(); $("#tOk").className = "okm"; $("#tOk").textContent = `¡Listo! Enviaste ${total} productos. Ahora ponle a cada uno una cinta con su código 👇`;
     await cargar(); $("#tPend").scrollIntoView({behavior: "smooth", block: "start"});
+  });
+
+  // ---------- corregir un aviso que la tienda todavía no recibió ----------
+  // Solo cambia lo que la marca avisó que traerá. El stock de la tienda no se toca:
+  // se suma recién cuando el personal recibe los productos.
+  let edIng = null, edItems = [], edCancel = false;
+  function pintarPend() {
+    if (!D) return;
+    const pend = D.ingresos.filter(i => i.estado === "pendiente");
+    if (edIng && !pend.some(i => i.id === edIng)) { edIng = null; edCancel = false; }
+    $("#tPend").hidden = !pend.length;
+    if (!pend.length) { $("#tPend").innerHTML = ""; return; }
+    const img = x => x.foto ? `<img src="${esc(IMG(x.foto))}" alt="" loading="lazy" style="width:48px;height:48px;border-radius:10px;object-fit:cover;flex:none">` : "";
+    $("#tPend").innerHTML = `<h2 style="font-size:1.15rem">🏷️ Pon una cinta a cada producto</h2><p class="small muted">Antes de traerlos, escribe en una cinta o etiqueta el <b>código</b> y pégala en cada producto. El precio ya va en el código.</p><p class="small muted" style="margin-top:-4px">¿Te equivocaste? Mientras no los recibamos, puedes <b>corregir</b> lo que avisaste. Lo que ya está en la tienda no se cambia desde aquí.</p>` + pend.map(i => {
+      if (i.id !== edIng) return `<div style="padding-top:8px;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap"><span><span class="pill warn">Te esperamos</span>${i.nota ? ` <span class="small muted">· ${esc(i.nota)}</span>` : ""}</span>${i.id ? `<button type="button" class="sec sm" data-ped="${esc(i.id)}">✏️ Corregir este aviso</button>` : ""}</div>` + i.items.map(x => `<div class="etq">${img(x)}<span style="min-width:0;flex:1"><b>${esc(x.nombre)}</b><br><span class="small muted">${x.cant} unidades · ${bs(x.precio)} c/u</span></span>${x.codigo ? `<span class="cod">${esc(x.codigo)}</span>` : ""}</div>`).join("");
+      return `<div class="pedit" style="margin-top:10px;padding:12px;border:2px solid var(--grape);border-radius:14px"><b>✏️ Corrigiendo tu aviso</b><p class="small muted" style="margin:4px 0 8px">Cambia el nombre, la cantidad o el precio. Si un producto no lo vas a traer, quítalo.</p>` +
+        (edItems.length ? edItems.map((x, k) => `<div class="lista-item" style="flex-wrap:wrap">${img(x)}<label style="flex:1 1 180px;min-width:0" class="small">Producto<input data-pf="nombre" data-k="${k}" value="${esc(x.nombre)}" maxlength="80" style="width:100%"></label><label class="small" style="width:90px">Cantidad<input data-pf="cant" data-k="${k}" type="number" min="1" max="9999" inputmode="numeric" value="${esc(x.cant)}" style="width:100%"></label><label class="small" style="width:110px">Precio (Bs)<input data-pf="precio" data-k="${k}" type="number" min="0" step="0.5" inputmode="decimal" value="${esc(x.precio)}" style="width:100%"></label><button type="button" class="sec sm" data-pq="${k}">Quitar</button></div>`).join("") : `<p class="small muted">Quitaste todos los productos.</p>`) +
+        `<div class="row" style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">${edItems.length ? `<button type="button" class="sm" data-pguardar>Guardar cambios</button>` : ""}<button type="button" class="sec sm" data-psalir>Salir sin guardar</button><button type="button" class="sec sm" data-pcancel style="color:var(--bad)">${edCancel ? "Toca otra vez para cancelar todo el aviso" : "Cancelar todo el aviso"}</button></div><p class="small" id="pErr" style="min-height:1.2em;margin:6px 0 0"></p></div>`;
+    }).join("");
+  }
+  $("#tPend").addEventListener("input", e => { const i = e.target.closest("[data-pf]"); if (i) edItems[+i.dataset.k][i.dataset.pf] = i.value; });
+  $("#tPend").addEventListener("click", async e => {
+    const ed = e.target.closest("[data-ped]"), q = e.target.closest("[data-pq]"), g = e.target.closest("[data-pguardar]"), s = e.target.closest("[data-psalir]"), c = e.target.closest("[data-pcancel]");
+    if (ed) { const i = D.ingresos.find(x => x.id === ed.dataset.ped); edIng = i.id; edItems = i.items.map(x => ({...x})); edCancel = false; pintarPend(); return; }
+    if (q) { edItems.splice(+q.dataset.pq, 1); pintarPend(); return; }
+    if (s) { edIng = null; edCancel = false; pintarPend(); return; }
+    const err = t => { const p = $("#pErr"); if (p) { p.className = "err small"; p.textContent = t; } };
+    const enviar = async items => {
+      const E = {nombre: "falta el nombre o es muy largo", cant: "la cantidad tiene que ser un número entero desde 1", precio: "el precio tiene que ser un número (ej. 25 o 25.5)", ya_recibido: "la tienda ya recibió estos productos; para cambiarlos escríbenos", no_existe: "este aviso ya no existe", pin: "tu PIN no es correcto; vuelve a entrar", bloqueado: "demasiados intentos; espera 15 minutos"};
+      const res = await sb.rpc("portal_editar_ingreso", {p_token: token, p_pin: pin, p_ingreso: edIng, p_items: items, p_nota: null});
+      if (res.error) { err("No hay internet. Tus cambios siguen aquí: vuelve a tocar."); return false; }
+      if (res.data?.error) { err("No se pudo guardar: " + (E[res.data.error] || "pide ayuda con el botón verde") + (res.data.fila && items[res.data.fila - 1] ? " (producto: «" + items[res.data.fila - 1].nombre + "»)" : "") + "."); if (res.data.error === "ya_recibido") { edIng = null; await cargar(); } return false; }
+      return true;
+    };
+    if (c) {
+      if (!edCancel) { edCancel = true; pintarPend(); return; }
+      c.disabled = true;
+      if (await enviar([])) { edIng = null; edCancel = false; await cargar(); $("#tOk").className = "okm"; $("#tOk").textContent = "Cancelaste ese aviso. Si traes productos, vuelve a avisarnos."; }
+      else c.disabled = false;
+      return;
+    }
+    if (g) {
+      const items = edItems.map(x => ({nombre: String(x.nombre || "").trim(), cant: String(parseInt(x.cant, 10) || 0), precio: String(Math.round((parseFloat(x.precio) || 0) * 100) / 100), foto: x.foto || ""}));
+      const mal = items.findIndex(x => !x.nombre || !(+x.cant >= 1) || x.precio === "" || !(+x.precio >= 0));
+      if (mal >= 0) { err("Revisa «" + (items[mal].nombre || "producto " + (mal + 1)) + "»: pon nombre, cantidad (desde 1) y precio."); return; }
+      g.disabled = true; g.textContent = "Guardando…";
+      if (await enviar(items)) { edIng = null; await cargar(); $("#tOk").className = "okm"; $("#tOk").textContent = "¡Listo! Corregimos tu aviso. Revisa los códigos para tus cintas 👇"; }
+      else { g.disabled = false; g.textContent = "Guardar cambios"; }
+    }
   });
 
   // ---------- pagar ----------
@@ -535,9 +595,7 @@ label.f{display:flex;flex-direction:column;gap:6px;font-weight:700;font-size:1re
       const porRecibir = pendI.length ? `<h3 style="margin:${D.productos.length ? "18px" : "0"} 0 4px;font-size:1.05rem">🕒 Avisaste que traes (${pendI.length}) — aún no los recibimos</h3><p class="small muted" style="margin:0 0 6px">Cuando los recibamos en la tienda pasan arriba con su stock. La foto te ayuda a saber cuál es cada uno.</p>` + pendI.map(x => `<div class="prod"><span class="ph" style="cursor:default">${x.foto ? `<img src="${esc(IMG(x.foto))}" alt="" loading="lazy">` : `<span class="ic">📦</span>`}</span><div style="min-width:0;display:flex;flex-direction:column;gap:6px"><b>${x.codigo ? `<span class="small muted">${esc(x.codigo)}</span> ` : ""}${esc(x.nombre)}</b><div><span class="pill g">Por recibir: ${x.cant}</span></div><div class="small">Precio: <b>${bs(x.precio)}</b></div></div></div>`).join("") : "";
       if (!document.activeElement?.matches("#pLista input")) $("#pLista").innerHTML = (recibidos || porRecibir) ? recibidos + porRecibir : `<p class="muted">Todavía no tienes productos en la tienda. Toca «Traer más productos» para avisarnos qué vas a traer.</p>`; }
     pintarRep();
-    const pend = D.ingresos.filter(i => i.estado === "pendiente");
-    $("#tPend").hidden = !pend.length;
-    $("#tPend").innerHTML = `<h2 style="font-size:1.15rem">🏷️ Pon una cinta a cada producto</h2><p class="small muted">Antes de traerlos, escribe en una cinta o etiqueta el <b>código</b> y pégala en cada producto. El precio ya va en el código.</p>` + pend.map(i => `<div style="padding-top:6px"><span class="pill warn">Te esperamos</span>${i.nota ? ` <span class="small muted">· ${esc(i.nota)}</span>` : ""}</div>` + i.items.map(x => `<div class="etq">${x.foto ? `<img src="${esc(IMG(x.foto))}" alt="" loading="lazy" style="width:48px;height:48px;border-radius:10px;object-fit:cover;flex:none">` : ""}<span style="min-width:0;flex:1"><b>${esc(x.nombre)}</b><br><span class="small muted">${x.cant} unidades · ${bs(x.precio)} c/u</span></span>${x.codigo ? `<span class="cod">${esc(x.codigo)}</span>` : ""}</div>`).join("")).join("");
+    if (!(edIng && document.activeElement?.closest(".pedit"))) pintarPend();
     // pagar
     const ms = meses();
     $("#pagoHero").innerHTML = d ? `<div class="big"><span>${d.futuro ? "Tu próximo pago" : "Te falta pagar"}</span><b>${bs(d.falta)}</b><small>${mesNombre(d.k)} · ${d.k === "2026-10" ? "es el saldo de tu primer mes, se paga al firmar el acuerdo" : "se paga hasta el 29 de " + MESES[+d.k.split("-")[1] - 1]}</small></div>` : `<div class="big"><span>Tu repisa</span><b>Al día ✅</b><small>No tienes pagos pendientes</small></div>`;

@@ -138,6 +138,7 @@ label.f{display:flex;flex-direction:column;gap:6px;font-weight:700;font-size:1re
       <button data-go="traer"><span class="ic" aria-hidden="true">📷</span>Traer productos<small>Avísanos qué vas a traer</small></button>
       <button data-go="pagar"><span class="ic" aria-hidden="true">💳</span>Pagar mi repisa<small id="mPagoSub">Tu pago del mes</small></button>
     </div>
+    <a class="sec full" id="btnDonar" href="#" style="display:flex;align-items:center;justify-content:center;gap:8px;min-height:52px;border-radius:14px;border:1px solid var(--line);background:var(--grape-soft);color:var(--grape);font-weight:700;text-decoration:none">💜 Donación Latiendo Juntos: sube tu producto</a>
     <button class="sec full" data-go="marca">⭐ Mi marca: logo e Instagram</button>
     <div class="card install" id="instalar">
       <h2 style="font-size:1.1rem">Guarda esta página en tu celular</h2>
@@ -279,6 +280,7 @@ label.f{display:flex;flex-direction:column;gap:6px;font-weight:700;font-size:1re
   document.addEventListener("click", e => { const b = e.target.closest("[data-reponer]"); if (!b) return; e.preventDefault(); $("#rBuscar").value = ""; repFiltro = "todos"; repAbierto = b.dataset.reponer; go("traer"); pintarRep(); const i = $("#rCant"); if (i) { i.closest(".rep-row").scrollIntoView({block: "center"}); i.focus(); i.select(); } });
 
   if (!token) { $("#vSinLink").hidden = false; return; }
+  { const bd = document.getElementById("btnDonar"); if (bd) bd.href = "../donar/?t=" + encodeURIComponent(token); }
   try { pin = localStorage.getItem(KEY); } catch {}
   if (pin) cargar(); else $("#vLogin").hidden = false;
 

@@ -341,10 +341,11 @@ body.emp .soc{display:none!important}body.emp [data-cimet]{display:none!importan
       <h2>Registrar donación · Latiendo Juntos</h2>
       <p class="small muted" style="margin:0">Elige la marca y el producto que dona, toma una foto del producto separado y guárdalo. Queda «Por revisar» y no toca el stock hasta que lo descuentes abajo.</p>
       <div class="row" style="gap:10px;flex-wrap:wrap;align-items:flex-end">
-        <label class="f" style="flex:1 1 240px">Marca<select id="donMarca"></select></label>
+        <label class="f" style="flex:1 1 240px">Marca<input id="donMarcaQ" type="search" placeholder="Escribe la marca o el celular" autocomplete="off"><select id="donMarca" hidden></select></label>
         <label class="f" style="flex:1 1 200px">Buscar producto<input id="donQ" type="search" placeholder="Nombre o código"></label>
         <label class="f" style="flex:0 1 110px">Cantidad<input id="donCant" type="number" min="1" max="999" value="1" inputmode="numeric"></label>
       </div>
+      <div id="donMarcaSug" class="row" style="gap:6px;flex-wrap:wrap"></div>
       <div id="donProds" class="donprods" role="listbox" aria-label="Productos de la marca"></div>
       <label class="f" id="donNomBox" hidden>¿Qué trae la marca?<input id="donNom" maxlength="80" placeholder="Ej. Vale de 50 Bs, fertilizante"></label>
       <div class="row" style="gap:10px;flex-wrap:wrap;align-items:center">
@@ -1398,7 +1399,17 @@ body.emp .soc{display:none!important}body.emp [data-cimet]{display:none!importan
         + `<button type="button" role="option" data-dp="__otro" aria-selected="${S.donSel === "__otro"}"><span class="nf">➕</span><b>Otro: lo trae la marca</b><span class="small muted">No está en stock</span></button>`;
     $("#donNomBox").hidden = S.donSel !== "__otro";
   }
-  $("#donMarca").addEventListener("change", () => { S.donSel = ""; $("#donQ").value = ""; donProds(); });
+  const nrm = t => String(t || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  function donSug() {
+    const q = nrm($("#donMarcaQ").value.trim()), cur = $("#donMarca").value;
+    const ms = q ? marcasOrden().filter(m => nrm(m.nombre).includes(q) || nrm(m.titular).includes(q) || String(m.celular || "").includes(q) || nrm(m.prefijo).startsWith(q)).slice(0, 10) : [];
+    $("#donMarcaSug").innerHTML = ms.length ? ms.map(m => `<button type="button" class="b sm" data-dm="${esc(m.id)}" aria-pressed="${m.id === cur}">${esc(m.nombre)}</button>`).join("")
+      : q ? `<span class="small muted">No hay ninguna marca con «${esc($("#donMarcaQ").value.trim())}».</span>` : "";
+  }
+  function donPick(id) { $("#donMarca").value = id; $("#donMarcaQ").value = S.marcas[id]?.nombre || ""; $("#donMarcaSug").innerHTML = ""; S.donSel = ""; $("#donQ").value = ""; donProds(); }
+  $("#donMarcaQ").addEventListener("input", () => { if ($("#donMarca").value && $("#donMarcaQ").value !== S.marcas[$("#donMarca").value]?.nombre) { $("#donMarca").value = ""; S.donSel = ""; donProds(); } donSug(); });
+  $("#donMarcaQ").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); const b = $("#donMarcaSug [data-dm]"); if (b) donPick(b.dataset.dm); } });
+  $("#donMarcaSug").addEventListener("click", e => { const b = e.target.closest("[data-dm]"); if (b) donPick(b.dataset.dm); });
   $("#donQ").addEventListener("input", donProds);
   $("#donProds").addEventListener("click", e => { const b = e.target.closest("[data-dp]"); if (!b) return; S.donSel = b.dataset.dp; donProds(); });
   $("#donFoto").addEventListener("change", e => { donFoto = e.target.files[0] || null; const i = $("#donPrev"); if (donFoto) { i.src = URL.createObjectURL(donFoto); i.hidden = false; } else i.hidden = true; });
@@ -1421,6 +1432,7 @@ body.emp .soc{display:none!important}body.emp [data-cimet]{display:none!importan
       chk(await sb.from("donaciones").insert({marca: mid, producto: p?.id || null, codigo: p?.codigo || null, nombre, cant, foto: ruta, nota: $("#donNota").value.trim() || null}));
       toast("Donación guardada: " + cant + " × " + nombre);
       donFoto = null; $("#donFoto").value = ""; $("#donPrev").hidden = true; $("#donNota").value = ""; $("#donCant").value = 1; $("#donNom").value = ""; S.donSel = ""; donProds();
+      $("#donMarca").value = ""; $("#donMarcaQ").value = ""; $("#donMarcaSug").innerHTML = ""; $("#donMarcaQ").focus();
       await loadDon(); renderDon();
     } catch (er) { fail(er); }
     b.disabled = false; b.textContent = "Guardar donación";

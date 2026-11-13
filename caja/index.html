@@ -193,6 +193,7 @@ body.emp .soc{display:none!important}body.emp [data-cimet]{display:none!importan
       <button role="tab" data-tab="inv" aria-selected="false">Inventario</button>
       <button role="tab" class="soc" data-tab="liq" aria-selected="false">Liquidación</button>
       <button role="tab" class="soc" data-tab="marcas" aria-selected="false">Marcas</button>
+      <button role="tab" class="soc" data-tab="don" aria-selected="false">Donaciones</button>
     </nav>
   </div>
 </header>
@@ -325,6 +326,31 @@ body.emp .soc{display:none!important}body.emp [data-cimet]{display:none!importan
         <h3>Ingresos anteriores</h3>
         <div id="fichaHist" class="small"></div>
       </div>
+    </div>
+  </section>
+
+  <!-- DONACIONES (solo socios) -->
+  <section data-view="don" hidden>
+    <div class="panel" style="margin-top:18px">
+      <h2>Registrar donación · Latiendo Juntos</h2>
+      <p class="small muted" style="margin:0">Elige la marca y el producto que dona, toma una foto del producto separado y guárdalo. Queda «Por revisar» y no toca el stock hasta que lo descuentes abajo.</p>
+      <div class="row" style="gap:10px;flex-wrap:wrap;align-items:flex-end">
+        <label class="f" style="flex:1 1 240px">Marca<select id="donMarca"></select></label>
+        <label class="f" style="flex:2 1 280px">Producto<select id="donProd"></select></label>
+        <label class="f" style="flex:0 1 110px">Cantidad<input id="donCant" type="number" min="1" max="999" value="1" inputmode="numeric"></label>
+      </div>
+      <label class="f" id="donNomBox" hidden>¿Qué trae la marca?<input id="donNom" maxlength="80" placeholder="Ej. Vale de 50 Bs, fertilizante"></label>
+      <div class="row" style="gap:10px;flex-wrap:wrap;align-items:center">
+        <label class="b" style="cursor:pointer" id="donFotoLab">📷 Foto del producto<input type="file" id="donFoto" accept="image/*" capture="environment" hidden></label>
+        <img id="donPrev" alt="" hidden style="width:72px;height:72px;object-fit:cover;border-radius:10px">
+        <label class="f" style="flex:1 1 220px">Nota (opcional)<input id="donNota" maxlength="200" placeholder="Ej. el verde, lo separó Tefi"></label>
+      </div>
+      <button class="b pri big" id="donGuardar">Guardar donación</button>
+    </div>
+    <div class="panel" style="margin-top:16px">
+      <div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px"><h2 id="donTit">Donaciones</h2>
+        <span class="row" style="gap:6px;flex-wrap:wrap" id="donFil"><button class="b sm" data-df="pendiente" aria-pressed="true">Por revisar</button><button class="b sm" data-df="hecho" aria-pressed="false">Descontadas</button><button class="b sm" data-df="todas" aria-pressed="false">Todas</button></span></div>
+      <div id="donRes"></div>
     </div>
   </section>
 
@@ -482,7 +508,8 @@ body.emp .soc{display:none!important}body.emp [data-cimet]{display:none!importan
   async function loadPagos() { const d = chk(await sb.from("pagos").select("*").eq("estado", "por_verificar").order("fecha")); S.pagos = d; }
   async function loadAjustes() { const d = await todo(() => sb.from("ajustes").select("*").order("clave")); S.aj = {}; d.forEach(a => S.aj[a.clave] = a.valor); }
   async function loadLiq() { const d = chk(await sb.from("liquidaciones").select("*").eq("periodo", S.liqPer)); S.liq = {}; d.forEach(l => S.liq[l.periodo + "__" + l.marca] = l); }
-  const loaders = {marcas: loadMarcas, productos: loadProductos, ventas: loadVentas, liquidaciones: loadLiq, ingresos: loadIngresos, pagos: loadPagos, ajustes: loadAjustes};
+  async function loadDon() { const d = chk(await sb.from("donaciones").select("*").order("creado", {ascending: false})); S.don = d; }
+  const loaders = {donaciones: loadDon, marcas: loadMarcas, productos: loadProductos, ventas: loadVentas, liquidaciones: loadLiq, ingresos: loadIngresos, pagos: loadPagos, ajustes: loadAjustes};
   const pend = new Set(); let tmr;
   function refresh(...tables) { tables.forEach(t => pend.add(t)); clearTimeout(tmr); tmr = setTimeout(async () => { const ts = [...pend]; pend.clear(); try { await Promise.all(ts.map(t => loaders[t]())); } catch (e) { fail(e); } render(); }, 150); }
 
@@ -503,7 +530,7 @@ body.emp .soc{display:none!important}body.emp [data-cimet]{display:none!importan
     if (S.rol === "empleado") {
       // Personal: solo vender, recibir mercadería y ver stock. Sin dinero, tarifas ni liquidaciones.
       document.body.classList.add("emp");
-      for (const k of ["pagos", "liquidaciones"]) loaders[k] = async () => {};
+      for (const k of ["pagos", "liquidaciones", "donaciones"]) loaders[k] = async () => {};
       loaders.marcas = async () => { const d = chk(await sb.rpc("marcas_caja")); S.marcas = {}; (d || []).forEach(m => S.marcas[m.id] = m); };
       loaders.ventas = async () => { const d = await todo(() => sb.from("ventas").select("*").eq("dia", HOY()).order("fecha", {ascending: false}).order("id")); S.ventas = {}; d.forEach(v => S.ventas[v.id] = v); };
       if (!["caja", "cierre", "stock", "inv"].includes(S.tab)) $('nav.tabs button[data-tab="caja"]').click();
@@ -1337,6 +1364,68 @@ body.emp .soc{display:none!important}body.emp [data-cimet]{display:none!importan
     try { chk(await sb.from("marcas").update({saldo_pagado: true}).eq("id", id)); S.marcas[id].saldo_pagado = true; toast("Saldo registrado: " + S.marcas[id].nombre); renderCobros(); } catch (er) { fail(er); }
   });
 
+  // ---------- donaciones (solo socios): se registran con foto y se descuentan del stock sin contar como venta ----------
+  S.don = []; S.donF = "pendiente"; let donFoto = null;
+  function renderDon() {
+    const sel = $("#donMarca"), cur = sel.value;
+    if (sel.options.length !== marcasOrden().length + 1) sel.innerHTML = `<option value="">— Elige la marca —</option>` + marcasOrden().map(m => `<option value="${esc(m.id)}">${esc(m.nombre)}</option>`).join("");
+    if (cur) sel.value = cur;
+    donProds();
+    const P = {pendiente: ["warn", "Por revisar"], aprobada: ["g", "Aprobada (sin stock)"], descontada: ["ok", "Descontada"], rechazada: ["bad", "Rechazada"]};
+    const lst = S.don.filter(d => S.donF === "todas" || (S.donF === "pendiente" ? d.estado === "pendiente" : d.estado !== "pendiente"));
+    const nP = S.don.filter(d => d.estado === "pendiente").length;
+    $("#donTit").textContent = "Donaciones" + (nP ? " · " + nP + " por revisar" : "");
+    $('nav.tabs button[data-tab="don"]').textContent = "Donaciones" + (nP ? " (" + nP + ")" : "");
+    $("#donRes").innerHTML = lst.length ? lst.map(d => { const [c, t] = P[d.estado] || ["warn", d.estado]; const p = d.producto ? S.productos[d.producto] : null; const m = S.marcas[d.marca];
+      return `<div class="row" style="gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);flex-wrap:wrap"><a href="${esc(IMG(d.foto))}" target="_blank" rel="noopener"><img src="${esc(IMG(d.foto))}" alt="Foto" loading="lazy" style="width:72px;height:72px;object-fit:cover;border-radius:10px"></a>
+        <div style="flex:1 1 200px;min-width:0"><b>${esc(m?.nombre || d.marca)}</b><br><span>${d.cant} × ${esc(d.nombre)}</span><br><span class="small muted">${d.codigo ? esc(d.codigo) + (p ? " · stock " + p.stock : "") : "Lo trae la marca"}${d.nota ? " · " + esc(d.nota) : ""} · ${fechaCorta(d.creado)} ${hora(d.creado)}</span></div>
+        <span class="chip ${c}">${t}</span>${d.estado === "pendiente" ? `<span class="row" style="gap:6px"><button class="b sm pri" data-ddesc="${esc(d.id)}">${d.producto ? "Descontar del stock" : "Aprobar"}</button><button class="b sm danger" data-drech="${esc(d.id)}">Rechazar</button></span>` : ""}</div>`; }).join("")
+      : `<div class="empty">${S.donF === "pendiente" ? "No hay donaciones por revisar." : "Todavía no hay donaciones aquí."}</div>`;
+  }
+  function donProds() {
+    const mid = $("#donMarca").value, sel = $("#donProd"), cur = sel.value, key = mid + ":" + prodsDe(mid).length;
+    if (sel.dataset.k !== key) { sel.dataset.k = key; sel.innerHTML = mid ? `<option value="">— Elige el producto —</option>` + prodsDe(mid).filter(p => p.stock > 0).map(p => `<option value="${esc(p.id)}">${esc(p.codigo || "")} · ${esc(p.nombre)} · ${bs(p.precio)} · stock ${p.stock}</option>`).join("") + `<option value="__otro">Otro: lo trae la marca (no está en stock)</option>` : `<option value="">Primero elige la marca</option>`; if (cur) sel.value = cur; }
+    $("#donNomBox").hidden = sel.value !== "__otro";
+  }
+  $("#donMarca").addEventListener("change", () => { $("#donProd").dataset.k = ""; donProds(); });
+  $("#donProd").addEventListener("change", donProds);
+  $("#donFoto").addEventListener("change", e => { donFoto = e.target.files[0] || null; const i = $("#donPrev"); if (donFoto) { i.src = URL.createObjectURL(donFoto); i.hidden = false; } else i.hidden = true; });
+  $("#donFil").addEventListener("click", e => { const b = e.target.closest("[data-df]"); if (!b) return; S.donF = b.dataset.df; $$("#donFil [data-df]").forEach(x => x.setAttribute("aria-pressed", x === b)); renderDon(); });
+  $("#donGuardar").addEventListener("click", async () => {
+    const mid = $("#donMarca").value, pv = $("#donProd").value, cant = parseInt($("#donCant").value, 10);
+    if (!mid) return toast("Elige la marca.");
+    if (!pv) return toast("Elige el producto que dona.");
+    const p = pv === "__otro" ? null : S.productos[pv];
+    const nombre = p ? p.nombre : $("#donNom").value.trim();
+    if (!nombre) return toast("Escribe qué trae la marca.");
+    if (!(cant >= 1)) return toast("Pon la cantidad.");
+    if (p && cant > p.stock) return toast("Solo hay " + p.stock + " en stock de " + p.nombre + ".");
+    if (!donFoto) return toast("Falta la foto del producto.");
+    const b = $("#donGuardar"); b.disabled = true; b.textContent = "Guardando…";
+    try {
+      const blob = await achicarImg(donFoto, 1000);
+      const ruta = "donaciones/" + mid + "/" + crypto.randomUUID() + ".jpg";
+      chk(await sb.storage.from("parralito").upload(ruta, blob, {contentType: "image/jpeg"}));
+      chk(await sb.from("donaciones").insert({marca: mid, producto: p?.id || null, codigo: p?.codigo || null, nombre, cant, foto: ruta, nota: $("#donNota").value.trim() || null}));
+      toast("Donación guardada: " + cant + " × " + nombre);
+      donFoto = null; $("#donFoto").value = ""; $("#donPrev").hidden = true; $("#donNota").value = ""; $("#donCant").value = 1; $("#donNom").value = ""; $("#donProd").value = ""; donProds();
+      await loadDon(); renderDon();
+    } catch (er) { fail(er); }
+    b.disabled = false; b.textContent = "Guardar donación";
+  });
+  let donArm = null;
+  $("#donRes").addEventListener("click", async e => {
+    const bd = e.target.closest("[data-ddesc]"), br = e.target.closest("[data-drech]"), b = bd || br; if (!b) return;
+    const id = bd ? bd.dataset.ddesc : br.dataset.drech;
+    if (donArm !== b) { donArm = b; const t = b.textContent; b.textContent = "¿Seguro? Toca otra vez"; setTimeout(() => { if (donArm === b) { donArm = null; b.textContent = t; } }, 3000); return; }
+    donArm = null; b.disabled = true;
+    try {
+      if (bd) { const r = chk(await sb.rpc("descontar_donacion", {p_id: id})); if (r?.error) throw new Error(r.error === "stock" ? "stock: solo quedan " + r.stock : r.error); toast(r.sin_stock ? "Aprobada (no sale de stock)" : "Descontado del stock. Quedan " + r.stock); refresh("productos"); }
+      else { chk(await sb.from("donaciones").update({estado: "rechazada", revisado: new Date().toISOString()}).eq("id", id)); toast("Donación rechazada"); }
+      await loadDon(); renderDon();
+    } catch (er) { b.disabled = false; fail(er); }
+  });
+
   function render() {
     if ($("#appView").hidden) return;
     renderTop();
@@ -1347,6 +1436,7 @@ body.emp .soc{display:none!important}body.emp [data-cimet]{display:none!importan
     if (S.tab === "stock") renderStock();
     if (S.tab === "inv") renderInv();
     if (S.tab === "liq") renderLiq();
+    if (S.tab === "don") renderDon();
     if (S.tab === "marcas") { renderMarcas(); const q = $("#qrImg"); if (S.aj.qr) { q.src = IMG(S.aj.qr); q.hidden = false; } else q.hidden = true; }
   }
   try { const t = localStorage.getItem("tab"); if (t) { const b = $(`nav.tabs button[data-tab="${t}"]`); b && b.click(); } } catch {}

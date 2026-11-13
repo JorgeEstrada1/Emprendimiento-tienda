@@ -355,6 +355,11 @@ body.emp .soc{display:none!important}body.emp [data-cimet]{display:none!importan
       </div>
       <button class="b pri big" id="donGuardar">Guardar donación</button>
     </div>
+    <div class="panel" style="margin-top:16px;border-color:var(--warn)" id="donDudasPanel">
+      <h2 id="donDudasTit">Dudas por resolver</h2>
+      <p class="small muted" style="margin:0">Lo que falta confirmar con cada marca. «Elegir producto» abre sus productos con foto arriba para asignar el código exacto.</p>
+      <div id="donDudas"></div>
+    </div>
     <div class="panel" style="margin-top:16px">
       <div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px"><h2 id="donTit">Donaciones</h2>
         <span class="row" style="gap:6px;flex-wrap:wrap" id="donFil"><button class="b sm" data-df="esperada" aria-pressed="true">Lista por encontrar</button><button class="b sm" data-df="pendiente" aria-pressed="false">Por revisar</button><button class="b sm" data-df="hecho" aria-pressed="false">Descontadas</button><button class="b sm" data-df="todas" aria-pressed="false">Todas</button></span></div>
@@ -1376,7 +1381,7 @@ body.emp .soc{display:none!important}body.emp [data-cimet]{display:none!importan
   });
 
   // ---------- donaciones (solo socios): se registran con foto y se descuentan del stock sin contar como venta ----------
-  S.don = []; S.donF = "esperada"; let donFoto = null, donEncId = null;
+  S.don = []; S.donF = "esperada"; S.donFix = null; let donFoto = null, donEncId = null;
   function renderDon() {
     const sel = $("#donMarca"), cur = sel.value;
     if (sel.options.length !== marcasOrden().length + 1) sel.innerHTML = `<option value="">— Elige la marca —</option>` + marcasOrden().map(m => `<option value="${esc(m.id)}">${esc(m.nombre)}</option>`).join("");
@@ -1387,6 +1392,10 @@ body.emp .soc{display:none!important}body.emp [data-cimet]{display:none!importan
     const lst = S.don.filter(d => (S.donF === "todas" || (S.donF === "esperada" ? d.estado === "esperada" : S.donF === "pendiente" ? d.estado === "pendiente" : !["esperada", "pendiente"].includes(d.estado)))
       && (!lq || nrm((S.marcas[d.marca]?.nombre || "") + " " + d.nombre + " " + (d.codigo || "") + " " + (d.nota || "")).includes(lq)))
       .sort((a, b) => S.donF === "esperada" ? String(S.marcas[a.marca]?.espacio || "zz").localeCompare(String(S.marcas[b.marca]?.espacio || "zz"), "es", {numeric: true}) || (a.orden ?? 0) - (b.orden ?? 0) : 0);
+    const dd = S.don.filter(d => d.duda && !d.duda_ok);
+    $("#donDudasPanel").hidden = !dd.length;
+    $("#donDudasTit").textContent = "Dudas por resolver (" + dd.length + ")";
+    $("#donDudas").innerHTML = dd.map(d => { const m = S.marcas[d.marca]; return `<div class="row" style="gap:10px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);flex-wrap:wrap"><div style="flex:1 1 240px;min-width:0"><b>${esc(m?.nombre || d.marca)}</b> <span class="small muted num">· ${esc(m?.celular || "")} · ${esc(m?.espacio || "")}</span><br><span>${d.cant} × ${esc(d.nombre)}${d.codigo ? ` <span class="small muted num">(${esc(d.codigo)})</span>` : ""}</span><br><span class="small" style="color:var(--warn)">❓ ${esc(d.duda)}</span></div><span class="row" style="gap:6px"><button class="b sm" data-dfix="${esc(d.id)}">Elegir producto</button><button class="b sm pri" data-dok="${esc(d.id)}">Resuelto</button></span></div>`; }).join("");
     const tot = S.don.filter(d => d.orden != null).length, enc = S.don.filter(d => d.orden != null && d.estado !== "esperada").length;
     $("#donProg").textContent = tot ? `Lista Latiendo Juntos: ${enc} de ${tot} encontrados · ${S.don.filter(d => d.estado === "descontada").length} descontados del stock` : "";
     const nP = S.don.filter(d => d.estado === "pendiente").length;
@@ -1419,7 +1428,7 @@ body.emp .soc{display:none!important}body.emp [data-cimet]{display:none!importan
       : q ? `<span class="small muted">No hay ninguna marca con «${esc($("#donMarcaQ").value.trim())}».</span>` : "";
   }
   function donPick(id) { $("#donMarca").value = id; $("#donMarcaQ").value = S.marcas[id]?.nombre || ""; $("#donMarcaSug").innerHTML = ""; S.donSel = ""; $("#donQ").value = ""; donProds(); }
-  $("#donMarcaQ").addEventListener("input", () => { if ($("#donMarca").value && $("#donMarcaQ").value !== S.marcas[$("#donMarca").value]?.nombre) { $("#donMarca").value = ""; S.donSel = ""; donProds(); } donSug(); });
+  $("#donMarcaQ").addEventListener("input", () => { if (S.donFix) { S.donFix = null; $("#donGuardar").textContent = "Guardar donación"; } if ($("#donMarca").value && $("#donMarcaQ").value !== S.marcas[$("#donMarca").value]?.nombre) { $("#donMarca").value = ""; S.donSel = ""; donProds(); } donSug(); });
   $("#donMarcaQ").addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); const b = $("#donMarcaSug [data-dm]"); if (b) donPick(b.dataset.dm); } });
   $("#donMarcaSug").addEventListener("click", e => { const b = e.target.closest("[data-dm]"); if (b) donPick(b.dataset.dm); });
   $("#donQ").addEventListener("input", donProds);
@@ -1435,6 +1444,15 @@ body.emp .soc{display:none!important}body.emp [data-cimet]{display:none!importan
     if (!nombre) return toast("Escribe qué trae la marca.");
     if (!(cant >= 1)) return toast("Pon la cantidad.");
     if (p && cant > p.stock) return toast("Solo hay " + p.stock + " en stock de " + p.nombre + ".");
+    if (S.donFix) {
+      if (!p) return toast("Toca el producto exacto de la lista con fotos.");
+      const b = $("#donGuardar"); b.disabled = true;
+      try {
+        chk(await sb.from("donaciones").update({producto: p.id, codigo: p.codigo, nombre: p.nombre, cant, duda_ok: true}).eq("id", S.donFix));
+        toast("Asignado: " + cant + " × " + p.nombre); S.donFix = null; S.donSel = ""; $("#donMarca").value = ""; $("#donMarcaQ").value = ""; donProds(); await loadDon(); renderDon();
+      } catch (er) { fail(er); }
+      b.disabled = false; b.textContent = "Guardar donación"; return;
+    }
     if (!donFoto) return toast("Falta la foto del producto.");
     const b = $("#donGuardar"); b.disabled = true; b.textContent = "Guardando…";
     try {
@@ -1450,6 +1468,13 @@ body.emp .soc{display:none!important}body.emp [data-cimet]{display:none!importan
     b.disabled = false; b.textContent = "Guardar donación";
   });
   $("#donLQ").addEventListener("input", renderDon);
+  let donOkArm = null;
+  $("#donDudas").addEventListener("click", async e => {
+    const bf = e.target.closest("[data-dfix]"), bo = e.target.closest("[data-dok]");
+    if (bf) { const d = S.don.find(x => x.id === bf.dataset.dfix); if (!d) return; S.donFix = d.id; donPick(d.marca); $("#donCant").value = d.cant; $("#donGuardar").textContent = "Asignar a: " + d.nombre; $("#donMarcaQ").scrollIntoView({behavior: "smooth", block: "start"}); toast("Toca el producto correcto y luego «Asignar»"); return; }
+    if (bo) { if (donOkArm !== bo) { donOkArm = bo; bo.textContent = "¿Seguro?"; setTimeout(() => { if (donOkArm === bo) { donOkArm = null; bo.textContent = "Resuelto"; } }, 3000); return; }
+      donOkArm = null; bo.disabled = true; try { chk(await sb.from("donaciones").update({duda_ok: true}).eq("id", bo.dataset.dok)); toast("Duda resuelta"); await loadDon(); renderDon(); } catch (er) { bo.disabled = false; fail(er); } }
+  });
   $("#donEncFoto").addEventListener("change", async e => {
     const f = e.target.files[0], id = donEncId; donEncId = null; if (!f || !id) return;
     const d = S.don.find(x => x.id === id); if (!d) return;

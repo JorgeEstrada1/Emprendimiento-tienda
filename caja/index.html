@@ -83,6 +83,12 @@ button.b.danger{color:var(--bad);border-color:var(--bad)}
 .prod .p{font-family:var(--f-num);font-weight:700}
 .prod .s{font-size:.75rem;color:var(--muted)}
 .prod[disabled]{opacity:.45;cursor:not-allowed}
+.donprods{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;max-height:460px;overflow-y:auto;padding:2px}
+.donprods button{display:flex;flex-direction:column;gap:4px;text-align:left;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:12px;padding:8px;font:inherit;cursor:pointer;min-width:0}
+.donprods button[aria-selected="true"]{border-color:var(--grape);box-shadow:0 0 0 3px var(--grape-soft)}
+.donprods img,.donprods .nf{width:100%;aspect-ratio:1;object-fit:cover;border-radius:8px;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:.8rem;color:var(--muted)}
+.donprods b{font-size:.9rem;line-height:1.2;overflow-wrap:anywhere}
+.donprods .small{font-size:.78rem}
 .chip{display:inline-flex;align-items:center;gap:4px;font-size:.75rem;font-weight:700;padding:2px 8px;border-radius:999px;white-space:nowrap}
 .chip.ok{background:var(--ok-soft);color:var(--ok)} .chip.warn{background:var(--warn-soft);color:var(--warn)} .chip.bad{background:var(--bad-soft);color:var(--bad)} .chip.g{background:var(--grape-soft);color:var(--grape)}
 .tbl{overflow-x:auto}
@@ -336,9 +342,10 @@ body.emp .soc{display:none!important}body.emp [data-cimet]{display:none!importan
       <p class="small muted" style="margin:0">Elige la marca y el producto que dona, toma una foto del producto separado y guárdalo. Queda «Por revisar» y no toca el stock hasta que lo descuentes abajo.</p>
       <div class="row" style="gap:10px;flex-wrap:wrap;align-items:flex-end">
         <label class="f" style="flex:1 1 240px">Marca<select id="donMarca"></select></label>
-        <label class="f" style="flex:2 1 280px">Producto<select id="donProd"></select></label>
+        <label class="f" style="flex:1 1 200px">Buscar producto<input id="donQ" type="search" placeholder="Nombre o código"></label>
         <label class="f" style="flex:0 1 110px">Cantidad<input id="donCant" type="number" min="1" max="999" value="1" inputmode="numeric"></label>
       </div>
+      <div id="donProds" class="donprods" role="listbox" aria-label="Productos de la marca"></div>
       <label class="f" id="donNomBox" hidden>¿Qué trae la marca?<input id="donNom" maxlength="80" placeholder="Ej. Vale de 50 Bs, fertilizante"></label>
       <div class="row" style="gap:10px;flex-wrap:wrap;align-items:center">
         <label class="b" style="cursor:pointer" id="donFotoLab">📷 Foto del producto<input type="file" id="donFoto" accept="image/*" capture="environment" hidden></label>
@@ -1382,17 +1389,22 @@ body.emp .soc{display:none!important}body.emp [data-cimet]{display:none!importan
         <span class="chip ${c}">${t}</span>${d.estado === "pendiente" ? `<span class="row" style="gap:6px"><button class="b sm pri" data-ddesc="${esc(d.id)}">${d.producto ? "Descontar del stock" : "Aprobar"}</button><button class="b sm danger" data-drech="${esc(d.id)}">Rechazar</button></span>` : ""}</div>`; }).join("")
       : `<div class="empty">${S.donF === "pendiente" ? "No hay donaciones por revisar." : "Todavía no hay donaciones aquí."}</div>`;
   }
+  S.donSel = "";
   function donProds() {
-    const mid = $("#donMarca").value, sel = $("#donProd"), cur = sel.value, key = mid + ":" + prodsDe(mid).length;
-    if (sel.dataset.k !== key) { sel.dataset.k = key; sel.innerHTML = mid ? `<option value="">— Elige el producto —</option>` + prodsDe(mid).filter(p => p.stock > 0).map(p => `<option value="${esc(p.id)}">${esc(p.codigo || "")} · ${esc(p.nombre)} · ${bs(p.precio)} · stock ${p.stock}</option>`).join("") + `<option value="__otro">Otro: lo trae la marca (no está en stock)</option>` : `<option value="">Primero elige la marca</option>`; if (cur) sel.value = cur; }
-    $("#donNomBox").hidden = sel.value !== "__otro";
+    const mid = $("#donMarca").value, q = $("#donQ").value.trim().toLowerCase();
+    const ps = mid ? prodsDe(mid).filter(p => p.stock > 0 && (!q || (p.nombre + " " + (p.codigo || "")).toLowerCase().includes(q))) : [];
+    $("#donProds").innerHTML = !mid ? `<div class="empty" style="grid-column:1/-1">Elige la marca para ver sus productos con foto.</div>`
+      : ps.map(p => `<button type="button" role="option" data-dp="${esc(p.id)}" aria-selected="${S.donSel === p.id}">${p.foto ? `<img src="${esc(IMG(p.foto))}" alt="" loading="lazy">` : `<span class="nf">Sin foto</span>`}<b>${esc(p.nombre)}</b><span class="small muted num">${esc(p.codigo || "")}</span><span class="small">${bs(p.precio)} · stock ${p.stock}</span></button>`).join("")
+        + `<button type="button" role="option" data-dp="__otro" aria-selected="${S.donSel === "__otro"}"><span class="nf">➕</span><b>Otro: lo trae la marca</b><span class="small muted">No está en stock</span></button>`;
+    $("#donNomBox").hidden = S.donSel !== "__otro";
   }
-  $("#donMarca").addEventListener("change", () => { $("#donProd").dataset.k = ""; donProds(); });
-  $("#donProd").addEventListener("change", donProds);
+  $("#donMarca").addEventListener("change", () => { S.donSel = ""; $("#donQ").value = ""; donProds(); });
+  $("#donQ").addEventListener("input", donProds);
+  $("#donProds").addEventListener("click", e => { const b = e.target.closest("[data-dp]"); if (!b) return; S.donSel = b.dataset.dp; donProds(); });
   $("#donFoto").addEventListener("change", e => { donFoto = e.target.files[0] || null; const i = $("#donPrev"); if (donFoto) { i.src = URL.createObjectURL(donFoto); i.hidden = false; } else i.hidden = true; });
   $("#donFil").addEventListener("click", e => { const b = e.target.closest("[data-df]"); if (!b) return; S.donF = b.dataset.df; $$("#donFil [data-df]").forEach(x => x.setAttribute("aria-pressed", x === b)); renderDon(); });
   $("#donGuardar").addEventListener("click", async () => {
-    const mid = $("#donMarca").value, pv = $("#donProd").value, cant = parseInt($("#donCant").value, 10);
+    const mid = $("#donMarca").value, pv = S.donSel, cant = parseInt($("#donCant").value, 10);
     if (!mid) return toast("Elige la marca.");
     if (!pv) return toast("Elige el producto que dona.");
     const p = pv === "__otro" ? null : S.productos[pv];
@@ -1408,7 +1420,7 @@ body.emp .soc{display:none!important}body.emp [data-cimet]{display:none!importan
       chk(await sb.storage.from("parralito").upload(ruta, blob, {contentType: "image/jpeg"}));
       chk(await sb.from("donaciones").insert({marca: mid, producto: p?.id || null, codigo: p?.codigo || null, nombre, cant, foto: ruta, nota: $("#donNota").value.trim() || null}));
       toast("Donación guardada: " + cant + " × " + nombre);
-      donFoto = null; $("#donFoto").value = ""; $("#donPrev").hidden = true; $("#donNota").value = ""; $("#donCant").value = 1; $("#donNom").value = ""; $("#donProd").value = ""; donProds();
+      donFoto = null; $("#donFoto").value = ""; $("#donPrev").hidden = true; $("#donNota").value = ""; $("#donCant").value = 1; $("#donNom").value = ""; S.donSel = ""; donProds();
       await loadDon(); renderDon();
     } catch (er) { fail(er); }
     b.disabled = false; b.textContent = "Guardar donación";

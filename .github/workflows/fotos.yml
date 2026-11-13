@@ -1,0 +1,22 @@
+name: fotos
+on:
+  push:
+    branches: [fotos-tmp]
+permissions:
+  contents: write
+jobs:
+  bajar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          mkdir -p img
+          for p in $(cat paths.txt); do
+            f="img/$(echo "$p" | tr '/' '_')"
+            curl -sfL "https://eyougzgrquztgrhlkain.supabase.co/storage/v1/object/public/parralito/$p" -o "$f" || echo "fallo $p"
+          done
+          mogrify -resize 400x400\> -quality 80 img/*.jpg || true
+          ls -la img | head -50
+          git config user.name actions
+          git config user.email actions@localhost
+          git add img && git commit -m "fotos" && git push

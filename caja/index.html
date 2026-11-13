@@ -357,7 +357,10 @@ body.emp .soc{display:none!important}body.emp [data-cimet]{display:none!importan
     </div>
     <div class="panel" style="margin-top:16px">
       <div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px"><h2 id="donTit">Donaciones</h2>
-        <span class="row" style="gap:6px;flex-wrap:wrap" id="donFil"><button class="b sm" data-df="pendiente" aria-pressed="true">Por revisar</button><button class="b sm" data-df="hecho" aria-pressed="false">Descontadas</button><button class="b sm" data-df="todas" aria-pressed="false">Todas</button></span></div>
+        <span class="row" style="gap:6px;flex-wrap:wrap" id="donFil"><button class="b sm" data-df="esperada" aria-pressed="true">Lista por encontrar</button><button class="b sm" data-df="pendiente" aria-pressed="false">Por revisar</button><button class="b sm" data-df="hecho" aria-pressed="false">Descontadas</button><button class="b sm" data-df="todas" aria-pressed="false">Todas</button></span></div>
+      <input id="donLQ" type="search" placeholder="Filtrar la lista por marca, producto o código" autocomplete="off">
+      <div id="donProg" class="small muted"></div>
+      <input type="file" id="donEncFoto" accept="image/*" capture="environment" hidden>
       <div id="donRes"></div>
     </div>
   </section>
@@ -1373,22 +1376,31 @@ body.emp .soc{display:none!important}body.emp [data-cimet]{display:none!importan
   });
 
   // ---------- donaciones (solo socios): se registran con foto y se descuentan del stock sin contar como venta ----------
-  S.don = []; S.donF = "pendiente"; let donFoto = null;
+  S.don = []; S.donF = "esperada"; let donFoto = null, donEncId = null;
   function renderDon() {
     const sel = $("#donMarca"), cur = sel.value;
     if (sel.options.length !== marcasOrden().length + 1) sel.innerHTML = `<option value="">— Elige la marca —</option>` + marcasOrden().map(m => `<option value="${esc(m.id)}">${esc(m.nombre)}</option>`).join("");
     if (cur) sel.value = cur;
     donProds();
-    const P = {pendiente: ["warn", "Por revisar"], aprobada: ["g", "Aprobada (sin stock)"], descontada: ["ok", "Descontada"], rechazada: ["bad", "Rechazada"]};
-    const lst = S.don.filter(d => S.donF === "todas" || (S.donF === "pendiente" ? d.estado === "pendiente" : d.estado !== "pendiente"));
+    const P = {esperada: ["", "Por encontrar"], pendiente: ["warn", "Por revisar"], aprobada: ["g", "Aprobada (sin stock)"], descontada: ["ok", "Descontada"], rechazada: ["bad", "Rechazada"]};
+    const lq = nrm($("#donLQ").value.trim());
+    const lst = S.don.filter(d => (S.donF === "todas" || (S.donF === "esperada" ? d.estado === "esperada" : S.donF === "pendiente" ? d.estado === "pendiente" : !["esperada", "pendiente"].includes(d.estado)))
+      && (!lq || nrm((S.marcas[d.marca]?.nombre || "") + " " + d.nombre + " " + (d.codigo || "") + " " + (d.nota || "")).includes(lq)))
+      .sort((a, b) => S.donF === "esperada" ? String(S.marcas[a.marca]?.espacio || "zz").localeCompare(String(S.marcas[b.marca]?.espacio || "zz"), "es", {numeric: true}) || (a.orden ?? 0) - (b.orden ?? 0) : 0);
+    const tot = S.don.filter(d => d.orden != null).length, enc = S.don.filter(d => d.orden != null && d.estado !== "esperada").length;
+    $("#donProg").textContent = tot ? `Lista Latiendo Juntos: ${enc} de ${tot} encontrados · ${S.don.filter(d => d.estado === "descontada").length} descontados del stock` : "";
     const nP = S.don.filter(d => d.estado === "pendiente").length;
     $("#donTit").textContent = "Donaciones" + (nP ? " · " + nP + " por revisar" : "");
     $('nav.tabs button[data-tab="don"]').textContent = "Donaciones" + (nP ? " (" + nP + ")" : "");
     $("#donRes").innerHTML = lst.length ? lst.map(d => { const [c, t] = P[d.estado] || ["warn", d.estado]; const p = d.producto ? S.productos[d.producto] : null; const m = S.marcas[d.marca];
-      return `<div class="row" style="gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);flex-wrap:wrap"><a href="${esc(IMG(d.foto))}" target="_blank" rel="noopener"><img src="${esc(IMG(d.foto))}" alt="Foto" loading="lazy" style="width:72px;height:72px;object-fit:cover;border-radius:10px"></a>
+      const ft = d.foto || p?.foto, pic = ft ? `<a href="${esc(IMG(ft))}" target="_blank" rel="noopener"><img src="${esc(IMG(ft))}" alt="Foto" loading="lazy" style="width:72px;height:72px;object-fit:cover;border-radius:10px"></a>` : `<span style="width:72px;height:72px;border-radius:10px;background:var(--bg);display:flex;align-items:center;justify-content:center;font-size:.75rem;color:var(--muted);flex:none">Sin foto</span>`;
+      if (d.estado === "esperada") return `<div class="row" style="gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);flex-wrap:wrap">${pic}
+        <div style="flex:1 1 200px;min-width:0"><b>${esc(m?.nombre || d.marca)}</b> <span class="small muted">· ${esc(m?.espacio || "")}</span><br><span>${d.cant} × ${esc(d.nombre)}</span><br><span class="small muted">${d.codigo ? esc(d.codigo) + (p ? " · stock " + p.stock : "") : "No sale de stock"}${d.nota ? " · " + esc(d.nota) : ""}</span></div>
+        <button class="b sm pri" data-denc="${esc(d.id)}">📷 Encontrado</button></div>`;
+      return `<div class="row" style="gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);flex-wrap:wrap">${pic}
         <div style="flex:1 1 200px;min-width:0"><b>${esc(m?.nombre || d.marca)}</b><br><span>${d.cant} × ${esc(d.nombre)}</span><br><span class="small muted">${d.codigo ? esc(d.codigo) + (p ? " · stock " + p.stock : "") : "Lo trae la marca"}${d.nota ? " · " + esc(d.nota) : ""} · ${fechaCorta(d.creado)} ${hora(d.creado)}</span></div>
         <span class="chip ${c}">${t}</span>${d.estado === "pendiente" ? `<span class="row" style="gap:6px"><button class="b sm pri" data-ddesc="${esc(d.id)}">${d.producto ? "Descontar del stock" : "Aprobar"}</button><button class="b sm danger" data-drech="${esc(d.id)}">Rechazar</button></span>` : ""}</div>`; }).join("")
-      : `<div class="empty">${S.donF === "pendiente" ? "No hay donaciones por revisar." : "Todavía no hay donaciones aquí."}</div>`;
+      : `<div class="empty">${S.donF === "esperada" ? "¡Listo! Ya encontraste todo lo de la lista." : S.donF === "pendiente" ? "No hay donaciones por revisar." : "Todavía no hay donaciones aquí."}</div>`;
   }
   S.donSel = "";
   function donProds() {
@@ -1437,8 +1449,22 @@ body.emp .soc{display:none!important}body.emp [data-cimet]{display:none!importan
     } catch (er) { fail(er); }
     b.disabled = false; b.textContent = "Guardar donación";
   });
+  $("#donLQ").addEventListener("input", renderDon);
+  $("#donEncFoto").addEventListener("change", async e => {
+    const f = e.target.files[0], id = donEncId; donEncId = null; if (!f || !id) return;
+    const d = S.don.find(x => x.id === id); if (!d) return;
+    toast("Subiendo foto…");
+    try {
+      const blob = await achicarImg(f, 1000), ruta = "donaciones/" + d.marca + "/" + crypto.randomUUID() + ".jpg";
+      chk(await sb.storage.from("parralito").upload(ruta, blob, {contentType: "image/jpeg"}));
+      chk(await sb.from("donaciones").update({foto: ruta, estado: "pendiente"}).eq("id", id));
+      toast("Encontrado: " + d.nombre + " → pasa a «Por revisar»");
+      await loadDon(); renderDon();
+    } catch (er) { fail(er); }
+  });
   let donArm = null;
   $("#donRes").addEventListener("click", async e => {
+    const be = e.target.closest("[data-denc]"); if (be) { donEncId = be.dataset.denc; $("#donEncFoto").value = ""; $("#donEncFoto").click(); return; }
     const bd = e.target.closest("[data-ddesc]"), br = e.target.closest("[data-drech]"), b = bd || br; if (!b) return;
     const id = bd ? bd.dataset.ddesc : br.dataset.drech;
     if (donArm !== b) { donArm = b; const t = b.textContent; b.textContent = "¿Seguro? Toca otra vez"; setTimeout(() => { if (donArm === b) { donArm = null; b.textContent = t; } }, 3000); return; }

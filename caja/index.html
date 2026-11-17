@@ -378,7 +378,7 @@ body.emp .soc{display:none!important}body.emp [data-cimet]{display:none!importan
       <p class="small muted" style="margin:0">Todo lo que entra y sale del stock de cada marca: lo que deja, lo vendido, donaciones y correcciones. 🔒 Este historial se guarda solo y <b>nadie puede editarlo ni borrarlo</b>.</p>
       <div class="row" style="gap:10px;flex-wrap:wrap;align-items:flex-end;margin-top:10px">
         <label class="f" style="flex:1 1 240px">Marca<input id="hsMarcaQ" type="search" placeholder="Escribe la marca o el celular" autocomplete="off"><select id="hsMarca" hidden></select></label>
-        <label class="f" style="flex:1 1 180px">Producto<input id="hsQ" type="search" placeholder="Nombre o código" autocomplete="off"></label>
+        <label class="f" style="flex:1 1 180px">Producto o usuario<input id="hsQ" type="search" placeholder="Nombre, código o quién lo hizo" autocomplete="off"></label>
         <label class="f" style="flex:0 1 190px" id="hsTipoBox">Movimiento<select id="hsTipo"><option value="">Todos</option><option value="ingreso">Lo que dejó</option><option value="venta">Ventas</option><option value="donacion">Donaciones</option><option value="ajuste">Correcciones y ajustes</option></select></label>
         <label class="f" style="flex:0 1 150px">Desde<input id="hsD1" type="date"></label>
         <label class="f" style="flex:0 1 150px">Hasta<input id="hsD2" type="date"></label>
@@ -1522,6 +1522,7 @@ body.emp .soc{display:none!important}body.emp [data-cimet]{display:none!importan
   // ---------- historial de stock (solo lectura) ----------
   S.hs = {mid: "", data: [], t: 0};
   const HS_TIPO = {ingreso: ["Dejó", "g"], alta: ["Producto nuevo", "g"], venta: ["Venta", "ok"], anulacion: ["Venta anulada", "warn"], donacion: ["Donación", "warn"], ajuste: ["Ajuste manual", "bad"], ajuste_sistema: ["Corrección del sistema", "bad"], eliminado: ["Producto eliminado", "bad"], corte: ["Stock al iniciar", ""]};
+  const hsQuien = (r, sinUsuario) => { const n = r.usuario || (r.por ? S.ih.socios?.[r.por] : ""); if (!n) return r.por ? "usuario de caja" : sinUsuario; const rol = r.usuario_rol === "empleado" ? "personal" : r.usuario_rol === "socio" ? "socio" : ""; return n + (rol ? " (" + rol + ")" : ""); };
   const hsGrupo = t => t === "ingreso" || t === "alta" ? "ingreso" : t === "venta" ? "venta" : t === "donacion" ? "donacion" : t === "corte" ? "corte" : "ajuste";
   const hsNrm = t => String(t || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
   async function cargarHist(mid, forzar) {
@@ -1549,7 +1550,7 @@ body.emp .soc{display:none!important}body.emp [data-cimet]{display:none!importan
     if (!mid || S.hs.mid !== mid) { res.innerHTML = `<p class="small muted">Elige una marca para ver su historial.</p>`; return; }
     const q = hsNrm($("#hsQ").value.trim()), tf = $("#hsTipo").value, d1 = $("#hsD1").value, d2 = $("#hsD2").value;
     const dia = iso => diaKey(new Date(new Date(iso).toLocaleString("en-US", {timeZone: "America/La_Paz"})));
-    const rows = S.hs.data.filter(r => (!q || hsNrm((r.codigo || "") + " " + (r.nombre || "")).includes(q)) && (!d1 || dia(r.fecha) >= d1) && (!d2 || dia(r.fecha) <= d2));
+    const rows = S.hs.data.filter(r => (!q || hsNrm((r.codigo || "") + " " + (r.nombre || "") + " " + (r.usuario || "")).includes(q)) && (!d1 || dia(r.fecha) >= d1) && (!d2 || dia(r.fecha) <= d2));
     const mov = rows.filter(r => r.tipo !== "corte"), sum = g => mov.filter(r => hsGrupo(r.tipo) === g).reduce((a, r) => a + r.cambio, 0);
     const stockAct = prodsDe(mid).filter(p => !q || hsNrm((p.codigo || "") + " " + p.nombre).includes(q)).reduce((a, p) => a + (+p.stock || 0), 0);
     const m = S.marcas[mid];
@@ -1561,11 +1562,11 @@ body.emp .soc{display:none!important}body.emp [data-cimet]{display:none!importan
     h += lista.slice(0, 600).map(r => {
       const dk = dia(r.fecha), [lab, cl] = HS_TIPO[r.tipo] || [r.tipo, ""];
       const cab = dk !== ult ? `<div class="small" style="margin:14px 0 4px;font-weight:800;color:var(--grape)">${esc(fechaCorta(r.fecha))}</div>` : ""; ult = dk;
-      const quien = r.por ? (S.ih.socios?.[r.por] || "Caja") : (r.origen === "reconstruido" ? "Registro anterior" : "Sistema");
+      const quien = hsQuien(r, r.origen === "reconstruido" ? "Registro anterior" : "Sistema");
       const cam = r.cambio > 0 ? "+" + r.cambio : String(r.cambio);
       const foto = r.foto ? `<a href="${esc(IMG(r.foto))}" target="_blank" rel="noopener" title="Ver foto" style="flex:0 0 auto"><img src="${esc(IMG(r.foto))}" alt="" loading="lazy" style="width:56px;height:56px;object-fit:cover;border-radius:10px;display:block;background:var(--line)"></a>` : `<span class="muted" style="flex:0 0 auto;width:56px;height:56px;border-radius:10px;background:var(--line);display:inline-flex;align-items:center;justify-content:center;font-size:.68rem;text-align:center">Sin foto</span>`;
       return cab + `<div style="display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--line)">${foto}
-        <div style="flex:1;min-width:0"><div class="row" style="gap:6px;flex-wrap:wrap;align-items:center"><span class="num small muted" style="white-space:nowrap">${hora(r.fecha)}</span><span class="chip ${cl}">${lab}</span><span class="small muted">${esc(quien)}</span></div>
+        <div style="flex:1;min-width:0"><div class="row" style="gap:6px;flex-wrap:wrap;align-items:center"><span class="num small muted" style="white-space:nowrap">${hora(r.fecha)}</span><span class="chip ${cl}">${lab}</span><span class="small" title="${esc(r.usuario_email || "")}">👤 <b>${esc(quien)}</b></span></div>
           <div style="margin-top:2px"><span class="small muted num">${esc(r.codigo || "")}</span> ${esc(r.nombre || "")}</div>${r.detalle ? `<div class="small muted">${esc(r.detalle)}</div>` : ""}</div>
         <div style="text-align:right;flex:0 0 auto"><b class="num" style="font-size:1.1rem;color:${r.cambio > 0 ? "var(--ok)" : r.cambio < 0 ? "var(--bad)" : "inherit"}">${cam}</b>${r.antes != null ? `<div class="small muted num">${r.antes} → ${r.despues}</div>` : ""}</div></div>`;
     }).join("");
@@ -1589,21 +1590,21 @@ body.emp .soc{display:none!important}body.emp [data-cimet]{display:none!importan
     const mid = $("#hsMarca").value, res = $("#hsRes");
     const q = hsNrm($("#hsQ").value.trim()), d1 = $("#hsD1").value, d2 = $("#hsD2").value;
     const dia = iso => diaKey(new Date(new Date(iso).toLocaleString("en-US", {timeZone: "America/La_Paz"})));
-    const rows = S.hm.data.filter(r => (!q || hsNrm((r.codigo || "") + " " + (r.nombre || "") + " " + (S.marcas[r.marca]?.nombre || "")).includes(q)) && (!d1 || dia(r.fecha) >= d1) && (!d2 || dia(r.fecha) <= d2));
+    const rows = S.hm.data.filter(r => (!q || hsNrm((r.codigo || "") + " " + (r.nombre || "") + " " + (S.marcas[r.marca]?.nombre || "") + " " + (r.usuario || "")).includes(q)) && (!d1 || dia(r.fecha) >= d1) && (!d2 || dia(r.fecha) <= d2));
     let h = `<p class="small muted" style="margin:0 0 10px">${mid ? "Cambios hechos a mano en los productos de <b>" + esc(S.marcas[mid]?.nombre || "") + "</b>" : "Últimos cambios hechos a mano en <b>todas las marcas</b> (elige una marca para ver solo la suya)"}: precio, nombre, stock, código, foto o productos eliminados. Las ventas, ingresos y donaciones no aparecen aquí: están en «Movimientos de stock». 🔒 No se puede editar ni borrar.</p>`;
     if (!rows.length) { res.innerHTML = h + `<p class="small muted">No hay cambios manuales registrados${q || d1 || d2 ? " con esos filtros" : " todavía"}. Se guardan desde el 16/11.</p>`; return; }
     const fmt = (k, v) => v == null || v === "" ? "—" : k === "precio" ? bs(v) : k === "marca" ? (S.marcas[v]?.nombre || v) : String(v);
     let ult = "";
     h += rows.slice(0, 600).map(r => {
       const dk = dia(r.fecha), cab = dk !== ult ? `<div class="small" style="margin:14px 0 4px;font-weight:800;color:var(--grape)">${esc(fechaCorta(r.fecha))}</div>` : ""; ult = dk;
-      const quien = r.origen === "emprendedor" ? "La marca (portal)" : r.por ? (S.ih.socios?.[r.por] || "Caja") : "Sistema";
+      const quien = r.origen === "emprendedor" ? "la marca (desde su portal)" : hsQuien(r, "Sistema");
       const [lab, cl] = r.accion === "crear" ? ["Producto creado", "g"] : r.accion === "eliminar" ? ["Producto eliminado", "bad"] : ["Editado", "warn"];
       const ch = Object.entries(r.cambios || {}).filter(([k]) => r.accion === "editar" || k === "stock" || k === "precio").map(([k, v]) =>
         k === "foto" ? `<span class="chip">Cambió la foto</span>` :
         `<span class="small"><b>${HM_CAMPO[k] || esc(k)}:</b> ${r.accion === "editar" ? `<span class="muted" style="text-decoration:line-through">${esc(fmt(k, v.antes))}</span> → ` : ""}<b>${esc(fmt(k, r.accion === "eliminar" ? v.antes : v.despues))}</b></span>`).join("");
       const foto = r.foto ? `<a href="${esc(IMG(r.foto))}" target="_blank" rel="noopener" style="flex:0 0 auto"><img src="${esc(IMG(r.foto))}" alt="" loading="lazy" style="width:56px;height:56px;object-fit:cover;border-radius:10px;display:block;background:var(--line)"></a>` : `<span class="muted" style="flex:0 0 auto;width:56px;height:56px;border-radius:10px;background:var(--line);display:inline-flex;align-items:center;justify-content:center;font-size:.68rem">Sin foto</span>`;
       return cab + `<div style="display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--line)">${foto}
-        <div style="flex:1;min-width:0"><div class="row" style="gap:6px;flex-wrap:wrap;align-items:center"><span class="num small muted" style="white-space:nowrap">${hora(r.fecha)}</span><span class="chip ${cl}">${lab}</span><span class="small muted">por ${esc(quien)}</span></div>
+        <div style="flex:1;min-width:0"><div class="row" style="gap:6px;flex-wrap:wrap;align-items:center"><span class="num small muted" style="white-space:nowrap">${hora(r.fecha)}</span><span class="chip ${cl}">${lab}</span><span class="small" title="${esc(r.usuario_email || "")}">👤 <b>${esc(quien)}</b></span></div>
           <div style="margin-top:2px">${!mid ? `<b class="small">${esc(S.marcas[r.marca]?.nombre || r.marca)}</b> · ` : ""}<span class="small muted num">${esc(r.codigo || "")}</span> ${esc(r.nombre || "")}</div>
           <div class="row" style="gap:8px;flex-wrap:wrap;margin-top:3px">${ch}</div></div></div>`;
     }).join("");

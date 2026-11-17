@@ -1562,12 +1562,11 @@ body.emp .soc{display:none!important}body.emp [data-cimet]{display:none!importan
       const cab = dk !== ult ? `<div class="small" style="margin:14px 0 4px;font-weight:800;color:var(--grape)">${esc(fechaCorta(r.fecha))}</div>` : ""; ult = dk;
       const quien = r.por ? (S.ih.socios?.[r.por] || "Caja") : (r.origen === "reconstruido" ? "Registro anterior" : "Sistema");
       const cam = r.cambio > 0 ? "+" + r.cambio : String(r.cambio);
-      return cab + `<div class="row" style="gap:8px;flex-wrap:wrap;align-items:center;padding:7px 0;border-bottom:1px solid var(--line)">
-        <span class="num small muted" style="min-width:68px;white-space:nowrap">${hora(r.fecha)}</span><span class="chip ${cl}">${lab}</span>
-        <span style="flex:1 1 180px;min-width:0"><span class="small muted num">${esc(r.codigo || "")}</span> ${esc(r.nombre || "")}${r.detalle ? `<br><span class="small muted">${esc(r.detalle)}</span>` : ""}</span>
-        <b class="num" style="min-width:42px;text-align:right;color:${r.cambio > 0 ? "var(--ok)" : r.cambio < 0 ? "var(--bad)" : "inherit"}">${cam}</b>
-        <span class="small muted num" style="min-width:56px">${r.antes != null ? r.antes + " → " + r.despues : ""}</span>
-        <span class="small muted" style="min-width:90px">${esc(quien)}</span></div>`;
+      const foto = r.foto ? `<a href="${esc(IMG(r.foto))}" target="_blank" rel="noopener" title="Ver foto" style="flex:0 0 auto"><img src="${esc(IMG(r.foto))}" alt="" loading="lazy" style="width:56px;height:56px;object-fit:cover;border-radius:10px;display:block;background:var(--line)"></a>` : `<span class="muted" style="flex:0 0 auto;width:56px;height:56px;border-radius:10px;background:var(--line);display:inline-flex;align-items:center;justify-content:center;font-size:.68rem;text-align:center">Sin foto</span>`;
+      return cab + `<div style="display:flex;gap:10px;align-items:flex-start;padding:8px 0;border-bottom:1px solid var(--line)">${foto}
+        <div style="flex:1;min-width:0"><div class="row" style="gap:6px;flex-wrap:wrap;align-items:center"><span class="num small muted" style="white-space:nowrap">${hora(r.fecha)}</span><span class="chip ${cl}">${lab}</span><span class="small muted">${esc(quien)}</span></div>
+          <div style="margin-top:2px"><span class="small muted num">${esc(r.codigo || "")}</span> ${esc(r.nombre || "")}</div>${r.detalle ? `<div class="small muted">${esc(r.detalle)}</div>` : ""}</div>
+        <div style="text-align:right;flex:0 0 auto"><b class="num" style="font-size:1.1rem;color:${r.cambio > 0 ? "var(--ok)" : r.cambio < 0 ? "var(--bad)" : "inherit"}">${cam}</b>${r.antes != null ? `<div class="small muted num">${r.antes} → ${r.despues}</div>` : ""}</div></div>`;
     }).join("");
     if (lista.length > 600) h += `<p class="small muted">Mostrando los últimos 600 de ${lista.length} movimientos. Usa las fechas o el buscador para ver el resto.</p>`;
     h += `<p class="small muted" style="margin-top:10px">Los movimientos antes del 16/11 se reconstruyeron de los ingresos, ventas y donaciones registrados («Registro anterior»). Desde el 16/11 se guarda cada cambio con quién lo hizo.</p>`;

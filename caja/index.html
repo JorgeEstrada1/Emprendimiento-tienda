@@ -197,6 +197,7 @@ body.emp .soc{display:none!important}body.emp [data-cimet]{display:none!importan
       <button role="tab" class="soc" data-tab="cobros" aria-selected="false">Cobros alquileres</button>
       <button role="tab" data-tab="stock" aria-selected="false">Stock</button>
       <button role="tab" data-tab="inv" aria-selected="false">Inventario</button>
+      <button role="tab" class="soc" data-tab="hist" aria-selected="false">Historial stock</button>
       <button role="tab" class="soc" data-tab="liq" aria-selected="false">Liquidación</button>
       <button role="tab" class="soc" data-tab="marcas" aria-selected="false">Marcas</button>
       <button role="tab" class="soc" data-tab="don" aria-selected="false">Donaciones</button>
@@ -367,6 +368,23 @@ body.emp .soc{display:none!important}body.emp [data-cimet]{display:none!importan
       <div id="donProg" class="small muted"></div>
       <input type="file" id="donEncFoto" accept="image/*" capture="environment" hidden>
       <div id="donRes"></div>
+    </div>
+  </section>
+
+  <!-- HISTORIAL DE STOCK (solo socios, no editable) -->
+  <section data-view="hist" hidden>
+    <div class="panel" style="margin-top:18px">
+      <div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px"><h2>Historial de stock</h2><button class="b sm" id="hsAct" type="button">↻ Actualizar</button></div>
+      <p class="small muted" style="margin:0">Todo lo que entra y sale del stock de cada marca: lo que deja, lo vendido, donaciones y correcciones. 🔒 Este historial se guarda solo y <b>nadie puede editarlo ni borrarlo</b>.</p>
+      <div class="row" style="gap:10px;flex-wrap:wrap;align-items:flex-end;margin-top:10px">
+        <label class="f" style="flex:1 1 240px">Marca<input id="hsMarcaQ" type="search" placeholder="Escribe la marca o el celular" autocomplete="off"><select id="hsMarca" hidden></select></label>
+        <label class="f" style="flex:1 1 180px">Producto<input id="hsQ" type="search" placeholder="Nombre o código" autocomplete="off"></label>
+        <label class="f" style="flex:0 1 190px">Movimiento<select id="hsTipo"><option value="">Todos</option><option value="ingreso">Lo que dejó</option><option value="venta">Ventas</option><option value="donacion">Donaciones</option><option value="ajuste">Correcciones y ajustes</option></select></label>
+        <label class="f" style="flex:0 1 150px">Desde<input id="hsD1" type="date"></label>
+        <label class="f" style="flex:0 1 150px">Hasta<input id="hsD2" type="date"></label>
+      </div>
+      <div id="hsSug" class="row" style="gap:6px;flex-wrap:wrap"></div>
+      <div id="hsRes" style="margin-top:12px"><p class="small muted">Elige una marca para ver su historial.</p></div>
     </div>
   </section>
 
@@ -1501,6 +1519,72 @@ body.emp .soc{display:none!important}body.emp [data-cimet]{display:none!importan
     } catch (er) { b.disabled = false; fail(er); }
   });
 
+  // ---------- historial de stock (solo lectura) ----------
+  S.hs = {mid: "", data: [], t: 0};
+  const HS_TIPO = {ingreso: ["Dejó", "g"], alta: ["Producto nuevo", "g"], venta: ["Venta", "ok"], anulacion: ["Venta anulada", "warn"], donacion: ["Donación", "warn"], ajuste: ["Ajuste manual", "bad"], ajuste_sistema: ["Corrección del sistema", "bad"], eliminado: ["Producto eliminado", "bad"], corte: ["Stock al iniciar", ""]};
+  const hsGrupo = t => t === "ingreso" || t === "alta" ? "ingreso" : t === "venta" ? "venta" : t === "donacion" ? "donacion" : t === "corte" ? "corte" : "ajuste";
+  const hsNrm = t => String(t || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+  async function cargarHist(mid, forzar) {
+    if (!mid) { S.hs = {mid: "", data: [], t: 0}; return; }
+    if (!forzar && S.hs.mid === mid && Date.now() - S.hs.t < 20000) return;
+    $("#hsRes").innerHTML = `<p class="small muted">Cargando historial…</p>`;
+    if (!S.ih.socios) { try { const so = await sb.from("socios").select("user_id,nombre"); S.ih.socios = Object.fromEntries((so.data || []).map(x => [x.user_id, x.nombre])); } catch {} }
+    const d = await todo(() => sb.from("stock_movimientos").select("*").eq("marca", mid).order("fecha", {ascending: false}).order("id", {ascending: false}));
+    S.hs = {mid, data: d, t: Date.now()};
+  }
+  function hsSugs() {
+    const q = hsNrm($("#hsMarcaQ").value.trim()), box = $("#hsSug");
+    if (!q) { box.innerHTML = ""; return; }
+    const ms = marcasOrden().filter(m => hsNrm(m.nombre + " " + (m.celular || "") + " " + (m.titular || "") + " " + (m.prefijo || "")).includes(q)).slice(0, 8);
+    box.innerHTML = ms.map(m => `<button class="b sm" type="button" data-hsm="${esc(m.id)}">${esc(m.nombre)}</button>`).join("") || `<span class="small muted">Ninguna marca coincide</span>`;
+  }
+  async function elegirHist(mid) {
+    $("#hsMarca").value = mid; $("#hsMarcaQ").value = S.marcas[mid]?.nombre || ""; $("#hsSug").innerHTML = "";
+    try { await cargarHist(mid, true); } catch (e) { fail(e); }
+    pintarHist();
+  }
+  function pintarHist() {
+    const mid = $("#hsMarca").value, res = $("#hsRes");
+    if (!mid || S.hs.mid !== mid) { res.innerHTML = `<p class="small muted">Elige una marca para ver su historial.</p>`; return; }
+    const q = hsNrm($("#hsQ").value.trim()), tf = $("#hsTipo").value, d1 = $("#hsD1").value, d2 = $("#hsD2").value;
+    const dia = iso => diaKey(new Date(new Date(iso).toLocaleString("en-US", {timeZone: "America/La_Paz"})));
+    const rows = S.hs.data.filter(r => (!q || hsNrm((r.codigo || "") + " " + (r.nombre || "")).includes(q)) && (!d1 || dia(r.fecha) >= d1) && (!d2 || dia(r.fecha) <= d2));
+    const mov = rows.filter(r => r.tipo !== "corte"), sum = g => mov.filter(r => hsGrupo(r.tipo) === g).reduce((a, r) => a + r.cambio, 0);
+    const stockAct = prodsDe(mid).filter(p => !q || hsNrm((p.codigo || "") + " " + p.nombre).includes(q)).reduce((a, p) => a + (+p.stock || 0), 0);
+    const m = S.marcas[mid];
+    let h = `<div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:10px"><b>${esc(m?.nombre || "")}</b><span class="small muted">${esc(m?.celular || "")} · ${esc(m?.espacio || "")}</span></div>
+      <div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:12px"><span class="chip g">Dejó: +${sum("ingreso")}</span><span class="chip ok">Vendido: ${-sum("venta")}</span><span class="chip warn">Donado: ${-sum("donacion")}</span><span class="chip bad">Correcciones: ${sum("ajuste") > 0 ? "+" : ""}${sum("ajuste")}</span><span class="chip">Stock actual: ${stockAct}</span></div>`;
+    const lista = rows.filter(r => !tf ? r.tipo !== "corte" : hsGrupo(r.tipo) === tf);
+    if (!lista.length) { res.innerHTML = h + `<p class="small muted">No hay movimientos con esos filtros.</p>`; return; }
+    let ult = "";
+    h += lista.slice(0, 600).map(r => {
+      const dk = dia(r.fecha), [lab, cl] = HS_TIPO[r.tipo] || [r.tipo, ""];
+      const cab = dk !== ult ? `<div class="small" style="margin:14px 0 4px;font-weight:800;color:var(--grape)">${esc(fechaCorta(r.fecha))}</div>` : ""; ult = dk;
+      const quien = r.por ? (S.ih.socios?.[r.por] || "Caja") : (r.origen === "reconstruido" ? "Registro anterior" : "Sistema");
+      const cam = r.cambio > 0 ? "+" + r.cambio : String(r.cambio);
+      return cab + `<div class="row" style="gap:8px;flex-wrap:wrap;align-items:center;padding:7px 0;border-bottom:1px solid var(--line)">
+        <span class="num small muted" style="min-width:68px;white-space:nowrap">${hora(r.fecha)}</span><span class="chip ${cl}">${lab}</span>
+        <span style="flex:1 1 180px;min-width:0"><span class="small muted num">${esc(r.codigo || "")}</span> ${esc(r.nombre || "")}${r.detalle ? `<br><span class="small muted">${esc(r.detalle)}</span>` : ""}</span>
+        <b class="num" style="min-width:42px;text-align:right;color:${r.cambio > 0 ? "var(--ok)" : r.cambio < 0 ? "var(--bad)" : "inherit"}">${cam}</b>
+        <span class="small muted num" style="min-width:56px">${r.antes != null ? r.antes + " → " + r.despues : ""}</span>
+        <span class="small muted" style="min-width:90px">${esc(quien)}</span></div>`;
+    }).join("");
+    if (lista.length > 600) h += `<p class="small muted">Mostrando los últimos 600 de ${lista.length} movimientos. Usa las fechas o el buscador para ver el resto.</p>`;
+    h += `<p class="small muted" style="margin-top:10px">Los movimientos antes del 16/11 se reconstruyeron de los ingresos, ventas y donaciones registrados («Registro anterior»). Desde el 16/11 se guarda cada cambio con quién lo hizo.</p>`;
+    res.innerHTML = h;
+  }
+  async function renderHist() {
+    const sel = $("#hsMarca"), cur = sel.value;
+    sel.innerHTML = `<option value=""></option>` + marcasOrden().map(m => `<option value="${esc(m.id)}">${esc(m.nombre)}</option>`).join("");
+    if (cur && S.marcas[cur]) sel.value = cur;
+    if (sel.value) { try { await cargarHist(sel.value); } catch (e) { fail(e); } }
+    pintarHist();
+  }
+  $("#hsMarcaQ").addEventListener("input", hsSugs);
+  $("#hsSug").addEventListener("click", e => { const b = e.target.closest("[data-hsm]"); if (b) elegirHist(b.dataset.hsm); });
+  ["#hsQ", "#hsTipo", "#hsD1", "#hsD2"].forEach(s => $(s).addEventListener(s === "#hsQ" ? "input" : "change", pintarHist));
+  $("#hsAct").addEventListener("click", async () => { const mid = $("#hsMarca").value; if (!mid) return; try { await cargarHist(mid, true); } catch (e) { fail(e); } pintarHist(); });
+
   function render() {
     if ($("#appView").hidden) return;
     renderTop();
@@ -1512,6 +1596,7 @@ body.emp .soc{display:none!important}body.emp [data-cimet]{display:none!importan
     if (S.tab === "inv") renderInv();
     if (S.tab === "liq") renderLiq();
     if (S.tab === "don") renderDon();
+    if (S.tab === "hist") renderHist();
     if (S.tab === "marcas") { renderMarcas(); const q = $("#qrImg"); if (S.aj.qr) { q.src = IMG(S.aj.qr); q.hidden = false; } else q.hidden = true; }
   }
   try { const t = localStorage.getItem("tab"); if (t) { const b = $(`nav.tabs button[data-tab="${t}"]`); b && b.click(); } } catch {}

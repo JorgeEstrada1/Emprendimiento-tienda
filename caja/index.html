@@ -198,6 +198,7 @@ body.emp .soc{display:none!important}body.emp [data-cimet]{display:none!importan
       <button role="tab" data-tab="stock" aria-selected="false">Stock</button>
       <button role="tab" data-tab="inv" aria-selected="false">Inventario</button>
       <button role="tab" class="soc" data-tab="hist" aria-selected="false">Historial stock</button>
+      <button role="tab" class="soc" data-tab="desc" aria-selected="false">Descuentos</button>
       <button role="tab" class="soc" data-tab="liq" aria-selected="false">Liquidación</button>
       <button role="tab" class="soc" data-tab="marcas" aria-selected="false">Marcas</button>
       <button role="tab" class="soc" data-tab="don" aria-selected="false">Donaciones</button>
@@ -237,6 +238,16 @@ body.emp .soc{display:none!important}body.emp [data-cimet]{display:none!importan
         <h2>Cuenta</h2>
         <ul class="cart" id="cart"></ul>
         <div class="total"><span>Total</span><span class="num" id="cartTot">0 Bs</span></div>
+        <details id="descBox" style="margin:6px 0 10px">
+          <summary class="small">🏷️ Aplicar descuento (autorizado por la marca)</summary>
+          <div class="row" style="margin-top:8px;gap:8px;flex-wrap:wrap;align-items:flex-end">
+            <label class="f" style="flex:0 1 140px">Total a cobrar (Bs)<input id="descTot" type="number" min="0" step="0.5" inputmode="decimal"></label>
+            <label class="f" style="flex:1 1 200px">Motivo<input id="descMot" placeholder="Ej. Combo de 3 productos, acordado con la marca"></label>
+            <button class="b" id="descApl" type="button">Aplicar</button>
+            <button class="b" id="descQuitar" type="button" hidden>Quitar</button>
+          </div>
+          <div class="small" id="descRes" style="margin-top:4px"></div>
+        </details>
         <div class="seg" id="metodo" role="group" aria-label="Forma de pago">
           <button data-m="efectivo" aria-pressed="true">Efectivo</button>
           <button data-m="qr" aria-pressed="false">QR</button>
@@ -388,6 +399,18 @@ body.emp .soc{display:none!important}body.emp [data-cimet]{display:none!importan
     </div>
   </section>
 
+  <section data-view="desc" hidden>
+    <div class="panel" style="margin-top:18px">
+      <div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px"><h2>Descuentos</h2><button class="b sm" id="dsAct" type="button">↻ Actualizar</button></div>
+      <p class="small muted" style="margin:0">Ventas que se cobraron con descuento porque la marca lo autorizó (combos, rebajas, etc.). La marca recibe en su liquidación el monto que realmente se cobró.</p>
+      <div class="row" style="gap:10px;flex-wrap:wrap;align-items:flex-end;margin-top:10px">
+        <label class="f" style="flex:0 1 160px">Mes<select id="dsPer"></select></label>
+        <label class="f" style="flex:1 1 220px">Buscar<input id="dsQ" type="search" placeholder="Marca, producto o motivo" autocomplete="off"></label>
+      </div>
+      <div id="dsRes" style="margin-top:12px"></div>
+    </div>
+  </section>
+
   <!-- LIQUIDACIÓN -->
   <!-- INVENTARIO -->
   <section data-view="inv" hidden>
@@ -516,7 +539,7 @@ body.emp .soc{display:none!important}body.emp [data-cimet]{display:none!importan
   const hora = iso => new Date(iso).toLocaleTimeString("es-BO", {hour: "2-digit", minute: "2-digit", timeZone: "America/La_Paz"});
   const fechaCorta = iso => new Date(iso).toLocaleDateString("es-BO", {day: "2-digit", month: "2-digit", year: "numeric", timeZone: "America/La_Paz"});
 
-  const S = { pagos: [], aj: {}, pend: [], uid: null, marcas: {}, productos: {}, ventas: {}, liq: {}, cart: [], metodo: "efectivo", tab: "caja", marcaCaja: null, liqPer: PER_ACT(), editMarca: null, ficha: [], ih: {rango: "hoy", q: "", data: [], key: null, socios: null} };
+  const S = { pagos: [], aj: {}, pend: [], uid: null, marcas: {}, productos: {}, ventas: {}, liq: {}, cart: [], desc: null, metodo: "efectivo", tab: "caja", marcaCaja: null, liqPer: PER_ACT(), editMarca: null, ficha: [], ih: {rango: "hoy", q: "", data: [], key: null, socios: null} };
 
   let tt;
   const toast = msg => { const t = $("#toast"); t.textContent = msg; t.hidden = false; clearTimeout(tt); tt = setTimeout(() => t.hidden = true, 3200); };
@@ -646,11 +669,15 @@ body.emp .soc{display:none!important}body.emp [data-cimet]{display:none!importan
         : `<div class="empty">${esc(S.marcas[S.marcaCaja].nombre)} no tiene productos registrados. Regístralos en Stock con la ficha de ingreso, o vende con «Producto sin registrar».</div>`;
     }
     if (box.__html !== boxHTML) { box.innerHTML = boxHTML; box.__html = boxHTML; }
-    $("#cart").innerHTML = S.cart.length ? S.cart.map((l, i) => `<li><span style="min-width:0"><b>${esc(l.nombre)}</b><br><span class="small muted">${l.codigo ? esc(l.codigo) + " · " : ""}${esc(S.marcas[l.marca]?.nombre || "")}</span></span><span class="row" style="flex-wrap:nowrap"><button class="b sm" data-dec="${i}" aria-label="Quitar uno">−</button><span class="num">${l.cant}</span><button class="b sm" data-inc="${i}" aria-label="Agregar uno">+</button><span class="num" style="min-width:76px;text-align:right">${bs(l.cant * l.precio)}</span></span></li>`).join("")
+    const its = itemsCobro();
+    $("#cart").innerHTML = S.cart.length ? S.cart.map((l, i) => `<li><span style="min-width:0"><b>${esc(l.nombre)}</b><br><span class="small muted">${l.codigo ? esc(l.codigo) + " · " : ""}${esc(S.marcas[l.marca]?.nombre || "")}</span></span><span class="row" style="flex-wrap:nowrap"><button class="b sm" data-dec="${i}" aria-label="Quitar uno">−</button><span class="num">${l.cant}</span><button class="b sm" data-inc="${i}" aria-label="Agregar uno">+</button><span class="num" style="min-width:76px;text-align:right">${S.desc ? `<s class="muted small">${bs(l.cant * l.precio)}</s><br>` : ""}${bs(l.cant * its[i].precio)}</span></span></li>`).join("")
       : `<li class="muted small">Toca un producto para agregarlo a la cuenta.</li>`;
-    $("#cartTot").textContent = bs(S.cart.reduce((a, l) => a + l.cant * l.precio, 0));
+    const lista = S.cart.reduce((a, l) => a + l.cant * l.precio, 0), cobra = its.reduce((a, l) => a + l.cant * l.precio, 0);
+    $("#cartTot").innerHTML = S.desc ? `<s class="muted small">${bs(lista)}</s> ${bs(cobra)}` : bs(lista);
+    $("#descQuitar").hidden = !S.desc;
+    $("#descRes").innerHTML = S.desc ? `Descuento de <b class="num">${bs(lista - cobra)}</b> · ${esc(S.desc.motivo)}` : "";
     $$("#metodo button").forEach(b => b.setAttribute("aria-pressed", b.dataset.m === S.metodo));
-    { const tot = S.cart.reduce((a, l) => a + l.cant * l.precio, 0), dv = S.metodo === "dividido", ef = parseFloat($("#divEf").value) || 0, ok = ef > 0 && ef < tot;
+    { const tot = cobra, dv = S.metodo === "dividido", ef = parseFloat($("#divEf").value) || 0, ok = ef > 0 && ef < tot;
       $("#divBox").hidden = !dv;
       $("#divRes").innerHTML = !dv ? "" : !S.cart.length ? `<span class="muted">Agrega productos a la cuenta.</span>` : ok ? `Efectivo <b class="num">${bs(ef)}</b> + QR <b class="num">${bs(tot - ef)}</b>` : `<span style="color:var(--bad)">Escribe un monto mayor a 0 y menor al total (${bs(tot)}).</span>`;
       $("#cobrar").disabled = !S.cart.length || (dv && !ok); }
@@ -659,7 +686,7 @@ body.emp .soc{display:none!important}body.emp [data-cimet]{display:none!importan
     const compras = []; { const by = new Map(); hoy.forEach(v => { const k = v.fecha + "|" + (v.por || ""); if (!by.has(k)) { by.set(k, []); compras.push(by.get(k)); } by.get(k).push(v); }); }
     const hoyHTML = hoy.length ? `<div class="small muted" style="margin-bottom:6px">${compras.length} ${compras.length === 1 ? "compra" : "compras"} · ${hoy.filter(v => !v.anulada).reduce((a, v) => a + v.cant, 0)} productos</div>` + compras.map((c, i) => { const ok = c.filter(v => !v.anulada), tot = ok.reduce((a, v) => a + +v.total, 0), u = ok.reduce((a, v) => a + v.cant, 0);
       return `<div class="compra${ok.length ? "" : " void"}"><div class="row" style="justify-content:space-between;gap:8px;flex-wrap:wrap"><span><b class="num">${hora(c[0].fecha)}</b> · Compra ${compras.length - i} · ${u} ${u === 1 ? "producto" : "productos"}</span><span class="row" style="gap:8px"><span class="chip g">${esc([...new Set(c.map(v => v.metodo))].join(" + "))}</span><b class="num">${bs(tot)}</b></span></div>
-        <div class="tbl"><table><tbody>${c.map(v => `<tr class="${v.anulada ? "void" : ""}"><td>${esc(S.marcas[v.marca]?.nombre || v.marca)}</td><td>${esc(v.nombre)}</td><td class="r num">${v.cant || ""}</td><td class="r num">${bs(v.total)}${new Set(c.map(x => x.metodo)).size > 1 ? ` <span class="small muted">${esc(v.metodo)}</span>` : ""}</td><td class="r">${v.anulada ? `<span class="chip bad">Anulada</span>` : (S.rol === "empleado" && v.por !== S.uid ? "" : `<span><button class="b sm danger" data-anular="${esc(v.id)}">Anular</button></span>`)}</td></tr>`).join("")}</tbody></table></div></div>`; }).join("")
+        <div class="tbl"><table><tbody>${c.map(v => `<tr class="${v.anulada ? "void" : ""}"><td>${esc(S.marcas[v.marca]?.nombre || v.marca)}</td><td>${esc(v.nombre)}${+v.descuento > 0 ? ` <span class="chip warn" title="${esc(v.descuento_motivo || "")}">−${bs(v.descuento)}</span>` : ""}</td><td class="r num">${v.cant || ""}</td><td class="r num">${bs(v.total)}${new Set(c.map(x => x.metodo)).size > 1 ? ` <span class="small muted">${esc(v.metodo)}</span>` : ""}</td><td class="r">${v.anulada ? `<span class="chip bad">Anulada</span>` : (S.rol === "empleado" && v.por !== S.uid ? "" : `<span><button class="b sm danger" data-anular="${esc(v.id)}">Anular</button></span>`)}</td></tr>`).join("")}</tbody></table></div></div>`; }).join("")
       : `<div class="empty">Todavía no hay ventas hoy. Cuando cobres, aparecen aquí agrupadas por compra.</div>`;
     const hl = $("#hoyList"); if (hl.__html !== hoyHTML && !hl.querySelector(".confirm")) { hl.innerHTML = hoyHTML; hl.__html = hoyHTML; }
   }
@@ -669,6 +696,7 @@ body.emp .soc{display:none!important}body.emp [data-cimet]{display:none!importan
     const l = S.cart.find(x => x.producto === p.id);
     if ((l ? l.cant : 0) + 1 > p.stock) return toast("No hay más stock de " + p.nombre);
     if (l) l.cant++; else S.cart.push({producto: p.id, marca: p.marca, nombre: p.nombre, codigo: p.codigo, precio: +p.precio, cant: 1});
+    S.desc = null;
     toast("Agregado: " + p.nombre + " (×" + (l ? l.cant : 1) + ")");
     renderCaja();
   });
@@ -676,6 +704,7 @@ body.emp .soc{display:none!important}body.emp [data-cimet]{display:none!importan
     const l = S.cart.find(x => x.producto === p.id);
     if ((l ? l.cant : 0) + 1 > p.stock) { toast("No hay más stock de " + p.nombre); return false; }
     if (l) l.cant++; else S.cart.push({producto: p.id, marca: p.marca, nombre: p.nombre, codigo: p.codigo, precio: +p.precio, cant: 1});
+    S.desc = null;
     return true;
   };
   $("#codForm").addEventListener("submit", e => {
@@ -692,13 +721,30 @@ body.emp .soc{display:none!important}body.emp [data-cimet]{display:none!importan
     const nom = $("#libreNom").value.trim(), pre = parseFloat($("#librePre").value);
     if (!S.marcaCaja) return toast("Primero elige la marca.");
     if (!nom || !(pre > 0)) return toast("Escribe la descripción y el precio.");
-    S.cart.push({producto: null, marca: S.marcaCaja, nombre: nom, precio: pre, cant: 1});
+    S.cart.push({producto: null, marca: S.marcaCaja, nombre: nom, precio: pre, cant: 1}); S.desc = null;
     $("#libreNom").value = ""; $("#librePre").value = ""; renderCaja();
   });
+  function itemsCobro() {
+    if (!S.desc) return S.cart.map(l => ({...l, precio_lista: l.precio}));
+    const lista = S.cart.reduce((a, l) => a + l.cant * l.precio, 0), r = lista ? S.desc.total / lista : 1;
+    const its = S.cart.map(l => ({...l, precio_lista: l.precio, precio: Math.round(l.precio * r * 100) / 100, motivo: S.desc.motivo}));
+    let dif = Math.round((S.desc.total - its.reduce((a, l) => a + l.cant * l.precio, 0)) * 100) / 100;
+    for (const l of [...its].reverse()) { if (!dif) break; const n = Math.round((l.precio + dif / l.cant) * 100) / 100; if (n >= 0 && n <= l.precio_lista) { dif = Math.round((dif - (n - l.precio) * l.cant) * 100) / 100; l.precio = n; } }
+    return its;
+  }
+  $("#descApl").addEventListener("click", () => {
+    const lista = S.cart.reduce((a, l) => a + l.cant * l.precio, 0), t = parseFloat($("#descTot").value), m = $("#descMot").value.trim();
+    if (!S.cart.length) return toast("Primero agrega los productos a la cuenta.");
+    if (!(t > 0) || t >= lista) return toast("El total con descuento debe ser mayor a 0 y menor a " + bs(lista) + ".");
+    if (!m) return toast("Escribe el motivo del descuento.");
+    S.desc = {total: t, motivo: m}; renderCaja();
+  });
+  $("#descQuitar").addEventListener("click", () => { S.desc = null; $("#descTot").value = ""; $("#descMot").value = ""; renderCaja(); });
   $("#cart").addEventListener("click", e => {
     const i = e.target.closest("[data-inc]")?.dataset.inc, j = e.target.closest("[data-dec]")?.dataset.dec;
     if (i != null) { const l = S.cart[i]; const p = l.producto && S.productos[l.producto]; if (p && l.cant + 1 > p.stock) return toast("No hay más stock."); l.cant++; }
     if (j != null) { S.cart[j].cant--; if (S.cart[j].cant <= 0) S.cart.splice(j, 1); }
+    if ((i != null || j != null) && S.desc) { S.desc = null; toast("Cambió la cuenta: vuelve a aplicar el descuento si corresponde."); }
     renderCaja();
   });
   $("#metodo").addEventListener("click", e => { const b = e.target.closest("button"); if (b) { S.metodo = b.dataset.m; renderCaja(); if (S.metodo === "dividido") $("#divEf").focus(); } });
@@ -706,15 +752,15 @@ body.emp .soc{display:none!important}body.emp [data-cimet]{display:none!importan
   $("#cobrar").addEventListener("click", async () => {
     if (!S.cart.length) return;
     const btn = $("#cobrar"); btn.disabled = true;
-    const total = S.cart.reduce((a, l) => a + l.cant * l.precio, 0);
+    const items = itemsCobro(), total = items.reduce((a, l) => a + l.cant * l.precio, 0);
     try {
       if (S.metodo === "dividido") {
         const ef = parseFloat($("#divEf").value) || 0;
-        chk(await sb.rpc("vender_dividido", {p_items: S.cart, p_efectivo: ef}));
-        S.cart = []; $("#divEf").value = ""; S.metodo = "efectivo"; toast("Cobrado " + bs(total) + " (efectivo " + bs(ef) + " + QR " + bs(total - ef) + ")");
+        chk(await sb.rpc("vender_dividido", {p_items: items, p_efectivo: ef}));
+        S.cart = []; S.desc = null; $("#descBox").open = false; $("#divEf").value = ""; S.metodo = "efectivo"; toast("Cobrado " + bs(total) + " (efectivo " + bs(ef) + " + QR " + bs(total - ef) + ")");
       } else {
-        chk(await sb.rpc("vender", {p_items: S.cart, p_metodo: S.metodo}));
-        S.cart = []; toast("Cobrado " + bs(total) + " (" + S.metodo + ")");
+        chk(await sb.rpc("vender", {p_items: items, p_metodo: S.metodo}));
+        S.cart = []; S.desc = null; $("#descBox").open = false; toast("Cobrado " + bs(total) + " (" + S.metodo + ")");
       }
       refresh("ventas", "productos");
     } catch (e) { fail(e); }
@@ -1632,6 +1678,36 @@ body.emp .soc{display:none!important}body.emp [data-cimet]{display:none!importan
   $("#hsAct").addEventListener("click", async () => { const mid = $("#hsMarca").value; try { if (S.hv === "man") { await cargarMan(mid, true); pintarMan(); return; } if (!mid) return; await cargarHist(mid, true); } catch (e) { fail(e); } pintarHist(); });
   $("#hsMarcaQ").addEventListener("search", () => { if (!$("#hsMarcaQ").value) { $("#hsMarca").value = ""; renderHistStock(); } });
 
+  // ---------- descuentos ----------
+  S.ds = {data: null, t: 0};
+  async function renderDesc(forzar) {
+    const sel = $("#dsPer");
+    if (!sel.options.length) { const ps = []; const d = laPaz(); for (let k = 0; k < 6; k++) { const x = new Date(d.getFullYear(), d.getMonth() - k, 1); ps.push(x.getFullYear() + "-" + String(x.getMonth() + 1).padStart(2, "0")); }
+      sel.innerHTML = `<option value="">Todos</option>` + ps.map(p => `<option value="${p}">${p}</option>`).join(""); sel.value = PER_ACT(); }
+    if (forzar || !S.ds.data || Date.now() - S.ds.t > 20000) {
+      $("#dsRes").innerHTML = `<p class="small muted">Cargando…</p>`;
+      try {
+        if (!S.ih.socios) { try { const so = await sb.from("socios").select("user_id,nombre"); S.ih.socios = Object.fromEntries((so.data || []).map(x => [x.user_id, x.nombre])); } catch {} }
+        S.ds = {data: await todo(() => sb.from("ventas").select("*").gt("descuento", 0).order("fecha", {ascending: false}).order("id")), t: Date.now()};
+      } catch (e) { fail(e); return; }
+    }
+    pintarDesc();
+  }
+  function pintarDesc() {
+    const per = $("#dsPer").value, q = hsNrm($("#dsQ").value.trim());
+    const rows = (S.ds.data || []).filter(v => !v.anulada && (!per || v.periodo === per) && (!q || hsNrm((S.marcas[v.marca]?.nombre || v.marca) + " " + v.nombre + " " + (v.descuento_motivo || "")).includes(q)));
+    if (!rows.length) { $("#dsRes").innerHTML = `<p class="small muted">No hay ventas con descuento${per || q ? " con esos filtros" : " todavía"}.</p>`; return; }
+    const tot = rows.reduce((a, v) => a + +v.descuento, 0), cob = rows.reduce((a, v) => a + +v.total, 0);
+    const porM = {}; rows.forEach(v => { porM[v.marca] = (porM[v.marca] || 0) + +v.descuento; });
+    let h = `<div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:10px"><span class="chip warn">Descontado: <b class="num">${bs(tot)}</b></span><span class="chip g">Cobrado: <b class="num">${bs(cob)}</b></span>${Object.entries(porM).sort((a, b) => b[1] - a[1]).map(([m, x]) => `<span class="chip">${esc(S.marcas[m]?.nombre || m)}: −${bs(x)}</span>`).join("")}</div>`;
+    h += `<div class="tbl"><table><thead><tr><th>Fecha</th><th>Marca</th><th>Producto</th><th class="r">Precio</th><th class="r">Cobrado</th><th class="r">Descuento</th><th>Motivo</th><th>Quién</th></tr></thead><tbody>` +
+      rows.map(v => `<tr><td class="num small">${esc(fechaCorta(v.fecha))} ${hora(v.fecha)}</td><td>${esc(S.marcas[v.marca]?.nombre || v.marca)}</td><td>${esc(v.nombre)}${v.cant > 1 ? ` ×${v.cant}` : ""}</td><td class="r num">${bs((+v.precio_lista || +v.precio) * (v.cant || 1))}</td><td class="r num">${bs(v.total)} <span class="small muted">${esc(v.metodo)}</span></td><td class="r num" style="color:var(--bad)">−${bs(v.descuento)}</td><td class="small">${esc(v.descuento_motivo || "")}</td><td class="small">${esc((S.ih.socios || {})[v.por] || "")}</td></tr>`).join("") + `</tbody></table></div>`;
+    $("#dsRes").innerHTML = h;
+  }
+  $("#dsPer").addEventListener("change", pintarDesc);
+  $("#dsQ").addEventListener("input", pintarDesc);
+  $("#dsAct").addEventListener("click", () => renderDesc(true));
+
   function render() {
     if ($("#appView").hidden) return;
     renderTop();
@@ -1644,6 +1720,7 @@ body.emp .soc{display:none!important}body.emp [data-cimet]{display:none!importan
     if (S.tab === "liq") renderLiq();
     if (S.tab === "don") renderDon();
     if (S.tab === "hist") renderHistStock();
+    if (S.tab === "desc") renderDesc();
     if (S.tab === "marcas") { renderMarcas(); const q = $("#qrImg"); if (S.aj.qr) { q.src = IMG(S.aj.qr); q.hidden = false; } else q.hidden = true; }
   }
   try { const t = localStorage.getItem("tab"); if (t) { const b = $(`nav.tabs button[data-tab="${t}"]`); b && b.click(); } } catch {}

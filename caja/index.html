@@ -162,7 +162,18 @@ body.emp .soc{display:none!important}body.emp [data-cimet]{display:none!importan
     <label class="f">Contraseña<input id="lgPass" type="password" autocomplete="current-password" minlength="6" required></label>
     <button class="b pri big" data-modo="entrar">Entrar</button>
     <button class="b" data-modo="crear">Crear mi cuenta</button>
+    <button class="b sm" type="button" id="lgOlvide" style="border:none;background:none;text-decoration:underline;justify-self:center">¿Olvidaste tu contraseña?</button>
     <div class="small" id="lgMsg" style="color:var(--bad)"></div>
+  </form>
+</div></div>
+<div id="recView" hidden><div class="wrap" style="max-width:420px;padding-block:48px">
+  <form class="panel" id="recForm">
+    <h2>Crea tu nueva contraseña</h2>
+    <p class="small muted" style="margin:0">Escribe tu nueva contraseña dos veces. Mínimo 6 caracteres.</p>
+    <label class="f">Nueva contraseña<input id="recPass" type="password" autocomplete="new-password" minlength="6" required></label>
+    <label class="f">Repítela<input id="recPass2" type="password" autocomplete="new-password" minlength="6" required></label>
+    <button class="b pri big">Guardar contraseña</button>
+    <div class="small" id="recMsg" style="color:var(--bad)"></div>
   </form>
 </div></div>
 <div id="joinView" hidden><div class="wrap" style="max-width:420px;padding-block:48px">
@@ -538,6 +549,10 @@ body.emp .soc{display:none!important}body.emp [data-cimet]{display:none!importan
   const SUPA_URL = "https://eyougzgrquztgrhlkain.supabase.co", SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV5b3VnemdycXV6dGdyaGxrYWluIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODc3OTA1MjcsImV4cCI6MjEwMzM2NjUyN30.b_4ma8HLRGW2F0uFBBhu307F9KqOKz0hI4_LnhwOWJk";
   const PORTAL_URL = location.origin + location.pathname.replace(/caja\/?(index\.html)?$/, "") + "portal/";
   const sb = window.supabase.createClient(SUPA_URL, SUPA_KEY);
+  // Enlace del correo «¿Olvidaste tu contraseña?»: muestra el formulario para crear una nueva
+  let enRecuperacion = /type=recovery/.test(location.hash);
+  sb.auth.onAuthStateChange(ev => { if (ev === "PASSWORD_RECOVERY") { enRecuperacion = true; mostrarRec(); } });
+  function mostrarRec() { ["appView", "joinView", "loginView"].forEach(id => { const el = document.getElementById(id); if (el) el.hidden = true; }); document.getElementById("recView").hidden = false; }
   const IMG = r => r ? SUPA_URL + "/storage/v1/object/public/parralito/" + r : "";
   const $ = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -589,11 +604,17 @@ body.emp .soc{display:none!important}body.emp [data-cimet]{display:none!importan
   // ---------- sesión ----------
   async function start() {
     const {data: {session}} = await sb.auth.getSession();
-    sb.auth.onAuthStateChange((_e, s) => { if (!s) showLogin(); });
+    sb.auth.onAuthStateChange((_e, s) => { if (!s && !enRecuperacion) showLogin(); });
+    if (enRecuperacion) return mostrarRec();
     if (!session) return showLogin();
     S.uid = session.user.id;
     S.rol = chk(await sb.rpc("mi_rol"));
-    if (!S.rol) return showJoin(session.user.email);
+    if (!S.rol) {
+      // Si la sesión fue cerrada desde el servidor, vuelve al ingreso en vez de pedir el código
+      const valida = chk(await sb.rpc("sesion_valida"));
+      if (!valida) { await sb.auth.signOut({scope: "local"}); return showLogin(); }
+      return showJoin(session.user.email);
+    }
     showApp();
   }
   function showLogin() { $("#appView").hidden = true; $("#joinView").hidden = true; $("#loginView").hidden = false; }
@@ -631,6 +652,24 @@ body.emp .soc{display:none!important}body.emp [data-cimet]{display:none!importan
     start();
   });
   const traducir = m => /Invalid login/i.test(m) ? "Correo o contraseña incorrectos." : /least 6/i.test(m) ? "La contraseña debe tener al menos 6 caracteres." : /already registered/i.test(m) ? "Ese correo ya tiene cuenta: usa «Entrar»." : /not confirmed/i.test(m) ? "Primero confirma tu correo con el enlace que te enviamos." : m;
+  $("#lgOlvide").addEventListener("click", async () => {
+    const email = $("#lgEmail").value.trim(), msg = $("#lgMsg");
+    if (!email) { msg.style.color = "var(--bad)"; msg.textContent = "Escribe tu correo arriba y vuelve a tocar «¿Olvidaste tu contraseña?»."; $("#lgEmail").focus(); return; }
+    $("#lgOlvide").disabled = true;
+    const {error} = await sb.auth.resetPasswordForEmail(email, {redirectTo: location.origin + location.pathname});
+    $("#lgOlvide").disabled = false;
+    msg.style.color = error ? "var(--bad)" : "var(--ok)";
+    msg.textContent = error ? (/rate|seconds/i.test(error.message) ? "Ya te enviamos un correo hace poco. Espera un momento y revisa tu bandeja (y spam)." : traducir(error.message)) : "Listo: te enviamos un correo a " + email + ". Ábrelo desde este celular y toca el enlace para crear tu nueva contraseña (revisa también spam).";
+  });
+  $("#recForm").addEventListener("submit", async e => {
+    e.preventDefault();
+    const a = $("#recPass").value, b = $("#recPass2").value, msg = $("#recMsg");
+    if (a !== b) { msg.textContent = "Las contraseñas no coinciden."; return; }
+    const {error} = await sb.auth.updateUser({password: a});
+    if (error) { msg.textContent = traducir(error.message); return; }
+    enRecuperacion = false; history.replaceState(null, "", location.pathname);
+    $("#recView").hidden = true; toast("Contraseña actualizada"); start().catch(fail);
+  });
   $("#joinForm").addEventListener("submit", async e => {
     e.preventDefault();
     const args = {p_codigo: $("#jCodigo").value.trim(), p_nombre: $("#jNombre").value.trim()};

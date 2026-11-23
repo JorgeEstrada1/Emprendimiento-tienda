@@ -197,6 +197,7 @@ body.emp .soc{display:none!important}body.emp [data-cimet]{display:none!importan
       <button role="tab" class="soc" data-tab="cobros" aria-selected="false">Cobros alquileres</button>
       <button role="tab" data-tab="stock" aria-selected="false">Stock</button>
       <button role="tab" data-tab="inv" aria-selected="false">Inventario</button>
+      <button role="tab" data-tab="canje" aria-selected="false">Canjes 🎁</button>
       <button role="tab" class="soc" data-tab="hist" aria-selected="false">Historial stock</button>
       <button role="tab" class="soc" data-tab="desc" aria-selected="false">Descuentos</button>
       <button role="tab" class="soc" data-tab="liq" aria-selected="false">Liquidación</button>
@@ -379,6 +380,21 @@ body.emp .soc{display:none!important}body.emp [data-cimet]{display:none!importan
       <div id="donProg" class="small muted"></div>
       <input type="file" id="donEncFoto" accept="image/*" capture="environment" hidden>
       <div id="donRes"></div>
+    </div>
+  </section>
+
+
+  <!-- CANJES DE CUPONES (Latiendo Juntos): personal y socios -->
+  <section data-view="canje" hidden>
+    <div class="panel" style="margin-top:18px">
+      <h2>Canjear cupón o vale · Latiendo Juntos</h2>
+      <p class="small muted" style="margin:0">Busca el premio del cupón (por marca o producto), escribe el N° del cupón y toca «Canjear». Si el premio sale del stock de la marca (por ejemplo un vale de alfajor), elige el producto exacto y se descuenta solo. Lo que la marca trajo aparte no toca el stock.</p>
+      <input id="cjQ" type="search" placeholder="Buscar premio: marca, producto o N° de cupón" autocomplete="off" style="margin-top:10px">
+      <div id="cjRes" style="margin-top:10px"></div>
+    </div>
+    <div class="panel" style="margin-top:16px">
+      <div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px"><h2 id="cjHTit">Canjes realizados</h2><button class="b sm" id="cjAct" type="button">↻ Actualizar</button></div>
+      <div id="cjHist"></div>
     </div>
   </section>
 
@@ -590,7 +606,7 @@ body.emp .soc{display:none!important}body.emp [data-cimet]{display:none!importan
       for (const k of ["pagos", "liquidaciones", "donaciones"]) loaders[k] = async () => {};
       loaders.marcas = async () => { const d = chk(await sb.rpc("marcas_caja")); S.marcas = {}; (d || []).forEach(m => S.marcas[m.id] = m); };
       loaders.ventas = async () => { const d = await todo(() => sb.from("ventas").select("*").eq("dia", HOY()).order("fecha", {ascending: false}).order("id")); S.ventas = {}; d.forEach(v => S.ventas[v.id] = v); };
-      if (!["caja", "cierre", "stock", "inv"].includes(S.tab)) $('nav.tabs button[data-tab="caja"]').click();
+      if (!["caja", "cierre", "stock", "inv", "canje"].includes(S.tab)) $('nav.tabs button[data-tab="caja"]').click();
     }
     try { await Promise.all(Object.values(loaders).map(f => f())); } catch (e) { fail(e); }
     sb.channel("caja").on("postgres_changes", {event: "*", schema: "public"}, p => { if (loaders[p.table]) refresh(p.table); }).subscribe();
@@ -1708,6 +1724,62 @@ body.emp .soc{display:none!important}body.emp [data-cimet]{display:none!importan
   $("#dsQ").addEventListener("input", pintarDesc);
   $("#dsAct").addEventListener("click", () => renderDesc(true));
 
+
+  // ---------- canjes de cupones Latiendo Juntos (personal y socios) ----------
+  S.cj = {data: null, open: null, busy: false};
+  async function loadCanjes() { const r = chk(await sb.rpc("canjes_lista")); if (r?.error) throw new Error(r.error); S.cj.data = r; }
+  async function renderCanje(force) {
+    if (!S.cj.data || force) { $("#cjRes").innerHTML = '<div class="empty">Cargando…</div>'; try { await loadCanjes(); } catch (e) { fail(e); return; } }
+    pintarCanje();
+  }
+  const cjNorm = t => String(t || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+  function pintarCanje() {
+    const d = S.cj.data; if (!d) return;
+    const q = cjNorm($("#cjQ").value.trim());
+    const usados = {}; (d.canjes || []).forEach(c => { if (c.cupon) usados[c.cupon] = c; });
+    let lista = (d.don || []).filter(x => !q || cjNorm(x.marca_nombre + " " + x.nombre).includes(q));
+    const cupHit = q && usados[q] ? `<div class="banner" style="margin-bottom:8px">⚠️ El cupón N° ${esc(q)} ya se canjeó el ${esc(fechaCorta(usados[q].fecha))} (${esc(usados[q].marca_nombre)} · ${esc(usados[q].nombre)}).</div>` : "";
+    lista.sort((a, b) => ((b.cant - b.canjeados) > 0) - ((a.cant - a.canjeados) > 0) || a.marca_nombre.localeCompare(b.marca_nombre));
+    $("#cjRes").innerHTML = cupHit + (lista.length ? lista.slice(0, 60).map(x => {
+      const quedan = x.cant - x.canjeados, abierto = S.cj.open === x.id;
+      const sale = x.estado === "descontada" ? '<span class="chip">Ya separado del stock</span>' : '<span class="chip warn">Puede salir del stock</span>';
+      let h = `<div class="card" style="padding:12px;margin-bottom:8px;border:1px solid var(--line);border-radius:12px"><div class="row" style="justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center">
+        <div style="min-width:0"><b>${esc(x.marca_nombre)}</b> · ${esc(x.nombre)}<div class="small muted">Canjeados ${x.canjeados} de ${x.cant} · ${sale}</div></div>
+        ${quedan > 0 ? `<button class="b sm ${abierto ? "" : "pri"}" data-cjopen="${esc(x.id)}" type="button">${abierto ? "Cerrar" : "Canjear (quedan " + quedan + ")"}</button>` : '<span class="chip g">✔ Completo</span>'}</div>`;
+      if (abierto && quedan > 0) {
+        const prods = x.estado === "descontada" ? [] : prodsDe(x.marca).filter(p => +p.stock > 0);
+        h += `<div class="row" style="gap:10px;flex-wrap:wrap;align-items:flex-end;margin-top:10px">
+          <label class="f" style="flex:0 1 140px">N° de cupón<input id="cjCup" inputmode="numeric" maxlength="10" placeholder="Ej. 35"></label>
+          <label class="f" style="flex:0 1 100px">Cantidad<input id="cjCant" type="number" min="1" max="${quedan}" value="1" inputmode="numeric"></label>
+          ${x.estado === "descontada" ? "" : `<label class="f" style="flex:1 1 260px">¿Sale del stock de la marca?<select id="cjProd"><option value="">No, lo trajeron aparte (no toca stock)</option>${prods.map(p => `<option value="${esc(p.id)}">${esc(p.nombre)} · ${esc(p.codigo || "")} (stock ${p.stock})</option>`).join("")}</select></label>`}
+          <label class="f" style="flex:1 1 200px">Nota (opcional)<input id="cjNota" maxlength="120" placeholder="Ej. eligió la talla M"></label>
+          <button class="b pri" id="cjOk" data-cjid="${esc(x.id)}" type="button">✔ Canjear</button></div>
+          <p class="small muted" style="margin:6px 0 0">Si es un vale físico sin número, deja el N° de cupón vacío.</p>`;
+      }
+      return h + "</div>";
+    }).join("") : '<div class="empty">No hay premios con esa búsqueda.</div>');
+    const hs = d.canjes || [];
+    $("#cjHTit").textContent = "Canjes realizados" + (hs.length ? " (" + hs.length + ")" : "");
+    $("#cjHist").innerHTML = hs.length ? `<div class="tbl"><table><thead><tr><th>Fecha</th><th>Cupón</th><th>Marca</th><th>Premio</th><th class="r">Cant.</th><th>Salió del stock</th><th>Nota</th><th>Quién</th></tr></thead><tbody>` +
+      hs.map(c => `<tr><td class="num small">${esc(fechaCorta(c.fecha))} ${hora(c.fecha)}</td><td class="num">${esc(c.cupon || "vale")}</td><td>${esc(c.marca_nombre)}</td><td>${esc(c.nombre)}</td><td class="r num">${c.cant}</td><td class="small">${c.producto_nombre ? esc(c.producto_nombre) + " · " + esc(c.producto_codigo || "") : "—"}</td><td class="small">${esc(c.nota || "")}</td><td class="small">${esc(c.quien || "")}</td></tr>`).join("") + `</tbody></table></div>`
+      : '<div class="empty">Todavía no hay canjes.</div>';
+  }
+  $("#cjQ").addEventListener("input", pintarCanje);
+  $("#cjAct").addEventListener("click", () => renderCanje(true));
+  $("#cjRes").addEventListener("click", async e => {
+    const bo = e.target.closest("[data-cjopen]");
+    if (bo) { S.cj.open = S.cj.open === bo.dataset.cjopen ? null : bo.dataset.cjopen; pintarCanje(); const c = $("#cjCup"); c && c.focus(); return; }
+    const ok = e.target.closest("#cjOk"); if (!ok || S.cj.busy) return;
+    const cant = Math.max(1, parseInt($("#cjCant").value, 10) || 1), cup = $("#cjCup").value.trim(), prod = $("#cjProd")?.value || null;
+    S.cj.busy = true; ok.disabled = true;
+    try {
+      const r = chk(await sb.rpc("canjear", {p_donacion: ok.dataset.cjid, p_cupon: cup || null, p_producto: prod, p_cant: cant, p_nota: $("#cjNota").value.trim() || null}));
+      if (r?.error) throw new Error(({cupon_usado: "ese N° de cupón ya fue canjeado", agotado: "ya no quedan premios de este tipo (quedan " + (r.quedan ?? 0) + ")", stock: "stock: solo quedan " + (r.stock ?? 0), permiso: "no tienes permiso", producto: "ese producto no es de esta marca"})[r.error] || r.error);
+      toast("🎁 Canje registrado" + (prod ? " y descontado del stock" : "") + ". Quedan " + r.quedan);
+      S.cj.open = null; await loadCanjes(); if (prod) refresh("productos"); pintarCanje();
+    } catch (er) { fail(er); ok.disabled = false; } finally { S.cj.busy = false; }
+  });
+
   function render() {
     if ($("#appView").hidden) return;
     renderTop();
@@ -1721,6 +1793,7 @@ body.emp .soc{display:none!important}body.emp [data-cimet]{display:none!importan
     if (S.tab === "don") renderDon();
     if (S.tab === "hist") renderHistStock();
     if (S.tab === "desc") renderDesc();
+    if (S.tab === "canje" && !S.cj.open) renderCanje();
     if (S.tab === "marcas") { renderMarcas(); const q = $("#qrImg"); if (S.aj.qr) { q.src = IMG(S.aj.qr); q.hidden = false; } else q.hidden = true; }
   }
   try { const t = localStorage.getItem("tab"); if (t) { const b = $(`nav.tabs button[data-tab="${t}"]`); b && b.click(); } } catch {}

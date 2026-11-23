@@ -611,6 +611,8 @@ body.emp .soc{display:none!important}body.emp [data-cimet]{display:none!importan
     try { await Promise.all(Object.values(loaders).map(f => f())); } catch (e) { fail(e); }
     sb.channel("caja").on("postgres_changes", {event: "*", schema: "public"}, p => { if (loaders[p.table]) refresh(p.table); }).subscribe();
     setInterval(() => refresh("ventas", "productos"), 60000);
+    // Si un socio cerró esta sesión desde otro lado, se cierra aquí también
+    setInterval(async () => { try { const {data, error} = await sb.rpc("mi_rol"); if (!error && !data) { await sb.auth.signOut({scope: "local"}); showLogin(); toast("Tu sesión se cerró. Vuelve a ingresar."); } } catch {} }, 30000);
     render();
   }
   $("#loginForm").addEventListener("submit", async e => {

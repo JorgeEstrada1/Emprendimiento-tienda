@@ -250,6 +250,10 @@ body.emp .soc{display:none!important}body.emp [data-cimet]{display:none!importan
         <h2>Cuenta</h2>
         <ul class="cart" id="cart"></ul>
         <div class="total"><span>Total</span><span class="num" id="cartTot">0 Bs</span></div>
+        <div class="row" id="regaloBox" style="gap:8px;flex-wrap:wrap;align-items:center;margin:6px 0 4px;padding:8px 10px;border:1px dashed var(--line);border-radius:10px">
+          <span class="small" style="flex:1 1 160px">🎁 <b>Envolver para regalo</b> · 2 Bs c/u (lo cobra la tienda)</span>
+          <span class="row" style="gap:6px;flex-wrap:nowrap;align-items:center"><button class="b sm" id="regMenos" type="button" aria-label="Quitar envoltura">−</button><span class="num" id="regN" style="min-width:18px;text-align:center">0</span><button class="b sm pri" id="regMas" type="button" aria-label="Agregar envoltura">+ Envolver</button></span>
+        </div>
         <details id="descBox" style="margin:6px 0 10px">
           <summary class="small">🏷️ Aplicar descuento (autorizado por la marca)</summary>
           <div class="row" style="margin-top:8px;gap:8px;flex-wrap:wrap;align-items:flex-end">
@@ -732,6 +736,7 @@ body.emp .soc{display:none!important}body.emp [data-cimet]{display:none!importan
     const lista = S.cart.reduce((a, l) => a + l.cant * l.precio, 0), cobra = its.reduce((a, l) => a + l.cant * l.precio, 0);
     $("#cartTot").innerHTML = S.desc ? `<s class="muted small">${bs(lista)}</s> ${bs(cobra)}` : bs(lista);
     $("#descQuitar").hidden = !S.desc;
+    { const r = S.cart.find(l => l.envoltura); $("#regN").textContent = r ? r.cant : 0; $("#regMenos").disabled = !r; }
     $("#descRes").innerHTML = S.desc ? `Descuento de <b class="num">${bs(lista - cobra)}</b> · ${esc(S.desc.motivo)}` : "";
     $$("#metodo button").forEach(b => b.setAttribute("aria-pressed", b.dataset.m === S.metodo));
     { const tot = cobra, dv = S.metodo === "dividido", ef = parseFloat($("#divEf").value) || 0, ok = ef > 0 && ef < tot;
@@ -783,18 +788,35 @@ body.emp .soc{display:none!important}body.emp [data-cimet]{display:none!importan
   });
   function itemsCobro() {
     if (!S.desc) return S.cart.map(l => ({...l, precio_lista: l.precio}));
-    const lista = S.cart.reduce((a, l) => a + l.cant * l.precio, 0), r = lista ? S.desc.total / lista : 1;
-    const its = S.cart.map(l => ({...l, precio_lista: l.precio, precio: Math.round(l.precio * r * 100) / 100, motivo: S.desc.motivo}));
+    // El descuento es de la marca: la envoltura de regalo (de la tienda) no se descuenta
+    const envT = S.cart.filter(l => l.envoltura).reduce((a, l) => a + l.cant * l.precio, 0);
+    const lista = S.cart.filter(l => !l.envoltura).reduce((a, l) => a + l.cant * l.precio, 0), meta = S.desc.total - envT, r = lista ? meta / lista : 1;
+    const its = S.cart.map(l => l.envoltura ? {...l, precio_lista: l.precio} : ({...l, precio_lista: l.precio, precio: Math.round(l.precio * r * 100) / 100, motivo: S.desc.motivo}));
     let dif = Math.round((S.desc.total - its.reduce((a, l) => a + l.cant * l.precio, 0)) * 100) / 100;
-    for (const l of [...its].reverse()) { if (!dif) break; const n = Math.round((l.precio + dif / l.cant) * 100) / 100; if (n >= 0 && n <= l.precio_lista) { dif = Math.round((dif - (n - l.precio) * l.cant) * 100) / 100; l.precio = n; } }
+    for (const l of [...its].reverse()) { if (!dif) break; if (l.envoltura) continue; const n = Math.round((l.precio + dif / l.cant) * 100) / 100; if (n >= 0 && n <= l.precio_lista) { dif = Math.round((dif - (n - l.precio) * l.cant) * 100) / 100; l.precio = n; } }
     return its;
   }
   $("#descApl").addEventListener("click", () => {
     const lista = S.cart.reduce((a, l) => a + l.cant * l.precio, 0), t = parseFloat($("#descTot").value), m = $("#descMot").value.trim();
     if (!S.cart.length) return toast("Primero agrega los productos a la cuenta.");
-    if (!(t > 0) || t >= lista) return toast("El total con descuento debe ser mayor a 0 y menor a " + bs(lista) + ".");
+    const envT = S.cart.filter(l => l.envoltura).reduce((a, l) => a + l.cant * l.precio, 0);
+    if (!(t > envT) || t >= lista) return toast("El total con descuento debe ser mayor a " + bs(envT) + " y menor a " + bs(lista) + ".");
     if (!m) return toast("Escribe el motivo del descuento.");
     S.desc = {total: t, motivo: m}; renderCaja();
+  });
+  const ENV_MARCA = "parralito";
+  $("#regMas").addEventListener("click", () => {
+    if (!S.marcas[ENV_MARCA]) return toast("Falta la marca de la tienda para la envoltura. Recarga la caja.");
+    const l = S.cart.find(x => x.envoltura);
+    if (l) l.cant++; else S.cart.push({producto: null, marca: ENV_MARCA, nombre: "Envoltura de regalo", precio: 2, cant: 1, envoltura: true});
+    if (S.desc) { S.desc = null; toast("Cambió la cuenta: vuelve a aplicar el descuento si corresponde."); } else toast("🎁 Envoltura agregada (+2 Bs)");
+    renderCaja();
+  });
+  $("#regMenos").addEventListener("click", () => {
+    const i = S.cart.findIndex(x => x.envoltura); if (i < 0) return;
+    S.cart[i].cant--; if (S.cart[i].cant <= 0) S.cart.splice(i, 1);
+    if (S.desc) S.desc = null;
+    renderCaja();
   });
   $("#descQuitar").addEventListener("click", () => { S.desc = null; $("#descTot").value = ""; $("#descMot").value = ""; renderCaja(); });
   $("#cart").addEventListener("click", e => {

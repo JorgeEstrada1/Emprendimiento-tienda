@@ -576,7 +576,7 @@ body.emp .soc{display:none!important}body.emp [data-cimet]{display:none!importan
     if (!pa || !pa.productos) return null; const d = HOY(); if ((pa.desde && d < pa.desde) || (pa.hasta && d > pa.hasta)) return null;
     const pct = +pa.productos[pid]; return pct > 0 && pct < 100 ? {pct, nombre: pa.nombre || "Promoción"} : null;
   }
-  const precioPromo = (precio, pr) => Math.round(precio * (100 - pr.pct)) / 100;
+  const precioPromo = (precio, pr) => Math.round(precio * (100 - pr.pct) / 50) / 2; // redondeo a 0,50 Bs
   const PER_ACT = () => { const k = perKey(laPaz()); return k < "2026-11" ? "2026-11" : k; };
   const hora = iso => new Date(iso).toLocaleTimeString("es-BO", {hour: "2-digit", minute: "2-digit", timeZone: "America/La_Paz"});
   const fechaCorta = iso => new Date(iso).toLocaleDateString("es-BO", {day: "2-digit", month: "2-digit", year: "numeric", timeZone: "America/La_Paz"});

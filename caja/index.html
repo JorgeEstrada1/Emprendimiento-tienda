@@ -570,6 +570,13 @@ body.emp .soc{display:none!important}body.emp [data-cimet]{display:none!importan
   const perLabel = k => { const [y, m] = k.split("-").map(Number); const pm = m === 1 ? 12 : m - 1; return "29 " + MESES[pm - 1] + " – 28 " + MESES[m - 1] + " · se entrega el 29 " + MESES[m - 1] + " " + y; };
   const perShift = (k, n) => { let [y, m] = k.split("-").map(Number); m += n; while (m > 12) { m -= 12; y++; } while (m < 1) { m += 12; y--; } return y + "-" + pad(m); };
   const HOY = () => diaKey(laPaz());
+  // Promoción automática (ej. Black Friday): ajustes.promo_auto = {nombre, desde, hasta, productos: {id: %}}
+  function promoDe(pid) {
+    if (!pid) return null; let pa; try { pa = JSON.parse(S.aj?.promo_auto || "null"); } catch { return null; }
+    if (!pa || !pa.productos) return null; const d = HOY(); if ((pa.desde && d < pa.desde) || (pa.hasta && d > pa.hasta)) return null;
+    const pct = +pa.productos[pid]; return pct > 0 && pct < 100 ? {pct, nombre: pa.nombre || "Promoción"} : null;
+  }
+  const precioPromo = (precio, pr) => Math.round(precio * (100 - pr.pct)) / 100;
   const PER_ACT = () => { const k = perKey(laPaz()); return k < "2026-11" ? "2026-11" : k; };
   const hora = iso => new Date(iso).toLocaleTimeString("es-BO", {hour: "2-digit", minute: "2-digit", timeZone: "America/La_Paz"});
   const fechaCorta = iso => new Date(iso).toLocaleDateString("es-BO", {day: "2-digit", month: "2-digit", year: "numeric", timeZone: "America/La_Paz"});
@@ -717,7 +724,7 @@ body.emp .soc{display:none!important}body.emp [data-cimet]{display:none!importan
     $("#dlMarcas").innerHTML = marcasOrden().map(m => `<option value="${esc(m.nombre + " · " + m.espacio)}"></option>`).join("");
     const box = $("#cajaProds"); let boxHTML = "";
     const cq = ($("#cajaQ")?.value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
-    const card = (p, conMarca) => `<button class="prod" data-add="${esc(p.id)}" ${p.stock <= 0 ? "disabled" : ""}>${p.foto ? `<img src="${esc(IMG(p.foto))}" alt="" loading="lazy">` : ""}${conMarca ? `<span class="m">${esc(S.marcas[p.marca]?.nombre || "")}</span>` : ""}<span class="small muted num">${esc(p.codigo || "")}</span><span>${esc(p.nombre)}</span><span class="p">${bs(p.precio)}</span><span class="s">Stock: ${p.stock}</span></button>`;
+    const card = (p, conMarca) => `<button class="prod" data-add="${esc(p.id)}" ${p.stock <= 0 ? "disabled" : ""}>${p.foto ? `<img src="${esc(IMG(p.foto))}" alt="" loading="lazy">` : ""}${conMarca ? `<span class="m">${esc(S.marcas[p.marca]?.nombre || "")}</span>` : ""}<span class="small muted num">${esc(p.codigo || "")}</span><span>${esc(p.nombre)}</span>${(pr => pr ? `<span class="p"><s class="muted small">${bs(p.precio)}</s> ${bs(precioPromo(+p.precio, pr))}</span><span class="chip warn">${esc(pr.nombre)} −${pr.pct}%</span>` : `<span class="p">${bs(p.precio)}</span>`)(promoDe(p.id))}<span class="s">Stock: ${p.stock}</span></button>`;
     if (cq.length >= 2) {
       const nn = t => String(t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
       const hits = Object.values(S.productos).filter(p => S.marcas[p.marca]?.activa !== false && (nn(p.nombre).includes(cq) || nn(p.codigo).includes(cq) || nn(S.marcas[p.marca]?.nombre).includes(cq))).sort((a, b) => (b.stock > 0) - (a.stock > 0) || a.nombre.localeCompare(b.nombre, "es"));
@@ -731,10 +738,10 @@ body.emp .soc{display:none!important}body.emp [data-cimet]{display:none!importan
     }
     if (box.__html !== boxHTML) { box.innerHTML = boxHTML; box.__html = boxHTML; }
     const its = itemsCobro();
-    $("#cart").innerHTML = S.cart.length ? S.cart.map((l, i) => `<li><span style="min-width:0"><b>${esc(l.nombre)}</b><br><span class="small muted">${l.codigo ? esc(l.codigo) + " · " : ""}${esc(S.marcas[l.marca]?.nombre || "")}</span></span><span class="row" style="flex-wrap:nowrap"><button class="b sm" data-dec="${i}" aria-label="Quitar uno">−</button><span class="num">${l.cant}</span><button class="b sm" data-inc="${i}" aria-label="Agregar uno">+</button><span class="num" style="min-width:76px;text-align:right">${S.desc ? `<s class="muted small">${bs(l.cant * l.precio)}</s><br>` : ""}${bs(l.cant * its[i].precio)}</span></span></li>`).join("")
+    $("#cart").innerHTML = S.cart.length ? S.cart.map((l, i) => `<li><span style="min-width:0"><b>${esc(l.nombre)}</b><br><span class="small muted">${l.codigo ? esc(l.codigo) + " · " : ""}${esc(S.marcas[l.marca]?.nombre || "")}</span>${!S.desc && its[i].motivo ? ` <span class="chip warn">${esc(its[i].motivo)}</span>` : ""}</span><span class="row" style="flex-wrap:nowrap"><button class="b sm" data-dec="${i}" aria-label="Quitar uno">−</button><span class="num">${l.cant}</span><button class="b sm" data-inc="${i}" aria-label="Agregar uno">+</button><span class="num" style="min-width:76px;text-align:right">${its[i].precio < l.precio ? `<s class="muted small">${bs(l.cant * l.precio)}</s><br>` : ""}${bs(l.cant * its[i].precio)}</span></span></li>`).join("")
       : `<li class="muted small">Toca un producto para agregarlo a la cuenta.</li>`;
     const lista = S.cart.reduce((a, l) => a + l.cant * l.precio, 0), cobra = its.reduce((a, l) => a + l.cant * l.precio, 0);
-    $("#cartTot").innerHTML = S.desc ? `<s class="muted small">${bs(lista)}</s> ${bs(cobra)}` : bs(lista);
+    $("#cartTot").innerHTML = cobra < lista ? `<s class="muted small">${bs(lista)}</s> ${bs(cobra)}` : bs(lista);
     $("#descQuitar").hidden = !S.desc;
     { const r = S.cart.find(l => l.envoltura); $("#regN").textContent = r ? r.cant : 0; $("#regMenos").disabled = !r; }
     $("#descRes").innerHTML = S.desc ? `Descuento de <b class="num">${bs(lista - cobra)}</b> · ${esc(S.desc.motivo)}` : "";
@@ -787,7 +794,7 @@ body.emp .soc{display:none!important}body.emp [data-cimet]{display:none!importan
     $("#libreNom").value = ""; $("#librePre").value = ""; renderCaja();
   });
   function itemsCobro() {
-    if (!S.desc) return S.cart.map(l => ({...l, precio_lista: l.precio}));
+    if (!S.desc) return S.cart.map(l => { const pr = !l.envoltura && promoDe(l.producto); return pr ? {...l, precio_lista: l.precio, precio: precioPromo(l.precio, pr), motivo: pr.nombre + " −" + pr.pct + "%"} : {...l, precio_lista: l.precio}; });
     // El descuento es de la marca: la envoltura de regalo (de la tienda) no se descuenta
     const envT = S.cart.filter(l => l.envoltura).reduce((a, l) => a + l.cant * l.precio, 0);
     const lista = S.cart.filter(l => !l.envoltura).reduce((a, l) => a + l.cant * l.precio, 0), meta = S.desc.total - envT, r = lista ? meta / lista : 1;
